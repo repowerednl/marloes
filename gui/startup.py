@@ -70,6 +70,7 @@ class ExperimentSetupApp(QWidget):
         self.learning_rate.setDecimals(5)
         self.learning_rate.setRange(0.00001, 0.1)
         self.learning_rate.setValue(0.001)
+        self.learning_rate.setSingleStep(0.0001)
         self.learning_rate_label.hide()
         self.learning_rate.hide()
         layout.addWidget(self.learning_rate_label)
