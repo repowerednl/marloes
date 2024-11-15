@@ -1,4 +1,4 @@
-
+# imports
 
 def validate_config(config: dict) -> str:
     """Validate the configuration dictionary."""
