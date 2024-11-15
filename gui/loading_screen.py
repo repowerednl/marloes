@@ -1,8 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
 from PyQt6.QtCore import Qt, QTimer
 from .img import LogoWindow
-from .errors import ErrorScreen
-import validation.validate_config as valid
 
 class LoadingScreen(QWidget):
     def __init__(self, config: dict):
@@ -57,10 +55,3 @@ class LoadingScreen(QWidget):
             # Here, add code to proceed to the experiment or main screen
             self.loading_label.setText("Experiment Finished!")
             # Optionally close loading screen or transition to the next screen
-
-    def validate(self, config: dict) -> None:
-        if valid.validate_config(config) != "Configuration is valid":
-            # go to error screen passing the error message
-            self.error_screen = ErrorScreen(valid.validate_config(config))
-            self.error_screen.show()
-            self.close()
