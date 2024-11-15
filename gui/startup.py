@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 from .loading_screen import LoadingScreen
 from .img import LogoWindow
 from .errors import ErrorScreen
-import validation.validate_config as valid
+from src.marloes.validation.validate_config import validate_config
 
 class ExperimentSetupApp(QWidget):
     def __init__(self):
@@ -147,5 +147,5 @@ class ExperimentSetupApp(QWidget):
         self.config = config
 
     def validate(self):
-        e = valid.validate_config(self.config)
+        e = validate_config(self.config)
         return e == "Configuration is valid", e
