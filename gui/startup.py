@@ -40,7 +40,7 @@ class ExperimentSetupApp(QWidget):
         # Coverage input field if grid_search is selected
         self.coverage_label = QLabel("Coverage:")
         self.coverage_input = QSpinBox()
-        self.coverage_input.setRange(0, 100)
+        self.coverage_input.setRange(1, 100)
         self.coverage_label.hide()
         self.coverage_input.hide()
         layout.addWidget(self.coverage_label)
@@ -48,8 +48,8 @@ class ExperimentSetupApp(QWidget):
 
         # ALGORITHM SELECTION
         self.algorithm_buttons = QButtonGroup(self)
-        self.algorithm_model_based = QRadioButton("Model-Based")
-        self.algorithm_model_free = QRadioButton("Model-Free")
+        self.algorithm_model_based = QRadioButton("model_based")
+        self.algorithm_model_free = QRadioButton("model_free")
         self.algorithm_buttons.addButton(self.algorithm_model_based)
         self.algorithm_buttons.addButton(self.algorithm_model_free)
 
@@ -125,9 +125,10 @@ class ExperimentSetupApp(QWidget):
             self.error_screen.show()
             self.close()
         else:
-            print(f"Starting experiment in {self.config['grid_search']} mode.")
+            print(f"Running {'Grid Search ' if self.config['grid_search'] else 'with '} {self.config['algorithm']} Algorithm...")
+            print(f"Epochs: {self.config['epochs']}")
             
-            # Here, add the logic for each experiment mode
+            # add the logic for each experiment mode, here or in probably in loading screen
             # Example: self.run_grid_search() or self.run_algorithm()
 
             # Switch to the loading screen

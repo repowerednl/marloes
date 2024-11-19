@@ -4,9 +4,9 @@ from .base import Agent
 
 class BatteryAgent(Agent):
     def __init__(self, config: dict):
-        battery = Battery(config)
+        model = Battery(config)
 
-        super().__init__(battery)
+        super().__init__(model)
 
     def act(self):
         pass

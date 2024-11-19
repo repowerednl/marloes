@@ -17,5 +17,5 @@ class DataSource(ABC):
 
     @abstractmethod
     def forecast(self):
-        """ Forecast data """
+        """ Forecast data (potentail power)"""
         pass
