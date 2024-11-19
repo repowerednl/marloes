@@ -34,10 +34,10 @@ class EnergyHub:
         """ Function to calculate the reward """
         pass
 
-    def step(self):
+    def step(self, actions: list):
         """ Function should return the observation, reward, done, info """
         # step the agents
-        [ agent.act() for agent in self.agents ] # function is called act now, can be renamed
+        [ agent.act(action) for agent, action in zip(self.agents, actions) ] # function is called act now, can be renamed
         # gather observations
         # either combine every agents state into one observation or a list of observations for each agent
         observation = self._combine_states()
