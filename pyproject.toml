@@ -31,5 +31,8 @@ priority = "explicit"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.pytest.ini_options]
+pythonpath = ["src/marloes"]
+
 [virtualenvs]
 in-project = true

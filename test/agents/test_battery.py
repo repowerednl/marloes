@@ -11,8 +11,6 @@ CONFIG = {
     "energy_capacity": 100.0,
     "ramp_up_rate": 10.0,
     "ramp_down_rate": 10.0,
-    "input_efficiency": 0.95,
-    "output_efficiency": 0.95,
     "efficiency": 0.9,
     "degradation_function": None
 }
