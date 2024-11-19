@@ -2,7 +2,6 @@ import unittest
 from freezegun import freeze_time
 from datetime import datetime, timedelta
 from simon.assets.battery import Battery
-from simon.data.battery_data import BatteryState
 from marloes.agents.battery import BatteryAgent
 
 CONFIG = {
@@ -18,17 +17,10 @@ CONFIG = {
     "degradation_function": None
 }
 
+@freeze_time("2023-01-01 12:00:00")
 class TestBatteryAgent(unittest.TestCase):
-    @freeze_time("2023-01-01 12:00:00")
     def setUp(self) -> None:
-        self.battery_agent = BatteryAgent(CONFIG)
-        self.initial_state = BatteryState(
-            time=datetime.now(),
-            power=-20,
-            state_of_charge=0.5,
-            degradation=0.0
-        )
-        self.battery_agent.model.set_state(self.initial_state)
+        self.battery_agent = BatteryAgent(start_time=datetime.now(),config=CONFIG)
 
     def test_init(self):
         self.assertIsInstance(self.battery_agent.model, Battery)
@@ -43,3 +35,9 @@ class TestBatteryAgent(unittest.TestCase):
         self.assertEqual(self.battery_agent.model.input_efficiency, 0.9**0.5)
         self.assertEqual(self.battery_agent.model.output_efficiency, 0.9**0.5)
         self.assertIsNone(self.battery_agent.model.degradation_function)
+        # test the initial (default) state
+        self.assertEqual(self.battery_agent.model.state.time, datetime.now())
+        self.assertEqual(self.battery_agent.model.state.power, 0.0)
+        self.assertEqual(self.battery_agent.model.state.state_of_charge, 0.5)
+        self.assertEqual(self.battery_agent.model.state.degradation, 0.0)
+
