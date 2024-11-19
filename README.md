@@ -17,6 +17,12 @@ Once Poetry is available, initialize the project with the following commands (al
 poetry install
 ```
 
+For development, make sure to install the pre-commit hooks for cleaner commits and a clean repo.
+
+```sh
+pre-commit install
+```
+
 To activate the virtual environment created by Poetry, use:
 
 ```sh
