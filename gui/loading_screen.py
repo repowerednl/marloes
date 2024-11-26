@@ -6,8 +6,6 @@ class LoadingScreen(QWidget):
     def __init__(self, config: dict):
         super().__init__()
         self.config = config
-
-        self.validate(config)
         
         # Set up the loading screen
         self.setWindowTitle("Loading Experiment")

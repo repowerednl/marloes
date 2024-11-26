@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 from .loading_screen import LoadingScreen
 from .img import LogoWindow
 from .errors import ErrorScreen
-import validation.validate_config as valid
+from src.marloes.validation.validate_config import validate_config
 
 class ExperimentSetupApp(QWidget):
     def __init__(self):
@@ -40,7 +40,7 @@ class ExperimentSetupApp(QWidget):
         # Coverage input field if grid_search is selected
         self.coverage_label = QLabel("Coverage:")
         self.coverage_input = QSpinBox()
-        self.coverage_input.setRange(0, 100)
+        self.coverage_input.setRange(1, 100)
         self.coverage_label.hide()
         self.coverage_input.hide()
         layout.addWidget(self.coverage_label)
@@ -48,8 +48,8 @@ class ExperimentSetupApp(QWidget):
 
         # ALGORITHM SELECTION
         self.algorithm_buttons = QButtonGroup(self)
-        self.algorithm_model_based = QRadioButton("Model-Based")
-        self.algorithm_model_free = QRadioButton("Model-Free")
+        self.algorithm_model_based = QRadioButton("model_based")
+        self.algorithm_model_free = QRadioButton("model_free")
         self.algorithm_buttons.addButton(self.algorithm_model_based)
         self.algorithm_buttons.addButton(self.algorithm_model_free)
 
@@ -70,6 +70,7 @@ class ExperimentSetupApp(QWidget):
         self.learning_rate.setDecimals(5)
         self.learning_rate.setRange(0.00001, 0.1)
         self.learning_rate.setValue(0.001)
+        self.learning_rate.setSingleStep(0.0001)
         self.learning_rate_label.hide()
         self.learning_rate.hide()
         layout.addWidget(self.learning_rate_label)
@@ -124,9 +125,10 @@ class ExperimentSetupApp(QWidget):
             self.error_screen.show()
             self.close()
         else:
-            print(f"Starting experiment in {self.config['grid_search']} mode.")
+            print(f"Running {'Grid Search ' if self.config['grid_search'] else 'with '} {self.config['algorithm']} Algorithm...")
+            print(f"Epochs: {self.config['epochs']}")
             
-            # Here, add the logic for each experiment mode
+            # add the logic for each experiment mode, here or in probably in loading screen
             # Example: self.run_grid_search() or self.run_algorithm()
 
             # Switch to the loading screen
@@ -147,5 +149,5 @@ class ExperimentSetupApp(QWidget):
         self.config = config
 
     def validate(self):
-        e = valid.validate_config(self.config)
+        e = validate_config(self.config)
         return e == "Configuration is valid", e

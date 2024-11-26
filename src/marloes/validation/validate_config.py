@@ -1,9 +1,9 @@
-
+# imports
 
 def validate_config(config: dict) -> str:
     """Validate the configuration dictionary."""
     # Check if all required keys are present
-    required_keys = ["algorithm", "epochs", "learning_rate"]
+    required_keys = ["algorithm", "epochs", "learning_rate" if not config["grid_search"] else "coverage"]
     for key in required_keys:
         if key not in config:
             return f"Error: Missing key '{key}' in configuration"
@@ -18,7 +18,7 @@ def validate_config(config: dict) -> str:
         return "Error: 'epochs' must be a positive integer"
     
     # Check if learning_rate is a positive float
-    if not isinstance(config["learning_rate"], float) or config["learning_rate"] <= 0:
+    if not config["grid_search"] and ( not isinstance(config["learning_rate"], float) or config["learning_rate"] <= 0 ):
         return "Error: 'learning_rate' must be a positive float"
     
     return "Configuration is valid"

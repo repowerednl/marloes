@@ -1,0 +1,31 @@
+{
+    "agents": {
+        "agent_1": {
+            "type": "random",
+            "config": {
+                "seed": 0
+            }
+        },
+        "agent_2": {
+            "type": "random",
+            "config": {
+                "seed": 1
+            }
+        },
+        "agent_3": {
+            "type": "random",
+            "config": {
+                "seed": 2
+            }
+        },
+        "agent_4": {
+            "type": "random",
+            "config": {
+                "seed": 3
+            }
+        }
+    },
+    "lr" : [0.1, 0.01, 0.001],
+    "batch_size" : [32, 64, 128],
+    "epochs" : [10, 20, 30]
+}

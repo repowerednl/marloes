@@ -19,6 +19,9 @@ ray = {extras = ["train"], version = "^2.39.0"}
 tqdm = "^4.67.0"
 psutil = "^6.1.0"
 pyqt6 = "^6.7.1"
+pre-commit = "^4.0.1"
+pytest = "^8.3.3"
+freezegun = "^1.5.1"
 
 [[tool.poetry.source]]
 name = "repowered"
@@ -28,6 +31,9 @@ priority = "explicit"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+pythonpath = ["src/marloes"]
 
 [virtualenvs]
 in-project = true
