@@ -6,7 +6,7 @@ def read_series(
     filepath: str, in_kwh: bool = True, filetype: str = "parquet"
 ) -> pd.Series:
     """
-    Reads a Parquet file and returns it as a pandas Series.
+    Reads a Parquet file and returns it as a minutely kW series.
     """
     read_function = getattr(pd, f"read_{filetype}")
     df = read_function(filepath)
