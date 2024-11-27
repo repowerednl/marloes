@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def read_series(
-    filepath: str, convert_to_kwh: bool = True, filetype: str = "parquet"
+    filepath: str, in_kwh: bool = True, filetype: str = "parquet"
 ) -> pd.Series:
     """
     Reads a Parquet file and returns it as a pandas Series.
@@ -15,11 +15,28 @@ def read_series(
     if df.shape[1] != 1:
         raise ValueError("Only one column is allowed to convert to series.")
 
-    if convert_to_kwh:
-        df = convert_kwh_to_minutely_kw(df)
+    # Make sure the data is in kWh to convert it to minutely kW
+    if not in_kwh:
+        df = convert_kw_to_kwh(df)
+
+    df = convert_kwh_to_minutely_kw(df)
 
     series = df.squeeze("columns")
     return series
+
+
+def convert_kwh_to_minutely_kw(df: pd.DataFrame) -> pd.DataFrame:
+    time_step = df.index[1] - df.index[0]
+    df = df.resample("1min").ffill() * 3600 / time_step.seconds
+
+    return df
+
+
+def convert_kw_to_kwh(df: pd.DataFrame) -> pd.DataFrame:
+    time_step = df.index[1] - df.index[0]
+    df = df * time_step.seconds / 3600
+
+    return df
 
 
 def shift_series(
@@ -107,17 +124,3 @@ def convert_to_utc(series: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame
     else:
         series.index = pd.to_datetime(series.index).tz_convert("UTC")
     return series
-
-
-def convert_kwh_to_minutely_kw(df: pd.DataFrame) -> pd.DataFrame:
-    time_step = df.index[1] - df.index[0]
-    df = df.resample("1min").ffill() * 3600 / time_step.seconds
-
-    return df
-
-
-def convert_kw_to_kwh(df: pd.DataFrame) -> pd.DataFrame:
-    time_step = df.index[1] - df.index[0]
-    df = df * time_step.seconds / 3600
-
-    return df
