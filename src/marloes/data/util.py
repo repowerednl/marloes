@@ -9,6 +9,9 @@ def read_series(
     """
     Reads a Parquet file and returns it as a minutely kW series.
     """
+    # Adjust filepath for root
+    filepath = f"src/marloes/data/profiles/{filepath}"
+
     # Read in the file given the filetype
     read_function = getattr(pd, f"read_{filetype}")
     df = read_function(filepath)

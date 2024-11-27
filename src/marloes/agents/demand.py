@@ -5,11 +5,13 @@ from .base import Agent
 
 
 class DemandAgent(Agent):
-    def __init__(self, start_time: datetime, config: dict):
-        model = Demand(**config)
-        model.load_default_state(time=start_time)
+    def __init__(self, config: dict, start_time: datetime):
+        series = self.get_demand_series(config)
+        super().__init__(Demand, config, start_time, series)
 
-        super().__init__(model)
+    def get_demand_series(self, config: dict):
+        # TODO: to be implemented
+        pass
 
     def act(self):
         pass

@@ -1,12 +1,17 @@
 """Wind agent with functionality from Repowered's Simon"""
+from datetime import datetime
 from simon.assets.supply import Supply
 from .base import Agent
 
-class WindAgent(Agent):
-    def __init__(self, config: dict):
-        model = Supply(config)
 
-        super().__init__(model)
+class WindAgent(Agent):
+    def __init__(self, config: dict, start_time: datetime):
+        series = self._get_production_series(config)
+        super().__init__(Supply, config, start_time, series)
+
+    def _get_production_series(self, config: dict):
+        # TODO: to be implemented
+        pass
 
     def act(self):
         pass
