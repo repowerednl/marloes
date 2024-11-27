@@ -1,4 +1,5 @@
 # imports
+from marloes.validation import validate_battery, validate_demand, validate_solar
 
 
 def validate_config(config: dict) -> str:
@@ -7,7 +8,7 @@ def validate_config(config: dict) -> str:
     valid_algorithms = ["model_based", "model_free", "solver"]
     algorithm = config.get("algorithm", None)
     if algorithm not in valid_algorithms:
-        return f"Error: Invalid algorithm '{algorithm}'"
+        raise ValueError(f"Error: Invalid algorithm '{algorithm}'")
 
     if config["algorithm"] in ["model_based", "model_free"]:
         # Check if required keys are present
@@ -17,17 +18,21 @@ def validate_config(config: dict) -> str:
         ]
         for key in required_keys:
             if key not in config:
-                return f"Error: Missing key '{key}' in configuration"
+                raise ValueError(f"Error: Missing key '{key}' in configuration")
 
         # Check if epochs is a positive integer
         if not isinstance(config["epochs"], int) or config["epochs"] <= 0:
-            return "Error: 'epochs' must be a positive integer"
+            raise ValueError("Error: 'epochs' must be a positive integer")
 
         # Check if learning_rate is a positive float
         if not config["grid_search"] and (
             not isinstance(config["learning_rate"], float)
             or config["learning_rate"] <= 0
         ):
-            return "Error: 'learning_rate' must be a positive float"
+            raise ValueError("Error: 'learning_rate' must be a positive float")
+
+    # Validate each agent configuration
+    for agent in config["agents"]:
+        globals().get(f"validate_{agent['type']}")(agent)
 
     return "Configuration is valid"
