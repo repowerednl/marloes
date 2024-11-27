@@ -5,6 +5,8 @@ from datetime import datetime
 
 from marloes.data.util import (
     _contains_leap_day,
+    convert_kw_to_kwh,
+    convert_kwh_to_minutely_kw,
     convert_to_utc,
     read_series,
     shift_series,
@@ -65,14 +67,52 @@ class TestShiftSeries(unittest.TestCase):
             )
         )
 
-    def test_read_series(self):
-        filepath = "src/marloes/data/profiles/Amen-LG-10-EW-Mounted.parquet"
-        series = read_series(filepath, "parquet")
 
-        self.assertEqual(len(series.index), 527040)
+class TestReadSeries(unittest.TestCase):
+    def setUp(self):
+        self.filepath = "src/marloes/data/profiles/Solar_EW.parquet"
+
+    def test_read_series(self):
+        series = read_series(self.filepath)
+
+        # Number of minutes in a yaer
+        self.assertEqual(len(series.index), 525600)
+
+        # Check if the first index is 2025-01-01 00:00
+        self.assertEqual(
+            series.index[0], pd.Timestamp("2025-01-01 00:00", tz=ZoneInfo("UTC"))
+        )
+
+        # Check if the last index is 2025-12-31 23:59
+        self.assertEqual(
+            series.index[-1], pd.Timestamp("2025-12-31 23:59", tz=ZoneInfo("UTC"))
+        )
 
     def test_read_unsupported_filetype(self):
-        filepath = "src/marloes/data/profiles/Amen-LG-10-EW-Mounted.parquet"
-        # Test unsupported filetype error
         with self.assertRaises(AttributeError):
-            read_series(filepath, "txt")
+            read_series(self.filepath, filetype="txt")
+
+    def test_convert_kwh_to_minutely_kw(self):
+        df = pd.read_parquet(self.filepath)
+
+        # Manually convert the minutely kW data to kWh
+        time_step_seconds = 60
+        df_kwh = df * time_step_seconds / 3600
+
+        # Use the function to convert back to minutely kW
+        df_converted = convert_kwh_to_minutely_kw(df_kwh)
+
+        pd.testing.assert_frame_equal(
+            df_converted, df, check_freq=False, check_index_type=False
+        )
+
+    def test_convert_kw_to_kwh(self):
+        df = pd.read_parquet(self.filepath)
+
+        # Convert the minutely kW to kWh using the function
+        df_converted = convert_kw_to_kwh(df)
+
+        # Manually calculate the expected kWh for each interval
+        expected_kwh = df * (1 / 60)
+
+        pd.testing.assert_frame_equal(df_converted, expected_kwh)

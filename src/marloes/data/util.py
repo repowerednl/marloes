@@ -1,13 +1,15 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import pandas as pd
 
 
 def read_series(
-    filepath: str, in_kwh: bool = True, filetype: str = "parquet"
+    filepath: str, in_kw: bool = True, filetype: str = "parquet"
 ) -> pd.Series:
     """
     Reads a Parquet file and returns it as a minutely kW series.
     """
+    # Read in the file given the filetype
     read_function = getattr(pd, f"read_{filetype}")
     df = read_function(filepath)
 
@@ -16,27 +18,52 @@ def read_series(
         raise ValueError("Only one column is allowed to convert to series.")
 
     # Make sure the data is in kWh to convert it to minutely kW
-    if not in_kwh:
+    if in_kw:
         df = convert_kw_to_kwh(df)
-
     df = convert_kwh_to_minutely_kw(df)
 
+    # Convert the DataFrame to a Series
     series = df.squeeze("columns")
+
+    # Shift the series to the year 2025 so all data aligns
+    series = shift_series(
+        series,
+        datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC")),
+        datetime(2025, 12, 31, 23, 59, tzinfo=ZoneInfo("UTC")),
+    )
     return series
 
 
 def convert_kwh_to_minutely_kw(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Converts kWh data to minutely kW data by distributing the energy over each minute.
+    """
     time_step = df.index[1] - df.index[0]
-    df = df.resample("1min").ffill() * 3600 / time_step.seconds
 
-    return df
+    # Calculate the average kW during each interval
+    df_kw = df / (time_step.total_seconds() / 3600.0)
+
+    # Make sure the index is complete until :59
+    start = df.index[0]
+    end = df.index[-1] + time_step - pd.Timedelta(minutes=1)
+    full_index = pd.date_range(start=start, end=end, freq="1T")
+    df_minutely_kw = df_kw.reindex(full_index, method="ffill")
+
+    return df_minutely_kw
 
 
 def convert_kw_to_kwh(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Converts kW data to kWh based on the time interval between data points.
+    """
+    # Calculate the time interval in hours
     time_step = df.index[1] - df.index[0]
-    df = df * time_step.seconds / 3600
+    interval_hours = time_step.total_seconds() / 3600.0
 
-    return df
+    # Convert kW to kWh
+    df_kwh = df * interval_hours
+
+    return df_kwh
 
 
 def shift_series(
