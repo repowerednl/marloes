@@ -13,7 +13,7 @@ class Agent(ABC):
     ):
         default_config = self.get_default_config(config)
         config = self.merge_configs(default_config, config)
-        if series:
+        if series is not None:
             self.asset = asset(series=series, **config)
         else:
             self.asset = asset(**config)

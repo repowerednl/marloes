@@ -20,6 +20,7 @@ class BatteryAgent(Agent):
         degradation_function = partial(
             battery_degradation_function,
             capacity=config["energy_capacity"],
+            # Default to 7000 cycles
             total_cycles=config.get("total_cycles", 7000),
         )
         return {

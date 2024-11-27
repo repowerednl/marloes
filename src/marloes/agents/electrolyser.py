@@ -8,6 +8,10 @@ class ElectrolyserAgent(Agent):
     def __init__(self, config: dict, start_time: datetime):
         super().__init__(Electrolyser, config, start_time)
 
+    def get_default_config(cls, config: dict) -> dict:
+        """Each subclass must define its default configuration."""
+        pass
+
     def act(self):
         pass
 

@@ -23,6 +23,10 @@ class SolarAgent(Agent):
 
         return series
 
+    def get_default_config(cls, config: dict) -> dict:
+        """Each subclass must define its default configuration."""
+        pass
+
     def act(self):
         pass
 
