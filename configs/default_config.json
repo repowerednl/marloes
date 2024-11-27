@@ -15,13 +15,13 @@
         },
         {
             "type": "demand",
-            "size": 1000,
-            "profile": "..."
+            "scale": 1,
+            "profile": "Farm"
         },
         {
             "type": "demand",
-            "size": 1000,
-            "profile": "..."
+            "scale": 1,
+            "profile": "RealEstate"
         },
         {
             "type": "battery",
