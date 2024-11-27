@@ -9,6 +9,8 @@ from marloes.agents.demand import DemandAgent
 
 CONFIG = {
     "name": "DemandOne",
+    "profile": "Farm",
+    "scale": 1,
     "max_power_in": 10.0,
     "constant_demand": 5.0,
     "curtailable_by_solver": True,
