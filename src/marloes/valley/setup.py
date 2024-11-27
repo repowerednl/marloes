@@ -1,7 +1,7 @@
-from marloes.hub import env
+from marloes.valley import env
 
 
 def setup_env(config: dict):
     # pass necessary config to the model
-    model = env.EnergyHub(config)
+    model = env.EnergyValley(config)
     return model
