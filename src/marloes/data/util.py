@@ -2,7 +2,24 @@ from datetime import datetime
 import pandas as pd
 
 
-def shift_series(series, start_date, end_date):
+def read_series(filepath: str, filetype: str = "parquet") -> pd.Series:
+    """
+    Reads a Parquet file and returns it as a pandas Series.
+    """
+    read_function = getattr(pd, f"read_{filetype}")
+    df = read_function(filepath)
+
+    # Ensure there are not multiple columns in the DataFrame
+    if df.shape[1] != 1:
+        raise ValueError("Only one column is allowed to convert to series.")
+
+    series = df.squeeze("columns")
+    return series
+
+
+def shift_series(
+    series: pd.Series, start_date: datetime, end_date: datetime
+) -> pd.Series:
     """
     Shifts the dates of a DatetimeIndex series to fit within the specified start and end date.
     The dates are cyclically shifted such that the month, day, and time stay the same, but the year changes
@@ -56,7 +73,7 @@ def shift_series(series, start_date, end_date):
     return shifted_series.sort_index()
 
 
-def _contains_leap_day(start_date, end_date):
+def _contains_leap_day(start_date: datetime, end_date: datetime) -> bool:
     """
     Checks if the time range between start_date and end_date includes a leap day (February 29th).
     """

@@ -3,7 +3,12 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 from datetime import datetime
 
-from marloes.data.util import _contains_leap_day, convert_to_utc, shift_series
+from marloes.data.util import (
+    _contains_leap_day,
+    convert_to_utc,
+    read_series,
+    shift_series,
+)
 
 
 class TestShiftSeries(unittest.TestCase):
@@ -59,3 +64,15 @@ class TestShiftSeries(unittest.TestCase):
                 datetime(2021, 12, 31, tzinfo=ZoneInfo("UTC")),
             )
         )
+
+    def test_read_series(self):
+        filepath = "src/marloes/data/profiles/Amen-LG-10-EW-Mounted.parquet"
+        series = read_series(filepath, "parquet")
+
+        self.assertEqual(len(series.index), 527040)
+
+    def test_read_unsupported_filetype(self):
+        filepath = "src/marloes/data/profiles/Amen-LG-10-EW-Mounted.parquet"
+        # Test unsupported filetype error
+        with self.assertRaises(AttributeError):
+            read_series(filepath, "txt")
