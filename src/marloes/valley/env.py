@@ -16,16 +16,17 @@ class EnergyValley:
         # handle other config parameters
 
     def add_agent(self, config: dict):
-        if config["type"] == "battery":
-            agent = BatteryAgent(config)
-        if config["type"] == "electrolyser":
-            agent = ElectrolyserAgent(config)
-        if config["type"] == "demand":
-            agent = DemandAgent(config)
-        if config["type"] == "solar":
-            agent = SolarAgent(config)
-        if config["type"] == "wind":
-            agent = WindAgent(config)
+        match config["type"]:
+            case "battery":
+                agent = BatteryAgent(config)
+            case "electrolyser":
+                agent = ElectrolyserAgent(config)
+            case "demand":
+                agent = DemandAgent(config)
+            case "solar":
+                agent = SolarAgent(config)
+            case "wind":
+                agent = WindAgent(config)
         self.agents.append(agent)
         # add to self.agents with necessary priorities, edges or constraints
 
