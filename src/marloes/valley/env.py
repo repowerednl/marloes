@@ -1,5 +1,5 @@
 """
-Environment that holds all necessary information for the Simulation, called EnergyHub (popular name, can change it later)
+Environment that holds all necessary information for the Simulation, called EnergyValley
 """
 from agents.battery import BatteryAgent
 from agents.electrolyser import ElectrolyserAgent
@@ -8,8 +8,7 @@ from agents.solar import SolarAgent
 from agents.wind import WindAgent
 
 
-# TODO: Maybe change this to EnergyValley?
-class EnergyHub:
+class EnergyValley:
     def __init__(self, config: dict):
         self.algorithm = config["algorithm"]
         self.agents = []
