@@ -51,6 +51,9 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# local vscode
+.vscode/
+
 # Translations
 *.mo
 *.pot

@@ -12,25 +12,24 @@ from marloes.agents.wind import WindAgent
 
 class EnergyValley:
     def __init__(self, config: dict):
-        self.algorithm = config["algorithm"]
         self.agents = []
         [self.add_agent(agent_config) for agent_config in config["agents"]]
-        # handle other config parameters
+        # TODO: handle other config parameters, include in testing
 
-    def add_agent(self, config: dict):
+    def add_agent(self, agent_config: dict):
         # Start time is fixed at 2025-01-01
         start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
-        match config["type"]:
+        match agent_config.pop("type"):
             case "battery":
-                agent = BatteryAgent(config, start_time)
+                agent = BatteryAgent(agent_config, start_time)
             case "electrolyser":
-                agent = ElectrolyserAgent(config, start_time)
+                agent = ElectrolyserAgent(agent_config, start_time)
             case "demand":
-                agent = DemandAgent(config, start_time)
+                agent = DemandAgent(agent_config, start_time)
             case "solar":
-                agent = SolarAgent(config, start_time)
+                agent = SolarAgent(agent_config, start_time)
             case "wind":
-                agent = WindAgent(config, start_time)
+                agent = WindAgent(agent_config, start_time)
         self.agents.append(agent)
         # add to self.agents with necessary priorities, edges or constraints
 
@@ -41,6 +40,13 @@ class EnergyValley:
     def _calculate_reward(self):
         """Function to calculate the reward"""
         pass
+
+    def reset(self):
+        """
+        Function should return the initial observation.
+        This environment is continuous, no start/end or terminal state.
+        """
+        return self._combine_states()
 
     def step(self, actions: list):
         """Function should return the observation, reward, done, info"""
