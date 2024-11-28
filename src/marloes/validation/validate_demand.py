@@ -11,7 +11,7 @@ def validate_demand(config: dict) -> str:
         raise ValueError("Error: 'profile' must be a string")
 
     # Check if scale is a positive float
-    if not isinstance(config["scale"], float) or config["scale"] <= 0:
+    if config["scale"] <= 0:
         raise ValueError("Error: 'scale' must be a positive float")
 
     return "Demand configuration is valid"

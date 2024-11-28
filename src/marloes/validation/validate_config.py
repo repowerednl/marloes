@@ -1,5 +1,7 @@
 # imports
-from marloes.validation import validate_battery, validate_demand, validate_solar
+from marloes.validation.validate_battery import validate_battery
+from marloes.validation.validate_solar import validate_solar
+from marloes.validation.validate_demand import validate_demand
 
 
 def validate_config(config: dict) -> str:

@@ -11,11 +11,11 @@ def validate_solar(config: dict) -> str:
         raise ValueError("Error: 'orientation' must be a string")
 
     # Check if DC is a positive float
-    if not isinstance(config["DC"], float) or config["DC"] <= 0:
+    if config["DC"] <= 0:
         raise ValueError("Error: 'DC' must be a positive float")
 
     # Check if AC is a positive float
-    if not isinstance(config["AC"], float) or config["AC"] <= 0:
+    if config["AC"] <= 0:
         raise ValueError("Error: 'AC' must be a positive float")
 
     return "Solar configuration is valid"

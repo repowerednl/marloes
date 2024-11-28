@@ -29,15 +29,9 @@
             "max_power_in": 1000
         },
         {
-            "type": "electrolyser",
-            "conversion_efficiency": 0.85,
-            "max_power_in": 3000,
-            "min_power_in": 300,
-            "slew_rate_up": 10,
-            "slew_rate_down": 10,
-            "startup_time": 15,
-            "anode_pressure": 30,
-            "storage_pressure": 200
+            "type": "battery",
+            "energy_capacity": 1000,
+            "max_power_in": 750
         }
     ]
 }
