@@ -9,23 +9,30 @@ from marloes.agents.demand import DemandAgent
 
 CONFIG = {
     "name": "DemandOne",
+    "profile": "Farm",
+    "scale": 1,
     "max_power_in": 10.0,
     "constant_demand": 5.0,
-    "data_source": None,
-    "series": None,
     "curtailable_by_solver": True,
-    "upward_dispatchable": False
+    "upward_dispatchable": False,
 }
+
 
 @freeze_time("2023-01-01 12:00:00")
 class TestDemandAgent(unittest.TestCase):
-    def setUp(self) -> None:
-        self.demand_agent = DemandAgent(start_time=datetime.now(),config=CONFIG)
-
     def test_init(self):
-        self.assertIsInstance(self.demand_agent.model, Demand)
-        self.assertEqual(self.demand_agent.model.name, "DemandOne")
-        self.assertEqual(self.demand_agent.model.max_power_in, 10.0)
-        self.assertIsInstance(self.demand_agent.model.data_source, DummyDataSource)
-        self.assertEqual(self.demand_agent.model.data_source.value, 5.0)
+        demand_agent = DemandAgent(start_time=datetime.now(), config=CONFIG)
+        self.assertIsInstance(demand_agent.asset, Demand)
+        self.assertEqual(demand_agent.asset.name, "DemandOne")
+        self.assertEqual(demand_agent.asset.max_power_in, 10.0)
+        self.assertIsInstance(demand_agent.asset.data_source, DummyDataSource)
+        self.assertEqual(demand_agent.asset.data_source.value, 5.0)
 
+    def test_partial_init(self):
+        partial_config = {
+            "profile": "Farm",
+        }
+        demand_agent = DemandAgent(start_time=datetime.now(), config=partial_config)
+        self.assertIsInstance(demand_agent.asset, Demand)
+        self.assertEqual(demand_agent.asset.name, "Demand")
+        self.assertFalse(demand_agent.asset.curtailable_by_solver)

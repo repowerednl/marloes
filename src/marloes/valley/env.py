@@ -1,11 +1,13 @@
 """
 Environment that holds all necessary information for the Simulation, called EnergyValley
 """
-from agents.battery import BatteryAgent
-from agents.electrolyser import ElectrolyserAgent
-from agents.demand import DemandAgent
-from agents.solar import SolarAgent
-from agents.wind import WindAgent
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from marloes.agents.battery import BatteryAgent
+from marloes.agents.electrolyser import ElectrolyserAgent
+from marloes.agents.demand import DemandAgent
+from marloes.agents.solar import SolarAgent
+from marloes.agents.wind import WindAgent
 
 
 class EnergyValley:
@@ -16,16 +18,19 @@ class EnergyValley:
         # handle other config parameters
 
     def add_agent(self, config: dict):
-        if config["type"] == "battery":
-            agent = BatteryAgent(config)
-        if config["type"] == "electrolyser":
-            agent = ElectrolyserAgent(config)
-        if config["type"] == "demand":
-            agent = DemandAgent(config)
-        if config["type"] == "solar":
-            agent = SolarAgent(config)
-        if config["type"] == "wind":
-            agent = WindAgent(config)
+        # Start time is fixed at 2025-01-01
+        start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        match config["type"]:
+            case "battery":
+                agent = BatteryAgent(config, start_time)
+            case "electrolyser":
+                agent = ElectrolyserAgent(config, start_time)
+            case "demand":
+                agent = DemandAgent(config, start_time)
+            case "solar":
+                agent = SolarAgent(config, start_time)
+            case "wind":
+                agent = WindAgent(config, start_time)
         self.agents.append(agent)
         # add to self.agents with necessary priorities, edges or constraints
 

@@ -9,6 +9,9 @@ def read_series(
     """
     Reads a Parquet file and returns it as a minutely kW series.
     """
+    # Adjust filepath for root
+    filepath = f"src/marloes/data/profiles/{filepath}"
+
     # Read in the file given the filetype
     read_function = getattr(pd, f"read_{filetype}")
     df = read_function(filepath)
@@ -46,7 +49,7 @@ def convert_kwh_to_minutely_kw(df: pd.DataFrame) -> pd.DataFrame:
     # Make sure the index is complete until :59
     start = df.index[0]
     end = df.index[-1] + time_step - pd.Timedelta(minutes=1)
-    full_index = pd.date_range(start=start, end=end, freq="1T")
+    full_index = pd.date_range(start=start, end=end, freq="1min")
     df_minutely_kw = df_kw.reindex(full_index, method="ffill")
 
     return df_minutely_kw
