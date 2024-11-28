@@ -70,7 +70,7 @@ class TestShiftSeries(unittest.TestCase):
 
 class TestReadSeries(unittest.TestCase):
     def setUp(self):
-        self.filepath = "src/marloes/data/profiles/Solar_EW.parquet"
+        self.filepath = "Solar_EW.parquet"
 
     def test_read_series(self):
         series = read_series(self.filepath)
@@ -93,7 +93,7 @@ class TestReadSeries(unittest.TestCase):
             read_series(self.filepath, filetype="txt")
 
     def test_convert_kwh_to_minutely_kw(self):
-        df = pd.read_parquet(self.filepath)
+        df = pd.read_parquet(f"src/marloes/data/profiles/{self.filepath}")
 
         # Manually convert the minutely kW data to kWh
         time_step_seconds = 60
@@ -107,7 +107,7 @@ class TestReadSeries(unittest.TestCase):
         )
 
     def test_convert_kw_to_kwh(self):
-        df = pd.read_parquet(self.filepath)
+        df = pd.read_parquet(f"src/marloes/data/profiles/{self.filepath}")
 
         # Convert the minutely kW to kWh using the function
         df_converted = convert_kw_to_kwh(df)
