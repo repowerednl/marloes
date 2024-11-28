@@ -13,7 +13,7 @@ class Simulation:
 
     def __init__(self, config: dict, save_energy_flows: bool = False):
         algorithm = config.pop("algorithm")
-        self.epochs = config.pop("epoch")
+        self.epochs = config.pop("epochs")
         self.valley = EnergyValley(config)
         self.saving = save_energy_flows
         # TODO: initialize the EnergyFlows class/model if saving is True
