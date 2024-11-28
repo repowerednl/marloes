@@ -1,19 +1,18 @@
 """
 Environment that holds all necessary information for the Simulation, called EnergyValley
 """
-from agents.battery import BatteryAgent
-from agents.electrolyser import ElectrolyserAgent
-from agents.demand import DemandAgent
-from agents.solar import SolarAgent
-from agents.wind import WindAgent
+from marloes.agents.battery import BatteryAgent
+from marloes.agents.electrolyser import ElectrolyserAgent
+from marloes.agents.demand import DemandAgent
+from marloes.agents.solar import SolarAgent
+from marloes.agents.wind import WindAgent
 
 
 class EnergyValley:
     def __init__(self, config: dict):
-        self.algorithm = config["algorithm"]
         self.agents = []
         [self.add_agent(agent_config) for agent_config in config["agents"]]
-        # handle other config parameters
+        # TODO: handle other config parameters, include in testing
 
     def add_agent(self, config: dict):
         if config["type"] == "battery":
@@ -36,6 +35,13 @@ class EnergyValley:
     def _calculate_reward(self):
         """Function to calculate the reward"""
         pass
+
+    def reset(self):
+        """
+        Function should return the initial observation.
+        This environment is continuous, no start/end or terminal state.
+        """
+        return self._combine_states()
 
     def step(self, actions: list):
         """Function should return the observation, reward, done, info"""
