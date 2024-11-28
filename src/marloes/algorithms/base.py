@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import Enum, auto
 
 
 class AlgorithmType(Enum):
-    MODEL_BASED = "model_based"
-    MODEL_FREE = "model_free"
-    SOLVER = "solver"
+    MODEL_BASED = auto()
+    MODEL_FREE = auto()
+    SOLVER = auto()
 
 
 class Algorithm(ABC):
