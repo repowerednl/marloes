@@ -1,4 +1,5 @@
 """ Battery agent with functionality from Repowered's Simon """
+
 from datetime import datetime
 from functools import partial
 from simon.assets.battery import Battery
@@ -13,10 +14,6 @@ class BatteryAgent(Agent):
     @classmethod
     def get_default_config(cls, config) -> dict:
         """Default configuration for a Battery."""
-        if not config.get("max_power_in") or not config.get("energy_capacity"):
-            raise ValueError(
-                "Battery configuration minimally requires 'max_power_in' and 'energy_capacity'"
-            )
         degradation_function = partial(
             battery_degradation_function,
             capacity=config["energy_capacity"],
@@ -25,13 +22,13 @@ class BatteryAgent(Agent):
         )
         return {
             "name": "Battery",
-            "max_power_in": config["max_power_in"],
-            "max_power_out": config["max_power_in"],
+            "max_power_in": config["power"],
+            "max_power_out": config["power"],
             "max_state_of_charge": 0.95,  # Assumption: 5% from max and min
             "min_state_of_charge": 0.05,
             "energy_capacity": config["energy_capacity"],
-            "ramp_up_rate": config["max_power_in"],  # instant
-            "ramp_down_rate": config["max_power_in"],  # instant
+            "ramp_up_rate": config["power"],  # instant
+            "ramp_down_rate": config["power"],  # instant
             "efficiency": 0.85,
             "degradation_function": degradation_function,
         }
