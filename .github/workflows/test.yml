@@ -3,12 +3,16 @@ name: Run Tests
 on:
   pull_request:
     branches:
-      - dev  # Trigger only on PRs targeting the dev branch
+      - dev
       - main
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: [3.11]
 
     steps:
       # Step 1: Checkout the code
@@ -23,21 +27,28 @@ jobs:
 
       # Step 3: Install Poetry
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
 
-      # Step 4: Configure Poetry environment
+      # Step 4: Configure Poetry
       - name: Configure Poetry
         run: |
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
+          poetry config repositories.repowered ${{ secrets.PRIVATE_PYPI_URL}}
+          poetry config http-basic.repowered ${{ secrets.PRIVATE_PYPI_USER }} ${{ secrets.PRIVATE_PYPI_PASSWORD}}
+
 
       # Step 5: Install dependencies
       - name: Install Dependencies
-        run: |
-          poetry install --no-root
+        run: poetry install --no-interaction --no-root
 
-      # Step 6: Run Pytest
+      # Step 6: Install root
+      - name: Install root
+        run: poetry install --no-interaction
+
+      # Step 7: Run Pytest
       - name: Run Pytest
         run: |
-          poetry run pytest --junitxml=pytest-results.xml
+          poetry run coverage run --source='.'  -m pytest
