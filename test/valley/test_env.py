@@ -2,6 +2,8 @@ import unittest
 from unittest.mock import patch
 from freezegun import freeze_time
 import pandas as pd
+
+from simon.solver import Model
 from marloes.agents.demand import DemandAgent
 from marloes.agents.solar import SolarAgent
 from marloes.agents.battery import BatteryAgent
@@ -87,3 +89,63 @@ class TestEnergyValleyEnv(unittest.TestCase):
         self.assertEqual(grid.asset.name, "Grid_One")
         self.assertEqual(grid.asset.max_power_in, 1000)
         self.assertEqual(grid.asset.max_power_out, float("inf"))
+
+    def test__get_targets(self):
+        """
+        Test the _get_targets method
+        """
+        demand_agent = self.env.agents[0]
+        solar_agent = self.env.agents[1]
+        battery_agent = self.env.agents[2]
+        grid_agent = self.env.agents[3]
+        # Test the targets of the demand agent
+        self.assertEqual(
+            self.env._get_targets(demand_agent),
+            [
+                (solar_agent.asset, 10),
+                (battery_agent.asset, 20),
+                (grid_agent.asset, 1),
+            ],
+        )
+        # Test the targets of the solar agent
+        self.assertEqual(
+            self.env._get_targets(solar_agent),
+            [
+                (demand_agent.asset, 30),
+                (battery_agent.asset, 20),
+                (grid_agent.asset, 1),
+            ],
+        )
+        # Test the targets of the battery agent
+        self.assertEqual(
+            self.env._get_targets(battery_agent),
+            [
+                (demand_agent.asset, 30),
+                (solar_agent.asset, 10),
+                (grid_agent.asset, 1),
+            ],
+        )
+        # Test the targets of the grid agent
+        self.assertEqual(
+            self.env._get_targets(grid_agent),
+            [
+                (demand_agent.asset, 30),
+                (solar_agent.asset, 10),
+                (battery_agent.asset, 20),
+            ],
+        )
+
+    def test_model_initialization(self):
+        """
+        Test if the model is initialized correctly
+        """
+        self.assertIsInstance(self.env.model, Model)
+        self.assertEqual(len(self.env.model.graph.nodes), 4)
+        self.assertEqual(len(self.env.model.graph.edges), 3)
+        # check if the agents are in the model
+        for agent in self.env.agents:
+            self.assertIn(agent.asset, self.env.model.graph.nodes)
+        # check if the connections are in the model
+        for agent in self.env.agents:
+            for target, _ in self.env._get_targets(agent):
+                self.assertIn((agent.asset, target), self.env.model.graph.edges)

@@ -3,6 +3,7 @@ Environment that holds all necessary information for the Simulation, called Ener
 """
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from simon.solver import Model
 from marloes.agents.battery import BatteryAgent
 from marloes.agents.electrolyser import ElectrolyserAgent
 from marloes.agents.demand import DemandAgent
@@ -20,8 +21,9 @@ class EnergyValley:
         self.agents.append(
             GridAgent(config=config.get("grid", {}), start_time=self.start_time)
         )
-
         # TODO: handle other config parameters, include in testing
+
+        self._initialize_model()  # Model has a graph (nx.DiGraph) with assets as nodes and edges as connections
 
     def add_agent(self, agent_config: dict):
         # Start time is fixed at 2025-01-01
@@ -37,7 +39,39 @@ class EnergyValley:
             case "wind":
                 agent = WindAgent(agent_config, self.start_time)
         self.agents.append(agent)
-        # add to self.agents with necessary priorities, edges or constraints
+
+    def _get_targets(self, agent):
+        """
+        Returns the targets of the agent (all agents except itself) with a priority
+        A list of Tuple(Asset, Priority) with:
+            - Demand Agents of priority 30
+            - Flexible Agents of priority 20
+            - Supply Agents of priority 10
+            - Grid Agent of priority 1
+        """
+        priority_map = {
+            DemandAgent: 30,
+            BatteryAgent: 20,
+            ElectrolyserAgent: 20,
+            SolarAgent: 10,
+            WindAgent: 10,
+            GridAgent: 1,
+        }
+        return [
+            (other_agent.asset, priority_map[type(other_agent)])
+            for other_agent in self.agents
+            if other_agent != agent
+        ]
+
+    def _initialize_model(self):
+        """
+        Function to initialize the Model imported from Simon.
+        It adds all agents to the model, and dynamically adds priorities to agent connections.
+        """
+        self.model = Model()
+        # add agents to the model
+        for agent in self.agents:
+            self.model.add_asset(agent.asset, self._get_targets(agent))
 
     def _combine_states(self):
         """Function to combine all agents states into one observation"""
@@ -56,10 +90,18 @@ class EnergyValley:
 
     def step(self, actions: list):
         """Function should return the observation, reward, done, info"""
-        # step the agents
+        # solve the model
+        self.model.solve()
+        # extract the relevant results from the model
+        self._extract_results()
+        # step the model
+        self.model.step()
+
+        # model.step() steps every asset in self.graph.nodes. We step every agent manually instead:
         [
             agent.act(action) for agent, action in zip(self.agents, actions)
         ]  # function is called act now, can be renamed
+
         # gather observations
         # either combine every agents state into one observation or a list of observations for each agent
         observation = self._combine_states()
@@ -70,3 +112,7 @@ class EnergyValley:
         # info for debugging purposes
         info = {}
         return observation, reward, done, info
+
+    def _extract_results(self):
+        """Function to extract the relevant results from the model"""
+        pass
