@@ -28,8 +28,7 @@ def get_new_config():  # function to return a new configuration, pop caused issu
                 "type": "battery",
                 "energy_capacity": 1000,
                 "efficiency": 0.9,
-                "max_power_in": 100,
-                "max_power_out": 100,
+                "power": 100,
             },
         ],
         # no grid agent should default to name="Grid", max_power_in and max_power_out should be inf
