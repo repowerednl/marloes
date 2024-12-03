@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from functools import partial
+import numpy as np
 from simon.assets.battery import Battery
 from simon.data.battery_data import BatteryState
 from .base import Agent
@@ -32,6 +33,22 @@ class BatteryAgent(Agent):
             "efficiency": 0.85,
             "degradation_function": degradation_function,
         }
+
+    @staticmethod
+    def merge_configs(default_config: dict, config: dict) -> dict:
+        """Merge the default configuration with user-provided values."""
+        merged_config = default_config.copy()  # Start with defaults
+        merged_config.update(config)  # Override with provided values
+
+        # Enforce constraints with regards to the grid
+        merged_config["max_power_in"] = min(
+            merged_config.get("max_power_in", np.inf), merged_config["power"]
+        )
+        merged_config["max_power_out"] = min(
+            merged_config.get("max_power_out", np.inf), merged_config.pop("power")
+        )
+
+        return merged_config
 
     def act(self):
         pass
