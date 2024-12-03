@@ -6,7 +6,7 @@ import gui.startup as startup
 
 
 def load_config():
-    with open("configs/config.yaml", "r") as file:
+    with open("configs/default_config.yaml", "r") as file:
         config = yaml.safe_load(file)
     return config
 
@@ -23,7 +23,7 @@ def main():
     if args.default:
         config = load_config()
         for key, value in config.items():
-            print(f"{key}: {value}")
+            print(f"\n{key}: {value}")
         # TODO: run the experiment with the configuration
     else:
         app = QApplication(sys.argv)
