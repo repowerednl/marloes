@@ -17,7 +17,7 @@ class WindAgent(Agent):
         """Each subclass must define its default configuration."""
         pass
 
-    def act(self):
+    def act(self, action: float):
         pass
 
     def observe(self):

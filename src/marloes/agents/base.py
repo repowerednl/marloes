@@ -33,7 +33,7 @@ class Agent(ABC):
         return merged_config
 
     @abstractmethod
-    def act(self):
+    def act(self, action: float):
         pass
 
     @abstractmethod

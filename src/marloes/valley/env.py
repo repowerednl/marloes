@@ -15,9 +15,11 @@ from marloes.agents.grid import GridAgent
 class EnergyValley:
     def __init__(self, config: dict):
         self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        self.time_step = 15 * 60  # 15 minutes in seconds
         self._initialize_agents(config)
-        # TODO: handle other config parameters, include in testing
         self._initialize_model()  # Model has a graph (nx.DiGraph) with assets as nodes and edges as connections
+
+        # TODO: handle other config parameters, include in testing
 
     def add_agent(self, agent_config: dict):
         # Start time is fixed at 2025-01-01
@@ -97,17 +99,18 @@ class EnergyValley:
 
     def step(self, actions: list):
         """Function should return the observation, reward, done, info"""
-        # solve the model
-        self.model.solve()
-        # extract the relevant results from the model
-        self._extract_results()
-        # step the model
-        self.model.step()
 
-        # model.step() steps every asset in self.graph.nodes. We step every agent manually instead:
+        # set setpoints before solving
         [
             agent.act(action) for agent, action in zip(self.agents, actions)
         ]  # function is called act now, can be renamed
+
+        # solve the model
+        self.model.solve(self.time_step)
+        # extract the relevant results from the model
+        self._extract_results()
+        # step the model
+        self.model.step(self.time_step)
 
         # gather observations
         # either combine every agents state into one observation or a list of observations for each agent

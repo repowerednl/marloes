@@ -43,7 +43,7 @@ class SolarAgent(Agent):
             "upward_dispatchable": False,
         }
 
-    def act(self):
+    def act(self, action: float):
         pass
 
     def observe(self):

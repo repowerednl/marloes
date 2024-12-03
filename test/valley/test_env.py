@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import unittest
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -44,9 +44,8 @@ class TestEnergyValleyEnv(unittest.TestCase):
     @patch("marloes.agents.solar.read_series")
     @patch("marloes.agents.demand.read_series")
     def setUp(self, mock_demand, mock_solar) -> None:
-        mock_series = pd.Series(
-            [100], index=[datetime(2025, 1, 1, 0, 0, tzinfo=ZoneInfo("UTC"))]
-        )
+        self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        mock_series = pd.Series([100], index=[self.start_time])
         mock_demand.return_value = mock_series
         mock_solar.return_value = mock_series
         self.env = EnergyValley(config=get_new_config())
@@ -154,3 +153,16 @@ class TestEnergyValleyEnv(unittest.TestCase):
         for agent in self.env.agents:
             for target, _ in self.env._get_targets(agent):
                 self.assertIn((agent.asset, target), self.env.model.graph.edges)
+
+    def test_step(self):
+        """
+        Test the step method
+        """
+        # dummy actions
+        actions = [0, 0, 0, 0]  # For now the Grid also has an action
+        observation, reward, done, info = self.env.step(actions=actions)
+        # and if the state time is updated with self.env.time_step
+        self.assertEqual(
+            self.demand_agent.asset.state.time,
+            self.start_time + timedelta(seconds=self.env.time_step),
+        )

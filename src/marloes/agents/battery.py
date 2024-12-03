@@ -36,7 +36,7 @@ class BatteryAgent(Agent):
             "degradation_function": degradation_function,
         }
 
-    def act(self):
+    def act(self, action: float):
         pass
 
     def observe(self):
