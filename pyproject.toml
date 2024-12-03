@@ -35,6 +35,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 pythonpath = ["src/marloes"]
+markers = [
+    "slow: marks tests as slow (use --runslow to include)"
+]
 
 [virtualenvs]
 in-project = true

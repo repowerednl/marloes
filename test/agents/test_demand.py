@@ -1,6 +1,7 @@
 import unittest
 from freezegun import freeze_time
 from datetime import datetime, timedelta
+import pytest
 from simon.assets.demand import Demand
 from simon.datasource.data_source import (
     DummyDataSource,
@@ -20,6 +21,7 @@ CONFIG = {
 
 @freeze_time("2023-01-01 12:00:00")
 class TestDemandAgent(unittest.TestCase):
+    @pytest.mark.slow
     def test_init(self):
         demand_agent = DemandAgent(start_time=datetime.now(), config=CONFIG)
         self.assertIsInstance(demand_agent.asset, Demand)
@@ -28,6 +30,7 @@ class TestDemandAgent(unittest.TestCase):
         self.assertIsInstance(demand_agent.asset.data_source, DummyDataSource)
         self.assertEqual(demand_agent.asset.data_source.value, 5.0)
 
+    @pytest.mark.slow
     def test_partial_init(self):
         partial_config = {
             "profile": "Farm",

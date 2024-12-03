@@ -3,6 +3,7 @@ from unittest.mock import patch
 from freezegun import freeze_time
 from datetime import datetime
 import numpy as np
+import pytest
 from simon.assets.supply import Supply
 from simon.datasource.data_source import (
     DummyDataSource,
@@ -21,6 +22,7 @@ CONFIG = {
 
 @freeze_time("2023-01-01 12:00:00")
 class TestSolarAgent(unittest.TestCase):
+    @pytest.mark.slow
     @patch("simon.assets.supply.Supply.load_default_state")
     def test_init(self, mock_default_state):
         solar_agent = SolarAgent(start_time=datetime.now(), config=CONFIG)
@@ -30,6 +32,7 @@ class TestSolarAgent(unittest.TestCase):
         self.assertFalse(solar_agent.asset.curtailable_by_solver)
         self.assertFalse(solar_agent.asset.upward_dispatchable)
 
+    @pytest.mark.slow
     @patch("simon.assets.supply.Supply.load_default_state")
     def test_partial_init(self, mock_default_state):
         partial_config = {

@@ -3,6 +3,8 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 from datetime import datetime
 
+import pytest
+
 from marloes.data.util import (
     _contains_leap_day,
     convert_kw_to_kwh,
@@ -72,6 +74,7 @@ class TestReadSeries(unittest.TestCase):
     def setUp(self):
         self.filepath = "Solar_EW.parquet"
 
+    @pytest.mark.slow
     def test_read_series(self):
         series = read_series(self.filepath)
 
@@ -93,7 +96,15 @@ class TestReadSeries(unittest.TestCase):
             read_series(self.filepath, filetype="txt")
 
     def test_convert_kwh_to_minutely_kw(self):
-        df = pd.read_parquet(f"src/marloes/data/profiles/{self.filepath}")
+        # Make a simple DataFrame with minutely kWh data
+        df = pd.DataFrame(
+            {
+                "value": [1.0, 2.0, 3.0, 4.0, 5.0],
+            },
+            index=pd.date_range(
+                "2025-01-01", periods=5, freq="min", tz=ZoneInfo("UTC")
+            ),
+        )
 
         # Manually convert the minutely kW data to kWh
         time_step_seconds = 60
@@ -107,7 +118,15 @@ class TestReadSeries(unittest.TestCase):
         )
 
     def test_convert_kw_to_kwh(self):
-        df = pd.read_parquet(f"src/marloes/data/profiles/{self.filepath}")
+        # Make a simple DataFrame with minutely kW data
+        df = pd.DataFrame(
+            {
+                "value": [1.0, 2.0, 3.0, 4.0, 5.0],
+            },
+            index=pd.date_range(
+                "2025-01-01", periods=5, freq="min", tz=ZoneInfo("UTC")
+            ),
+        )
 
         # Convert the minutely kW to kWh using the function
         df_converted = convert_kw_to_kwh(df)
