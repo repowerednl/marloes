@@ -6,8 +6,9 @@ from marloes.agents.battery import BatteryAgent
 
 CONFIG = {
     "name": "BatteryOne",
-    "max_power_in": 50.0,
-    "max_power_out": 50.0,
+    "power": 50.0,
+    "max_power_in": 30.0,
+    "max_power_out": 30.0,
     "max_state_of_charge": 1.0,
     "min_state_of_charge": 0.0,
     "energy_capacity": 100.0,
@@ -44,7 +45,7 @@ class TestBatteryAgent(unittest.TestCase):
 
     def test_partial_init(self):
         partial_config = {
-            "max_power_in": 50.0,
+            "power": 50.0,
             "energy_capacity": 100.0,
         }
         self.battery_agent = BatteryAgent(
