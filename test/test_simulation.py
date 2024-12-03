@@ -32,6 +32,7 @@ def get_new_config():  # function to return a new configuration, pop caused issu
                 "max_power_out": 100,
             },
         ],
+        # no grid agent should default to name="Grid", max_power_in and max_power_out should be inf
     }
 
 
@@ -47,10 +48,30 @@ class TestSimulation(unittest.TestCase):
     def test_init(self):
         # no saving
         self.assertEqual(self.sim.epochs, 100)
-        self.assertEqual(len(self.sim.valley.agents), 3)
+        self.assertEqual(len(self.sim.valley.agents), 4)
         self.assertFalse(self.sim.saving)
         self.assertIsNone(self.sim.flows, None)
         self.assertEqual(self.sim.algorithm, AlgorithmType.MODEL_BASED)
         # saving
         self.assertTrue(self.sim_saving.saving)
         self.assertIsInstance(self.sim_saving.flows, list)
+
+    def test_agent_types(self):
+        # check if the agents are of the right type
+        self.assertEqual(len(self.sim.valley.agents), 4)
+        self.assertEqual(len(self.sim_saving.valley.agents), 4)
+        self.assertEqual(
+            [agent.__class__.__name__ for agent in self.sim.valley.agents],
+            ["DemandAgent", "SolarAgent", "BatteryAgent", "GridAgent"],
+        )
+        self.assertEqual(
+            [agent.__class__.__name__ for agent in self.sim_saving.valley.agents],
+            ["DemandAgent", "SolarAgent", "BatteryAgent", "GridAgent"],
+        )
+
+    def test_grid(self):
+        # check if the grid agent is correctly initialized (default)
+        grid = self.sim.valley.agents[-1]
+        self.assertEqual(grid.asset.name, "Grid")
+        self.assertEqual(grid.asset.max_power_in, float("inf"))
+        self.assertEqual(grid.asset.max_power_out, float("inf"))
