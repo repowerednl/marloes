@@ -2,7 +2,6 @@ from datetime import datetime
 import unittest
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
-from freezegun import freeze_time
 import pandas as pd
 from simon.solver import Model
 from marloes.agents.demand import DemandAgent
@@ -51,93 +50,89 @@ class TestEnergyValleyEnv(unittest.TestCase):
         mock_demand.return_value = mock_series
         mock_solar.return_value = mock_series
         self.env = EnergyValley(config=get_new_config())
+        self.demand_agent = self.env.agents[0]
+        self.solar_agent = self.env.agents[1]
+        self.battery_agent = self.env.agents[2]
+        self.grid_agent = self.env.agents[3]
 
-    def test_init(self):
+    def test_agent_initialization(self):
         self.assertEqual(len(self.env.agents), 4)  # 3 agents + 1 grid
         # check if the agents are of the right type
-        self.assertIsInstance(self.env.agents[0], DemandAgent)
-        self.assertIsInstance(self.env.agents[1], SolarAgent)
-        self.assertIsInstance(self.env.agents[2], BatteryAgent)
-        self.assertIsInstance(self.env.agents[3], GridAgent)
+        self.assertIsInstance(self.demand_agent, DemandAgent)
+        self.assertIsInstance(self.solar_agent, SolarAgent)
+        self.assertIsInstance(self.battery_agent, BatteryAgent)
+        self.assertIsInstance(self.grid_agent, GridAgent)
         # check start time of each agent, should be equal to each other
         self.assertEqual(
-            self.env.agents[0].asset.state.time, self.env.agents[1].asset.state.time
+            self.demand_agent.asset.state.time, self.solar_agent.asset.state.time
         )
         self.assertEqual(
-            self.env.agents[0].asset.state.time, self.env.agents[2].asset.state.time
+            self.demand_agent.asset.state.time, self.battery_agent.asset.state.time
         )
         self.assertEqual(
-            self.env.agents[0].asset.state.time, self.env.agents[3].asset.state.time
+            self.demand_agent.asset.state.time, self.grid_agent.asset.state.time
         )
 
     def test_agent_configurations(self):
         """
         Test the configurations of the agents
         """
-        demand_agent = self.env.agents[0]
-        solar_agent = self.env.agents[1]
-        battery_agent = self.env.agents[2]
         # Demand
-        self.assertEqual(demand_agent.asset.name, "Demand")
-        self.assertEqual(demand_agent.asset.max_power_in, float("inf"))
+        self.assertEqual(self.demand_agent.asset.name, "Demand")
+        self.assertEqual(self.demand_agent.asset.max_power_in, float("inf"))
         # Solar
-        self.assertEqual(solar_agent.asset.name, "Solar")
-        self.assertEqual(solar_agent.asset.max_power_out, float("inf"))
+        self.assertEqual(self.solar_agent.asset.name, "Solar")
+        self.assertEqual(self.solar_agent.asset.max_power_out, float("inf"))
         # Battery
-        self.assertEqual(battery_agent.asset.name, "Battery")
-        self.assertEqual(battery_agent.asset.energy_capacity, 1000)
+        self.assertEqual(self.battery_agent.asset.name, "Battery")
+        self.assertEqual(self.battery_agent.asset.energy_capacity, 1000)
 
     def test_grid_configuration(self):
         """
         Separate test for the grid configuration
         """
-        grid = self.env.agents[3]
-        self.assertEqual(grid.asset.name, "Grid_One")
-        self.assertEqual(grid.asset.max_power_in, 1000)
-        self.assertEqual(grid.asset.max_power_out, float("inf"))
+        self.assertEqual(self.grid_agent.asset.name, "Grid_One")
+        self.assertEqual(self.grid_agent.asset.max_power_in, 1000)
+        self.assertEqual(self.grid_agent.asset.max_power_out, float("inf"))
 
     def test__get_targets(self):
         """
         Test the _get_targets method
         """
-        demand_agent = self.env.agents[0]
-        solar_agent = self.env.agents[1]
-        battery_agent = self.env.agents[2]
-        grid_agent = self.env.agents[3]
         # Test the targets of the demand agent
         self.assertEqual(
-            self.env._get_targets(demand_agent),
+            self.env._get_targets(self.demand_agent),
             [
-                (solar_agent.asset, 10),
-                (battery_agent.asset, 20),
-                (grid_agent.asset, 1),
+                (self.solar_agent.asset, 10),
+                (self.battery_agent.asset, 20),
+                (self.grid_agent.asset, 1),
             ],
         )
         # Test the targets of the solar agent
         self.assertEqual(
-            self.env._get_targets(solar_agent),
+            self.env._get_targets(self.solar_agent),
             [
-                (demand_agent.asset, 30),
-                (battery_agent.asset, 20),
-                (grid_agent.asset, 1),
+                (self.demand_agent.asset, 30),
+                (self.battery_agent.asset, 20),
+                (self.grid_agent.asset, 1),
             ],
         )
         # Test the targets of the battery agent
         self.assertEqual(
-            self.env._get_targets(battery_agent),
+            self.env._get_targets(self.battery_agent),
             [
-                (demand_agent.asset, 30),
-                (solar_agent.asset, 10),
-                (grid_agent.asset, 1),
+                (self.demand_agent.asset, 30),
+                (self.solar_agent.asset, 10),
+                (self.grid_agent.asset, 1),
             ],
         )
         # Test the targets of the grid agent
         self.assertEqual(
-            self.env._get_targets(grid_agent),
+            self.env._get_targets(self.grid_agent),
             [
-                (demand_agent.asset, 30),
-                (solar_agent.asset, 10),
-                (battery_agent.asset, 20),
+                (self.demand_agent.asset, 30),
+                (self.solar_agent.asset, 10),
+                (self.battery_agent.asset, 20),
             ],
         )
 
@@ -146,8 +141,12 @@ class TestEnergyValleyEnv(unittest.TestCase):
         Test if the model is initialized correctly
         """
         self.assertIsInstance(self.env.model, Model)
-        self.assertEqual(len(self.env.model.graph.nodes), 4)
-        self.assertEqual(len(self.env.model.graph.edges), 3)
+        num_nodes = len(self.env.model.graph.nodes)
+        num_agents = len(self.env.agents)
+        self.assertEqual(num_nodes, num_agents)  # each agent is a node
+        self.assertEqual(
+            len(self.env.model.graph.edges), num_agents * (num_agents - 1)
+        )  # x agents with each (x-1) connections = x*(x-1)
         # check if the agents are in the model
         for agent in self.env.agents:
             self.assertIn(agent.asset, self.env.model.graph.nodes)

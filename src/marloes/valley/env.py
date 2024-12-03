@@ -15,14 +15,8 @@ from marloes.agents.grid import GridAgent
 class EnergyValley:
     def __init__(self, config: dict):
         self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
-        self.agents = []
-        [self.add_agent(agent_config) for agent_config in config["agents"]]
-        """Initialize the GridAgent with the given configuration, or default if not provided"""
-        self.agents.append(
-            GridAgent(config=config.get("grid", {}), start_time=self.start_time)
-        )
+        self._initialize_agents(config)
         # TODO: handle other config parameters, include in testing
-
         self._initialize_model()  # Model has a graph (nx.DiGraph) with assets as nodes and edges as connections
 
     def add_agent(self, agent_config: dict):
@@ -62,6 +56,19 @@ class EnergyValley:
             for other_agent in self.agents
             if other_agent != agent
         ]
+
+    def _initialize_agents(self, config: dict):
+        """
+        Function to initialize all agents with the given configuration.
+        Requires config with "agents" key (list of dicts), and "grid" key (dict).
+        """
+        self.agents = []
+        for agent_config in config["agents"]:
+            self.add_agent(agent_config)
+        # add the grid agent
+        self.agents.append(
+            GridAgent(config=config.get("grid", {}), start_time=self.start_time)
+        )
 
     def _initialize_model(self):
         """
