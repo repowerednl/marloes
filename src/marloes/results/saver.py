@@ -1,0 +1,2 @@
+class Saver:
+    pass
