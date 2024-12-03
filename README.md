@@ -1,7 +1,7 @@
 # marloes
 This Repowered project uses Multi-Agent Reinforcement Learning (MARL) to Optimize Energy Systems in an Energy Hub, aiming to reduce CO₂ emissions through efficient management of multiple energy commodities.
 
-# Poetry
+## Poetry
 
 To download Poetry, you can use the following command:
 
@@ -36,6 +36,26 @@ python main.py
 ```
 
 This will prompt a experiment startup screen for you to select a configuration to run a grid search, or an experiment with your personal preferences.
+
+## This project uses ADRs (Architecture Decision Records) to document choices that need justification.
+
+## Installation
+On linux:
+```
+git clone https://github.com/npryce/adr-tools.git
+cd adr-tools
+sudo make install
+```
+On mac:
+`brew install adr-tools`
+
+### How to Use
+1. ADRs are stored in `docs/adr`.
+2. Create a new ADR: `adr new "Decision Title"`.
+3. Link ADRs when one decision modifies or supersedes another:
+   - Example: `adr link 0001 0002`
+4. Review all decisions that still need justification: `grep -l "TBJ" docs/adr/*.md`
+   - You can also filter on specific names by: `grep -l "TBJ" docs/adr/*.md | xargs grep -l "[NAME]"`
 
 # Own use
 
