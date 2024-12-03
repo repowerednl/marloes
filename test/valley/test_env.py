@@ -1,7 +1,10 @@
+from datetime import datetime
 import unittest
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 from freezegun import freeze_time
 import pandas as pd
+import pytest
 from marloes.agents.demand import DemandAgent
 from marloes.agents.solar import SolarAgent
 from marloes.agents.battery import BatteryAgent
@@ -33,11 +36,16 @@ def get_new_config():  # function to return a new configuration, pop caused issu
     }
 
 
-@freeze_time("2023-01-01 12:00:00")
 class TestEnergyValleyEnv(unittest.TestCase):
-    def setUp(self) -> None:
-        with patch("marloes.data.util.read_series", return_value=pd.Series()):
-            self.env = EnergyValley(config=get_new_config())
+    @patch("marloes.agents.solar.read_series")
+    @patch("marloes.agents.demand.read_series")
+    def setUp(self, mock_demand, mock_solar) -> None:
+        mock_series = pd.Series(
+            [100], index=[datetime(2025, 1, 1, 0, 0, tzinfo=ZoneInfo("UTC"))]
+        )
+        mock_demand.return_value = mock_series
+        mock_solar.return_value = mock_series
+        self.env = EnergyValley(config=get_new_config())
 
     def test_init(self):
         self.assertEqual(len(self.env.agents), 3)
