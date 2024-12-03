@@ -8,28 +8,34 @@ from marloes.agents.electrolyser import ElectrolyserAgent
 from marloes.agents.demand import DemandAgent
 from marloes.agents.solar import SolarAgent
 from marloes.agents.wind import WindAgent
+from marloes.agents.grid import GridAgent
 
 
 class EnergyValley:
     def __init__(self, config: dict):
+        self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
         self.agents = []
         [self.add_agent(agent_config) for agent_config in config["agents"]]
+        """Initialize the GridAgent with the given configuration, or default if not provided"""
+        self.agents.append(
+            GridAgent(config=config.get("grid", {}), start_time=self.start_time)
+        )
+
         # TODO: handle other config parameters, include in testing
 
     def add_agent(self, agent_config: dict):
         # Start time is fixed at 2025-01-01
-        start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
         match agent_config.pop("type"):
             case "battery":
-                agent = BatteryAgent(agent_config, start_time)
+                agent = BatteryAgent(agent_config, self.start_time)
             case "electrolyser":
-                agent = ElectrolyserAgent(agent_config, start_time)
+                agent = ElectrolyserAgent(agent_config, self.start_time)
             case "demand":
-                agent = DemandAgent(agent_config, start_time)
+                agent = DemandAgent(agent_config, self.start_time)
             case "solar":
-                agent = SolarAgent(agent_config, start_time)
+                agent = SolarAgent(agent_config, self.start_time)
             case "wind":
-                agent = WindAgent(agent_config, start_time)
+                agent = WindAgent(agent_config, self.start_time)
         self.agents.append(agent)
         # add to self.agents with necessary priorities, edges or constraints
 
