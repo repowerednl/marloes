@@ -1,6 +1,10 @@
 name: Run Tests
 
 on:
+  push:
+    branches:
+      - dev
+      - main
   pull_request:
     branches:
       - dev
@@ -38,7 +42,6 @@ jobs:
         run: |
           poetry config repositories.repowered ${{ secrets.PRIVATE_PYPI_URL}}
           poetry config http-basic.repowered ${{ secrets.PRIVATE_PYPI_USER }} ${{ secrets.PRIVATE_PYPI_PASSWORD}}
-
 
       # Step 5: Install dependencies
       - name: Install Dependencies
