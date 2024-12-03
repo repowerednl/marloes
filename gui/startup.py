@@ -14,7 +14,7 @@ from .loading_screen import LoadingScreen
 from .img import LogoWindow
 from .errors import ErrorScreen
 from src.marloes.validation.validate_config import validate_config
-import json  # Import for handling JSON files
+import yaml  # Import for handling YAML files
 
 
 class ExperimentSetupApp(QWidget):
@@ -191,10 +191,10 @@ class ExperimentSetupApp(QWidget):
     def collect_config(self):
         config = {}
         if self.default_config_checkbox.isChecked():
-            # Load default config from JSON file
+            # Load default config from YAML file
             try:
-                with open("configs/default_config.json", "r") as f:
-                    config = json.load(f)
+                with open("configs/default_config.yaml", "r") as f:
+                    config = yaml.safe_load(f)
             except Exception as e:
                 config = {}
                 print(f"Error loading default config: {e}")
