@@ -36,14 +36,14 @@ def get_new_config():  # function to return a new configuration, pop caused issu
     }
 
 
-@freeze_time("2023-01-01 12:00:00")
 class TestSimulation(unittest.TestCase):
-    def setUp(self) -> None:
-        with patch("marloes.data.util.read_series", return_value=pd.Series()):
-            self.sim = Simulation(config=get_new_config())
-            self.sim_saving = Simulation(
-                config=get_new_config(), save_energy_flows=True
-            )
+    @patch("marloes.agents.solar.read_series", return_value=pd.Series())
+    @patch("marloes.agents.demand.read_series", return_value=pd.Series())
+    @patch("simon.assets.supply.Supply.load_default_state")
+    @patch("simon.assets.demand.Demand.load_default_state")
+    def setUp(self, *mocks) -> None:
+        self.sim = Simulation(config=get_new_config())
+        self.sim_saving = Simulation(config=get_new_config(), save_energy_flows=True)
 
     def test_init(self):
         # no saving
