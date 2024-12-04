@@ -26,6 +26,7 @@ class DemandAgent(Agent):
 
         return series
 
+    @classmethod
     def get_default_config(cls, config: dict) -> dict:
         """Each subclass must define its default configuration."""
         return {

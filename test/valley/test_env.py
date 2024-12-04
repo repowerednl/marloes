@@ -28,8 +28,7 @@ def get_new_config():  # function to return a new configuration, pop caused issu
             {
                 "type": "battery",
                 "efficiency": 0.9,
-                "max_power_in": 100,
-                "max_power_out": 100,
+                "power": 100,
                 "energy_capacity": 1000,
             },
         ],

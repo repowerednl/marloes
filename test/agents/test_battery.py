@@ -6,8 +6,9 @@ from marloes.agents.battery import BatteryAgent
 
 CONFIG = {
     "name": "BatteryOne",
-    "max_power_in": 50.0,
-    "max_power_out": 50.0,
+    "power": 50.0,
+    "max_power_in": 100.0,
+    "max_power_out": 40.0,
     "max_state_of_charge": 1.0,
     "min_state_of_charge": 0.0,
     "energy_capacity": 100.0,
@@ -27,7 +28,7 @@ class TestBatteryAgent(unittest.TestCase):
         self.assertIsInstance(self.battery_agent.asset, Battery)
         self.assertEqual(self.battery_agent.asset.name, "BatteryOne")
         self.assertEqual(self.battery_agent.asset.max_power_in, 50.0)
-        self.assertEqual(self.battery_agent.asset.max_power_out, 50.0)
+        self.assertEqual(self.battery_agent.asset.max_power_out, 40.0)  # Enforced
         self.assertEqual(self.battery_agent.asset.max_state_of_charge, 1.0)
         self.assertEqual(self.battery_agent.asset.min_state_of_charge, 0.0)
         self.assertEqual(self.battery_agent.asset.energy_capacity, 100.0)
@@ -44,7 +45,7 @@ class TestBatteryAgent(unittest.TestCase):
 
     def test_partial_init(self):
         partial_config = {
-            "max_power_in": 50.0,
+            "power": 50.0,
             "energy_capacity": 100.0,
         }
         self.battery_agent = BatteryAgent(
