@@ -1,65 +1,54 @@
-name: Run Tests
+name: Test CI
 
 on:
   push:
-    branches:
-      - dev
-      - main
+    branches: [ "main", "dev"]
   pull_request:
-    branches:
-      - dev
-      - main
+
 
 jobs:
-  test:
+  build:
+
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
       matrix:
-        python-version: [3.11]
+        python-version: ["3.11"]
 
     steps:
-      - name: Debug Secrets
-        run: echo "Secrets configured"
-        env:
-          PRIVATE_PYPI_URL: ${{ secrets.PRIVATE_PYPI_URL }}
-          PRIVATE_PYPI_USER: ${{ secrets.PRIVATE_PYPI_USER }}
-          PRIVATE_PYPI_PASSWORD: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-    
-      # Step 1: Checkout the code
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        architecture: "x64"
 
-      # Step 2: Set up Python with the required version
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'  # Match the version in your pyproject.toml
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
+    - name: Configure Poetry
+      run: |
+        poetry config repositories.repowered ${{ secrets.PRIVATE_PYPI_URL}}
+        poetry config http-basic.repowered ${{ secrets.PRIVATE_PYPI_USER }} ${{ secrets.PRIVATE_PYPI_PASSWORD}}
 
-      # Step 3: Install Poetry
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
+    - name: Load cached venv
+      id: cached-pip-wheels
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
-      # Step 4: Configure Poetry
-      - name: Configure Poetry
-        run: |
-          poetry config repositories.repowered ${{ secrets.PRIVATE_PYPI_URL}}
-          poetry config http-basic.repowered ${{ secrets.PRIVATE_PYPI_USER }} ${{ secrets.PRIVATE_PYPI_PASSWORD}}
+    - name: Install Dependencies
+      run: poetry install --no-interaction --no-root
 
-      # Step 5: Install dependencies
-      - name: Install Dependencies
-        run: poetry install --no-interaction --no-root
+    - name: Install root
+      run: poetry install --no-interaction
 
-      # Step 6: Install root
-      - name: Install root
-        run: poetry install --no-interaction
-
-      # Step 7: Run Pytest
-      - name: Run Pytest
-        run: |
-          poetry run coverage run --source='.'  -m pytest
+    - name: Run Tests
+      run: |
+        poetry run coverage run --source='.'  -m pytest
