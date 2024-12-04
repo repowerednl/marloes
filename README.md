@@ -40,14 +40,35 @@ This will prompt a experiment startup screen for you to select a configuration t
 ## This project uses ADRs (Architecture Decision Records) to document choices that need justification.
 
 ## Installation
-On linux:
+On linux, navigate to the folder you want the repository. It does not have to be in the same folder as marloes:
 ```
 git clone https://github.com/npryce/adr-tools.git
 cd adr-tools
-sudo make install
 ```
+
+The `adr-tools` repo does not provide a make install target, so install it manually:
+```
+sudo cp src/* /usr/local/bin
+```
+
+Make sure the scripts are executable:
+```
+sudo chmod +x /usr/local/bin/adr-*
+```
+
+Now add the repository's `src` to your `PATH` in your `~/.bashrc` or `/.zshrc`.
+Reload shell configuration
+```
+source ~/.bashrc
+```
+
 On mac:
 `brew install adr-tools`
+
+Verify installation with
+```
+adr --version
+```
 
 ### How to Use
 1. ADRs are stored in `docs/adr`.
