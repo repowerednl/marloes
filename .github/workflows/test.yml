@@ -19,6 +19,14 @@ jobs:
         python-version: [3.11]
 
     steps:
+      - name: Debug Secrets
+        run: echo "Secrets configured"
+        env:
+          PRIVATE_PYPI_URL: ${{ secrets.PRIVATE_PYPI_URL }}
+          PRIVATE_PYPI_USER: ${{ secrets.PRIVATE_PYPI_USER }}
+          PRIVATE_PYPI_PASSWORD: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+
+    
       # Step 1: Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
