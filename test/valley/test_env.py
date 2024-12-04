@@ -97,40 +97,34 @@ class TestEnergyValleyEnv(unittest.TestCase):
         """
         Test the _get_targets method
         """
-        # Test the targets of the demand agent
+        # Test the targets of the demand agent (should be empty)
         self.assertEqual(
             self.env._get_targets(self.demand_agent),
-            [
-                (self.solar_agent.asset, 10),
-                (self.battery_agent.asset, 20),
-                (self.grid_agent.asset, 1),
-            ],
+            [],
         )
-        # Test the targets of the solar agent
+        # Test the targets of the solar agent (should have all demand, battery/electrolyser and grid agents)
         self.assertEqual(
             self.env._get_targets(self.solar_agent),
             [
-                (self.demand_agent.asset, 30),
-                (self.battery_agent.asset, 20),
+                (self.demand_agent.asset, 3),
+                (self.battery_agent.asset, 2),
                 (self.grid_agent.asset, 1),
             ],
         )
-        # Test the targets of the battery agent
+        # Test the targets of the battery agent (should have demand and grid agents)
         self.assertEqual(
             self.env._get_targets(self.battery_agent),
             [
-                (self.demand_agent.asset, 30),
-                (self.solar_agent.asset, 10),
+                (self.demand_agent.asset, 3),
                 (self.grid_agent.asset, 1),
             ],
         )
-        # Test the targets of the grid agent
+        # Test the targets of the grid agent (should be able to supply demand and flexible assets)
         self.assertEqual(
             self.env._get_targets(self.grid_agent),
             [
-                (self.demand_agent.asset, 30),
-                (self.solar_agent.asset, 10),
-                (self.battery_agent.asset, 20),
+                (self.demand_agent.asset, 3),
+                (self.battery_agent.asset, 2),
             ],
         )
 
@@ -141,10 +135,9 @@ class TestEnergyValleyEnv(unittest.TestCase):
         self.assertIsInstance(self.env.model, Model)
         num_nodes = len(self.env.model.graph.nodes)
         num_agents = len(self.env.agents)
-        self.assertEqual(num_nodes, num_agents)  # each agent is a node
-        self.assertEqual(
-            len(self.env.model.graph.edges), num_agents * (num_agents - 1)
-        )  # x agents with each (x-1) connections = x*(x-1)
+        self.assertEqual(num_nodes, num_agents)  # each agent should be a node
+        # edges should be supply targets thus solar (3) + battery (2) + grid (3)
+        self.assertEqual(len(self.env.model.graph.edges), 7)
         # check if the agents are in the model
         for agent in self.env.agents:
             self.assertIn(agent.asset, self.env.model.graph.nodes)

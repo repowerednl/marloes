@@ -15,7 +15,7 @@ from marloes.agents.grid import GridAgent
 class EnergyValley:
     def __init__(self, config: dict):
         self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
-        self.time_step = 15 * 60  # 15 minutes in seconds
+        self.time_step = 60  # 1 minute in seconds
         self._initialize_agents(config)
         self._initialize_model()  # Model has a graph (nx.DiGraph) with assets as nodes and edges as connections
 
@@ -38,25 +38,33 @@ class EnergyValley:
 
     def _get_targets(self, agent):
         """
-        Returns the targets of the agent (all agents except itself) with a priority
+        Get the targets for a Supply/Flexible agent, Demand/Flexible/Grid agents are targets
         A list of Tuple(Asset, Priority) with:
-            - Demand Agents of priority 30
-            - Flexible Agents of priority 20
-            - Supply Agents of priority 10
+            - Demand Agents of priority 3
+            - Flexible Agents of priority 2
             - Grid Agent of priority 1
         """
+
+        def _can_supply(a):
+            return isinstance(
+                a, (SolarAgent, WindAgent, BatteryAgent, ElectrolyserAgent, GridAgent)
+            )
+
+        def _is_target(a):
+            return isinstance(
+                a, (DemandAgent, BatteryAgent, ElectrolyserAgent, GridAgent)
+            )
+
         priority_map = {
-            DemandAgent: 30,
-            BatteryAgent: 20,
-            ElectrolyserAgent: 20,
-            SolarAgent: 10,
-            WindAgent: 10,
+            DemandAgent: 3,
+            BatteryAgent: 2,
+            ElectrolyserAgent: 2,
             GridAgent: 1,
         }
         return [
             (other_agent.asset, priority_map[type(other_agent)])
             for other_agent in self.agents
-            if other_agent != agent
+            if other_agent != agent and _is_target(other_agent) and _can_supply(agent)
         ]
 
     def _initialize_agents(self, config: dict):
@@ -107,10 +115,10 @@ class EnergyValley:
 
         # solve the model
         self.model.solve(self.time_step)
-        # extract the relevant results from the model
-        self._extract_results()
         # step the model
         self.model.step(self.time_step)
+        # extract the relevant results from the model
+        self._extract_results()
 
         # gather observations
         # either combine every agents state into one observation or a list of observations for each agent
