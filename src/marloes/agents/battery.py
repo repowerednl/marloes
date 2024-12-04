@@ -1,6 +1,8 @@
 """ Battery agent with functionality from Repowered's Simon """
+
 from datetime import datetime
 from functools import partial
+import numpy as np
 from simon.assets.battery import Battery
 from simon.data.battery_data import BatteryState
 from .base import Agent
@@ -13,10 +15,6 @@ class BatteryAgent(Agent):
     @classmethod
     def get_default_config(cls, config) -> dict:
         """Default configuration for a Battery."""
-        if not config.get("max_power_in") or not config.get("energy_capacity"):
-            raise ValueError(
-                "Battery configuration minimally requires 'max_power_in' and 'energy_capacity'"
-            )
         degradation_function = partial(
             battery_degradation_function,
             capacity=config["energy_capacity"],
@@ -25,16 +23,32 @@ class BatteryAgent(Agent):
         )
         return {
             "name": "Battery",
-            "max_power_in": config["max_power_in"],
-            "max_power_out": config["max_power_in"],
+            "max_power_in": config["power"],
+            "max_power_out": config["power"],
             "max_state_of_charge": 0.95,  # Assumption: 5% from max and min
             "min_state_of_charge": 0.05,
             "energy_capacity": config["energy_capacity"],
-            "ramp_up_rate": config["max_power_in"],  # instant
-            "ramp_down_rate": config["max_power_in"],  # instant
+            "ramp_up_rate": config["power"],  # instant
+            "ramp_down_rate": config["power"],  # instant
             "efficiency": 0.85,
             "degradation_function": degradation_function,
         }
+
+    @staticmethod
+    def merge_configs(default_config: dict, config: dict) -> dict:
+        """Merge the default configuration with user-provided values."""
+        merged_config = default_config.copy()  # Start with defaults
+        merged_config.update(config)  # Override with provided values
+
+        # Enforce constraints with regards to the grid
+        merged_config["max_power_in"] = min(
+            merged_config.get("max_power_in", np.inf), merged_config["power"]
+        )
+        merged_config["max_power_out"] = min(
+            merged_config.get("max_power_out", np.inf), merged_config.pop("power")
+        )
+
+        return merged_config
 
     def act(self):
         pass

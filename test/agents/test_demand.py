@@ -1,6 +1,7 @@
 import unittest
 from freezegun import freeze_time
 from datetime import datetime, timedelta
+import numpy as np
 import pytest
 from simon.assets.demand import Demand
 from simon.datasource.data_source import (
@@ -37,5 +38,6 @@ class TestDemandAgent(unittest.TestCase):
         }
         demand_agent = DemandAgent(start_time=datetime.now(), config=partial_config)
         self.assertIsInstance(demand_agent.asset, Demand)
+        self.assertEqual(demand_agent.asset.max_power_in, np.inf)
         self.assertEqual(demand_agent.asset.name, "Demand")
         self.assertFalse(demand_agent.asset.curtailable_by_solver)
