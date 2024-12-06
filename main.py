@@ -3,6 +3,7 @@ import argparse
 import yaml
 from PyQt6.QtWidgets import QApplication
 import gui.startup as startup
+from marloes.simulation import Simulation
 
 
 def load_config():
@@ -25,6 +26,8 @@ def main():
         for key, value in config.items():
             print(f"\n{key}: {value}")
         # TODO: run the experiment with the configuration
+        simulation = Simulation(config)
+        simulation.run()
     else:
         app = QApplication(sys.argv)
         window = startup.ExperimentSetupApp()

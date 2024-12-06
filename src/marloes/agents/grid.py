@@ -13,6 +13,7 @@ class GridAgent:
     """
 
     def __init__(self, config: dict, start_time: datetime):
+        self.id = config.get("name", "National Grid")
         self.asset = Connection(
             **self._merge_configs(self._get_default_grid_config(), config)
         )
