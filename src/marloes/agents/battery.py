@@ -50,7 +50,7 @@ class BatteryAgent(Agent):
 
         return merged_config
 
-    def act(self):
+    def act(self, action: float):
         pass
 
     def observe(self):

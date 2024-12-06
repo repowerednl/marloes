@@ -36,7 +36,7 @@ class DemandAgent(Agent):
             "curtailable_by_solver": False,
         }
 
-    def act(self):
+    def act(self, action: float):
         pass
 
     def observe(self):

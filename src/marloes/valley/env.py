@@ -3,6 +3,7 @@ Environment that holds all necessary information for the Simulation, called Ener
 """
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from simon.solver import Model
 from marloes.agents.battery import BatteryAgent
 from marloes.agents.electrolyser import ElectrolyserAgent
 from marloes.agents.demand import DemandAgent
@@ -14,12 +15,9 @@ from marloes.agents.grid import GridAgent
 class EnergyValley:
     def __init__(self, config: dict):
         self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
-        self.agents = []
-        [self.add_agent(agent_config) for agent_config in config["agents"]]
-        """Initialize the GridAgent with the given configuration, or default if not provided"""
-        self.agents.append(
-            GridAgent(config=config.get("grid", {}), start_time=self.start_time)
-        )
+        self.time_step = 60  # 1 minute in seconds
+        self._initialize_agents(config)
+        self._initialize_model()  # Model has a graph (nx.DiGraph) with assets as nodes and edges as connections
 
         # TODO: handle other config parameters, include in testing
 
@@ -37,7 +35,60 @@ class EnergyValley:
             case "wind":
                 agent = WindAgent(agent_config, self.start_time)
         self.agents.append(agent)
-        # add to self.agents with necessary priorities, edges or constraints
+
+    def _get_targets(self, agent):
+        """
+        Get the targets for a Supply/Flexible agent, Demand/Flexible/Grid agents are targets
+        A list of Tuple(Asset, Priority) with:
+            - Demand Agents of priority 3
+            - Flexible Agents of priority 2
+            - Grid Agent of priority 1
+        """
+
+        def _can_supply(a):
+            return isinstance(
+                a, (SolarAgent, WindAgent, BatteryAgent, ElectrolyserAgent, GridAgent)
+            )
+
+        def _is_target(a):
+            return isinstance(
+                a, (DemandAgent, BatteryAgent, ElectrolyserAgent, GridAgent)
+            )
+
+        priority_map = {
+            DemandAgent: 3,
+            BatteryAgent: 2,
+            ElectrolyserAgent: 2,
+            GridAgent: 1,
+        }
+        return [
+            (other_agent.asset, priority_map[type(other_agent)])
+            for other_agent in self.agents
+            if other_agent != agent and _is_target(other_agent) and _can_supply(agent)
+        ]
+
+    def _initialize_agents(self, config: dict):
+        """
+        Function to initialize all agents with the given configuration.
+        Requires config with "agents" key (list of dicts), and "grid" key (dict).
+        """
+        self.agents = []
+        for agent_config in config["agents"]:
+            self.add_agent(agent_config)
+        # add the grid agent
+        self.agents.append(
+            GridAgent(config=config.get("grid", {}), start_time=self.start_time)
+        )
+
+    def _initialize_model(self):
+        """
+        Function to initialize the Model imported from Simon.
+        It adds all agents to the model, and dynamically adds priorities to agent connections.
+        """
+        self.model = Model()
+        # add agents to the model
+        for agent in self.agents:
+            self.model.add_asset(agent.asset, self._get_targets(agent))
 
     def _combine_states(self):
         """Function to combine all agents states into one observation"""
@@ -56,10 +107,19 @@ class EnergyValley:
 
     def step(self, actions: list):
         """Function should return the observation, reward, done, info"""
-        # step the agents
+
+        # set setpoints before solving
         [
             agent.act(action) for agent, action in zip(self.agents, actions)
         ]  # function is called act now, can be renamed
+
+        # solve the model
+        self.model.solve(self.time_step)
+        # step the model
+        self.model.step(self.time_step)
+        # extract the relevant results from the model
+        self._extract_results()
+
         # gather observations
         # either combine every agents state into one observation or a list of observations for each agent
         observation = self._combine_states()
@@ -70,3 +130,7 @@ class EnergyValley:
         # info for debugging purposes
         info = {}
         return observation, reward, done, info
+
+    def _extract_results(self):
+        """Function to extract the relevant results from the model"""
+        pass
