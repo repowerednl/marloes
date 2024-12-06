@@ -11,7 +11,7 @@ class Simulation:
 
     def __init__(self, config: dict, save_energy_flows: bool = False):
         algorithm = config.pop("algorithm")
-        self.epochs = config.pop("epochs")
+        self.epochs = config.pop("epochs", 100)  # 525600)  # 1 year in minutes
         self.valley = EnergyValley(config)
         self.saving = save_energy_flows
         # TODO: initialize the EnergyFlows class/model if saving is True
@@ -27,7 +27,7 @@ class Simulation:
         observation = self.valley.reset()
         for epoch in range(self.epochs):
             # TODO: Get the actions from the algorithm
-            actions = [random.random(0, 1) for agent in self.valley.agents]
+            actions = [random.random() for agent in self.valley.agents]
             # Take a step in the environment
             observation, reward, done, info = self.valley.step(actions)
             # TODO: Save the energy flows if saving is True
