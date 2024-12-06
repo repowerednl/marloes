@@ -1,3 +1,4 @@
+from marloes.agents.grid import GridAgent
 from .valley.env import EnergyValley
 import random
 
@@ -25,14 +26,23 @@ class Simulation:
         """
         # Get the initial observation
         observation = self.valley.reset()
+
         for epoch in range(self.epochs):
-            # TODO: Get the actions from the algorithm
-            actions = [random.random() for agent in self.valley.agents]
+            # Create an actions dictionary using the agent IDs
+            actions = {
+                agent.id: random.random()
+                for agent in self.valley.agents
+                if not isinstance(agent, GridAgent)
+            }
+
             # Take a step in the environment
             observation, reward, done, info = self.valley.step(actions)
-            # TODO: Save the energy flows if saving is True
+
+            # Save the energy flows if saving is enabled
             if self.saving:
                 self.flows.append(info)
+
             # TODO: Train the algorithm
             # TODO: Save the training results
+
         # Stash any final results
