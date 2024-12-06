@@ -4,16 +4,19 @@ Environment that holds all necessary information for the Simulation, called Ener
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from simon.solver import Model
+from marloes.agents.base import Agent
 from marloes.agents.battery import BatteryAgent
 from marloes.agents.electrolyser import ElectrolyserAgent
 from marloes.agents.demand import DemandAgent
 from marloes.agents.solar import SolarAgent
 from marloes.agents.wind import WindAgent
 from marloes.agents.grid import GridAgent
+from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 
-class EnergyValley:
+class EnergyValley(MultiAgentEnv):
     def __init__(self, config: dict):
+        super().__init__()
         self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
         self.time_step = 60  # 1 minute in seconds
         self._initialize_agents(config)
@@ -22,7 +25,6 @@ class EnergyValley:
         # TODO: handle other config parameters, include in testing
 
     def add_agent(self, agent_config: dict):
-        # Start time is fixed at 2025-01-01
         match agent_config.pop("type"):
             case "battery":
                 agent = BatteryAgent(agent_config, self.start_time)
@@ -72,7 +74,7 @@ class EnergyValley:
         Function to initialize all agents with the given configuration.
         Requires config with "agents" key (list of dicts), and "grid" key (dict).
         """
-        self.agents = []
+        self.agents: list[Agent] = []
         for agent_config in config["agents"]:
             self.add_agent(agent_config)
         # add the grid agent
@@ -86,7 +88,8 @@ class EnergyValley:
         It adds all agents to the model, and dynamically adds priorities to agent connections.
         """
         self.model = Model()
-        # add agents to the model
+
+        # Add agents to the model
         for agent in self.agents:
             self.model.add_asset(agent.asset, self._get_targets(agent))
 
@@ -98,39 +101,42 @@ class EnergyValley:
         """Function to calculate the reward"""
         pass
 
-    def reset(self):
-        """
-        Function should return the initial observation.
-        This environment is continuous, no start/end or terminal state.
-        """
-        return self._combine_states()
-
-    def step(self, actions: list):
-        """Function should return the observation, reward, done, info"""
-
-        # set setpoints before solving
-        [
-            agent.act(action) for agent, action in zip(self.agents, actions)
-        ]  # function is called act now, can be renamed
-
-        # solve the model
-        self.model.solve(self.time_step)
-        # step the model
-        self.model.step(self.time_step)
-        # extract the relevant results from the model
-        self._extract_results()
-
-        # gather observations
-        # either combine every agents state into one observation or a list of observations for each agent
-        observation = self._combine_states()
-        # calculate reward (CO2 emission factor, sum of taking/feeding in, current net balance)
-        reward = self._calculate_reward()
-        # is the hub ever done? Is life ever done? Is life a simulation?
-        done = False
-        # info for debugging purposes
-        info = {}
-        return observation, reward, done, info
-
     def _extract_results(self):
         """Function to extract the relevant results from the model"""
         pass
+
+    def reset(self):
+        """
+        Function should return the initial state.
+        """
+        for agent in self.agents:
+            agent.asset.load_default_state(self.start_time)
+        return self._combine_states()
+
+    def step(self, actions: dict):
+        """Function should return the observation, reward, done, info"""
+
+        # Set setpoints for agents based on actions
+        for agent in self.agents:
+            if agent.id in actions:
+                action = actions[agent.id]
+                agent.act(action)
+
+        # Solve and step the model
+        self.model.solve(self.time_step)
+        self.model.step(self.time_step)
+
+        # Extract results and calculate next states
+        self._extract_results()
+        observations = self._combine_states()
+        rewards = self._calculate_reward()
+
+        # Done and info
+        # is the hub ever done? Is life ever done? Is life a simulation?
+        dones = {agent.id: False for agent in self.agents}
+        dones["__all__"] = False
+
+        # Empty info dicts for agents
+        infos = {agent.id: {} for agent in self.agents}
+
+        return observations, rewards, dones, infos
