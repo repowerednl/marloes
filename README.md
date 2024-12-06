@@ -81,3 +81,4 @@ adr --version
 # Own use
 
 You can use the separate packages for your own experiments.
+Configuration and notifications are added to Slack.
