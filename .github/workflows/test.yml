@@ -31,6 +31,13 @@ jobs:
         virtualenvs-create: true
         virtualenvs-in-project: true
         installer-parallel: true
+
+    - name: Debug Secrets
+      run: |
+        echo "PYPI URL: ${{ secrets.PRIVATE_PYPI_URL }}"
+        echo "PRIVATE_PYPI_USER length: ${#PRIVATE_PYPI_USER}"
+        echo "PRIVATE_PYPI_PASSWORD length: ${#PRIVATE_PYPI_PASSWORD}"
+
     - name: Configure Poetry
       run: |
         poetry config repositories.repowered ${{ secrets.PRIVATE_PYPI_URL}}
