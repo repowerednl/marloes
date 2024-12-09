@@ -58,4 +58,4 @@ jobs:
 
     - name: Run Tests
       run: |
-        poetry run coverage run --source='.'  -m pytest
+        poetry run --source='.'  -m pytest
