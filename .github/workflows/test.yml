@@ -58,4 +58,4 @@ jobs:
 
     - name: Run Tests
       run: |
-        poetry run --source='.'  -m pytest
+        poetry run pytest
