@@ -26,9 +26,6 @@ class GridAgent:
         """
         return self.asset.state
 
-    def act(self, action: float):
-        pass
-
     @classmethod
     def _get_default_grid_config(cls) -> dict:
         return {

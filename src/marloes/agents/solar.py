@@ -43,8 +43,12 @@ class SolarAgent(Agent):
             "upward_dispatchable": False,
         }
 
-    def act(self, action: float):
-        pass
+    def map_action_to_setpoint(self, action: float) -> float:
+        # Solar has a continous action space, range: [0, 1]
+        if action < 0:
+            return 0
+        else:
+            return self.asset.max_power_out * action
 
     def observe(self):
         pass

@@ -50,8 +50,12 @@ class BatteryAgent(Agent):
 
         return merged_config
 
-    def act(self, action: float):
-        pass
+    def map_action_to_setpoint(self, action: float) -> float:
+        # Battery has a continous action space, range: [-1, 1]
+        if action < 0:
+            return self.asset.max_power_in * -action
+        else:
+            return self.asset.max_power_out * action
 
     def observe(self):
         pass
