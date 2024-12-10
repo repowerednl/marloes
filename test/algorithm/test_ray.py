@@ -34,7 +34,7 @@ def get_new_config():  # function to return a new configuration, pop caused issu
     }
 
 
-class TestBaseAlgorithm(unittest.TestCase):
+class TestRaySacAlgorithm(unittest.TestCase):
     @patch("marloes.agents.solar.read_series", return_value=pd.Series())
     @patch("marloes.agents.demand.read_series", return_value=pd.Series())
     @patch("simon.assets.supply.Supply.load_default_state")
