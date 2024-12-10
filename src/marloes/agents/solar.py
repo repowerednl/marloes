@@ -18,7 +18,7 @@ class SolarAgent(Agent):
 
     def _get_production_series(self, config: dict) -> pd.Series:
         # Read in the right 1 MWp profile from the solar data
-        series = read_series(f"Solar_{config['orientation']}.parquet")
+        series = read_series(f"Solar_{config.pop('orientation')}.parquet")
 
         # Scale to the right size
         series = series * config["DC"] / 1000  # from kWp to MWp
@@ -26,18 +26,13 @@ class SolarAgent(Agent):
         # Cap at the AC capacity
         series[series > config["AC"]] = config["AC"]
 
-        # Remove used arguments from config
-        config.pop("orientation", None)
-        config.pop("DC", None)
-        config.pop("AC", None)
-
         return series
 
     def get_default_config(cls, config: dict) -> dict:
         """Each subclass must define its default configuration."""
         return {
             "name": "Solar",
-            "max_power_out": np.inf,
+            "max_power_out": min(config.pop("AC"), config.pop("DC")),
             # Solar parks are curtailable
             "curtailable_by_solver": True,
             "upward_dispatchable": False,

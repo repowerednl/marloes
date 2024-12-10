@@ -53,7 +53,7 @@ class Agent(ABC):
 
         # Create setpoint for the coming minute
         setpoint = AssetSetpoint(
-            value=value, start=timestamp, end=timestamp + timedelta(minutes=1)
+            value=value, start=timestamp, stop=timestamp + timedelta(minutes=1)
         )
 
         # Set the setpoint
