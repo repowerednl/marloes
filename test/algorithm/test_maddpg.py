@@ -4,12 +4,12 @@ from unittest.mock import patch
 import pandas as pd
 
 from marloes.algorithms.base import AlgorithmType
-from marloes.algorithms.ray import SACfromRay
+from marloes.algorithms.maddpg import MADDPG
 
 
 def get_new_config():  # function to return a new configuration, pop caused issues
     return {
-        "algorithm": "sac",
+        "algorithm": "maddpg",
         "epochs": 100,
         "agents": [
             {
@@ -34,42 +34,44 @@ def get_new_config():  # function to return a new configuration, pop caused issu
     }
 
 
-class TestRaySacAlgorithm(unittest.TestCase):
+class TestMADDPG(unittest.TestCase):
     @patch("marloes.agents.solar.read_series", return_value=pd.Series())
     @patch("marloes.agents.demand.read_series", return_value=pd.Series())
     @patch("simon.assets.supply.Supply.load_default_state")
     @patch("simon.assets.demand.Demand.load_default_state")
     def setUp(self, *mocks) -> None:
-        self.alg = SACfromRay(config=get_new_config())
-        self.alg_saving = SACfromRay(config=get_new_config(), save_energy_flows=True)
+        self.alg = MADDPG(config=get_new_config())
+        self.alg_saving = MADDPG(config=get_new_config(), save_energy_flows=True)
 
     def test_init(self):
         # no saving
         self.assertEqual(self.alg.epochs, 100)
-        self.assertEqual(len(self.alg.valley.agents), 4)
+        self.assertEqual(len(self.alg.valley.agents), 3)
         self.assertFalse(self.alg.saving)
         self.assertIsNone(self.alg.flows, None)
-        self.assertEqual(self.alg.algorithm, AlgorithmType.SAC)
+        self.assertEqual(self.alg.algorithm, AlgorithmType.MADDPG)
         # saving
         self.assertTrue(self.alg_saving.saving)
         self.assertIsInstance(self.alg_saving.flows, list)
 
     def test_agent_types(self):
         # check if the agents are of the right type
-        self.assertEqual(len(self.alg.valley.agents), 4)
-        self.assertEqual(len(self.alg_saving.valley.agents), 4)
+        self.assertEqual(len(self.alg.valley.agents), 3)
+        self.assertEqual(len(self.alg_saving.valley.agents), 3)
         self.assertEqual(
             [agent.__class__.__name__ for agent in self.alg.valley.agents],
-            ["DemandAgent", "SolarAgent", "BatteryAgent", "GridAgent"],
+            ["DemandAgent", "SolarAgent", "BatteryAgent"],
         )
         self.assertEqual(
             [agent.__class__.__name__ for agent in self.alg_saving.valley.agents],
-            ["DemandAgent", "SolarAgent", "BatteryAgent", "GridAgent"],
+            ["DemandAgent", "SolarAgent", "BatteryAgent"],
         )
+        self.assertEqual(self.alg.valley.grid.asset.name, "Grid")
+        self.assertEqual(self.alg_saving.valley.grid.asset.name, "Grid")
 
     def test_grid(self):
         # check if the grid agent is correctly initialized (default)
-        grid = self.alg.valley.agents[-1]
+        grid = self.alg.valley.grid
         self.assertEqual(grid.asset.name, "Grid")
         self.assertEqual(grid.asset.max_power_in, float("inf"))
         self.assertEqual(grid.asset.max_power_out, float("inf"))

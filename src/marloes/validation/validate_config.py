@@ -7,7 +7,7 @@ from marloes.validation.validate_demand import validate_demand
 def validate_config(config: dict) -> str:
     """Validate the configuration dictionary."""
     # Check if the algorithm is valid
-    valid_algorithms = ["model_based", "model_free", "solver", "sac"]
+    valid_algorithms = ["model_based", "model_free", "solver", "maddpg"]
     algorithm = config.get("algorithm", None)
     if algorithm not in valid_algorithms:
         raise ValueError(f"Error: Invalid algorithm '{algorithm}'")
