@@ -122,7 +122,6 @@ class Extractor:
             asset_type = asset.name.split()[0]  # Take generic part of the name
 
             power_data[asset_type] += power
-            if power > 0.0:
-                output_power_data[asset_type] += power
+            output_power_data[asset_type] += max(0, power)
 
         return dict(power_data), dict(output_power_data)
