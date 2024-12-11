@@ -7,7 +7,7 @@ from marloes.valley.env import EnergyValley
 class AlgorithmType(Enum):
     MODEL_BASED = auto()
     MODEL_FREE = auto()
-    SOLVER = auto()
+    PRIORITIES = auto()
     MADDPG = auto()
 
 
@@ -29,8 +29,8 @@ class Algorithm(ABC):
             self.algorithm = AlgorithmType.MODEL_BASED
         elif alg == "model_free":
             self.algorithm = AlgorithmType.MODEL_FREE
-        elif alg == "solver":
-            self.algorithm = AlgorithmType.SOLVER
+        elif alg == "priorities":
+            self.algorithm = AlgorithmType.PRIORITIES
         elif alg == "maddpg":
             self.algorithm = AlgorithmType.MADDPG
         else:
