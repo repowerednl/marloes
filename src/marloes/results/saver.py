@@ -1,9 +1,8 @@
 import os
-
+import yaml
 import pandas as pd
 
 from .extractor import Extractor
-from marloes.algorithms.base import AlgorithmType
 
 
 class Saver:
@@ -11,20 +10,32 @@ class Saver:
     Class that saves the data extracted by the Extractor
     """
 
-    def __init__(self, algorithm: AlgorithmType) -> None:
+    def __init__(self, config: dict) -> None:
         self.name = "Saver"
-        self.algorithm = algorithm
+        self.algorithm = config["algorithm"]
         self.filename = "results"
         self.uid = self._update_simulation_number()
+        self._save_config_to_yaml(config)
 
     def save(self, extractor: Extractor) -> None:
-        print(f"Saving the data extracted by {extractor} of simulation {self.uid}")
         for metric in extractor.metrics:  # or extractor.get_metrics()
             # series = extractor.data[metric]
             series = pd.Series([1, 2, 3], index=["a", "b", "c"])
             self._save_metric(metric, series)
 
-    def save_model(self) -> None:
+    def _save_config_to_yaml(self, config: dict) -> None:
+        """
+        Function that saves the configuration to a yaml file
+        """
+        config_files = os.path.join(self.filename, "configs")
+        os.makedirs(config_files, exist_ok=True)
+        config_filename = os.path.join(
+            config_files, f"{self.uid}_{self.algorithm}.yaml"
+        )
+        with open(config_filename, "w") as f:
+            yaml.dump(config, f)
+
+    def save_model(self, model) -> None:
         pass
 
     def _update_simulation_number(self) -> int:
@@ -53,7 +64,7 @@ class Saver:
         """
         self._validate_folder(metric=metric)
         metric_filename = os.path.join(
-            self.filename, metric, f"{self.uid}_{self.algorithm.name}.csv"
+            self.filename, metric, f"{self.uid}_{self.algorithm}.csv"
         )
 
         series.to_csv(

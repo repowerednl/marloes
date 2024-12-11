@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
+from marloes.results.saver import Saver
 
 
 class AlgorithmType(Enum):
@@ -15,6 +16,7 @@ class Algorithm(ABC):
 
     @abstractmethod
     def __init__(self, config: dict):
+        self.saver = Saver(config)
         pass
 
     @abstractmethod

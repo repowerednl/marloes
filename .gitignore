@@ -166,4 +166,4 @@ cython_debug/
 
 # The results
 /results/
-/results/uid.txt
+/uid.txt
