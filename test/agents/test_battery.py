@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock, patch
 from freezegun import freeze_time
 from datetime import datetime, timedelta
 from simon.assets.battery import Battery
@@ -66,3 +67,30 @@ class TestBatteryAgent(unittest.TestCase):
         self.assertEqual(self.battery_agent.asset.state.power, 0.0)
         self.assertEqual(self.battery_agent.asset.state.state_of_charge, 0.5)
         self.assertEqual(self.battery_agent.asset.state.degradation, 0.0)
+
+    def test_action_mapping(self):
+        self.assertEqual(self.battery_agent.map_action_to_setpoint(-1.0), 50.0)
+        self.assertEqual(self.battery_agent.map_action_to_setpoint(0.0), 0.0)
+        self.assertEqual(self.battery_agent.map_action_to_setpoint(1.0), 40.0)
+
+    # General agent test
+    @patch("simon.assets.battery.Battery.set_setpoint")
+    def test_act_sets_correct_setpoint(self, mock_set_setpoint):
+        # Arrange
+        timestamp = datetime.now()
+        action = 0.5
+        expected_value = 20.0
+
+        # set_setpoint should return the expected value
+        mock_set_setpoint.return_value = expected_value
+
+        self.battery_agent.act(action, timestamp)
+
+        mock_set_setpoint.assert_called_once()
+        setpoint_arg = mock_set_setpoint.call_args[0][0]
+
+        # Verify the setpoint argument
+        self.assertEqual(setpoint_arg.value, expected_value)
+        self.assertEqual(setpoint_arg.start, timestamp)
+        self.assertEqual(setpoint_arg.stop, timestamp + timedelta(minutes=1))
+        self.assertEqual(setpoint_arg.type, "power")

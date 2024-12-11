@@ -92,7 +92,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         # Solar
         self.assertEqual(self.solar_agent.asset.name, "Solar")
         self.assertEqual(self.solar_agent.id, "SolarAgent 0")
-        self.assertEqual(self.solar_agent.asset.max_power_out, float("inf"))
+        self.assertEqual(self.solar_agent.asset.max_power_out, 900)
         # Battery
         self.assertEqual(self.battery_agent.asset.name, "Battery")
         self.assertEqual(self.battery_agent.asset.energy_capacity, 1000)
