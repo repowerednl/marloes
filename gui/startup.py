@@ -57,7 +57,7 @@ class ExperimentSetupApp(QWidget):
         self.algorithm_buttons = QButtonGroup(self)
         self.algorithm_model_based = QRadioButton("model_based")
         self.algorithm_model_free = QRadioButton("model_free")
-        self.algorithm_simon_solver = QRadioButton("solver")
+        self.algorithm_simon_solver = QRadioButton("priorities")
         self.algorithm_buttons.addButton(self.algorithm_model_based)
         self.algorithm_buttons.addButton(self.algorithm_model_free)
         self.algorithm_buttons.addButton(self.algorithm_simon_solver)
@@ -108,7 +108,7 @@ class ExperimentSetupApp(QWidget):
         selected_algorithm = self.algorithm_buttons.checkedButton()
         if selected_algorithm:
             algorithm = selected_algorithm.text()
-            if algorithm == "solver":
+            if algorithm == "priorities":
                 self.hide_all_params()
             elif algorithm in ["model_based", "model_free"]:
                 if not self.grid_search_radio.isChecked():
@@ -157,7 +157,7 @@ class ExperimentSetupApp(QWidget):
             self.algorithm_simon_solver.setDisabled(False)
 
     def hide_params(self):
-        """Hides parameter fields (not needed for grid search or solver)."""
+        """Hides parameter fields (not needed for grid search or priorities)."""
         self.learning_rate_label.hide()
         self.learning_rate.hide()
 
