@@ -87,14 +87,14 @@ class Extractor:
         self.total_grid_production[self.i] = output_power_data.get(
             GridAgent.__name__, 0.0
         )
+        self.update()
 
     def from_files(self, uid: int):
         """
         Extract information from files based on a unique identifier.
         """
         # TODO: Implement file-based extraction logic
-        # This could involve reading pre-saved metrics from disk and populating the arrays
-        pass
+        self.update()
 
     @staticmethod
     def _get_total_flow_between_types(model: Model, type1: Type, type2: Type) -> float:
