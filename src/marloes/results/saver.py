@@ -1,6 +1,7 @@
 import os
 import yaml
 import pandas as pd
+import numpy as np
 
 from .extractor import Extractor
 
@@ -18,10 +19,28 @@ class Saver:
         self._save_config_to_yaml(config)
 
     def save(self, extractor: Extractor) -> None:
-        for metric in extractor.metrics:  # or extractor.get_metrics()
-            # series = extractor.data[metric]
-            series = pd.Series([1, 2, 3], index=["a", "b", "c"])
-            self._save_metric(metric, series)
+        for _, attr_value in extractor.__dict__.items():
+            if self._is_savable(attr_value):
+                for metric, array in attr_value.items():
+                    self._save_metric(metric, array)
+
+    def save_model(self, alg) -> None:
+        """
+        Should access the model in the algorithm and save the weights/parameters
+        """
+        pass
+
+    def _save_metric(self, metric: str, array: np.ndarray) -> None:
+        """
+        Function that saves the metrics in the respective folders
+        If the file already exists, the new data is appended.
+        """
+        self._validate_folder(metric=metric)
+        metric_filename = os.path.join(
+            self.filename, metric, f"{self.uid}_{self.algorithm}.csv"
+        )
+        # write the data to the file, if it already exists, append the data
+        pd.Series(array).to_csv(metric_filename, mode="a", header=False, index=False)
 
     def _save_config_to_yaml(self, config: dict) -> None:
         """
@@ -35,8 +54,13 @@ class Saver:
         with open(config_filename, "w") as f:
             yaml.dump(config, f)
 
-    def save_model(self, model) -> None:
-        pass
+    def _is_savable(self, data: dict) -> bool:
+        """
+        Function that checks if the data is savable(should be a dictionary, with value as a np.array)
+        """
+        return isinstance(data, dict) and all(
+            isinstance(value, np.ndarray) for value in data.values()
+        )
 
     def _update_simulation_number(self) -> int:
         """
@@ -56,20 +80,3 @@ class Saver:
         """
         metric_folder = os.path.join(self.filename, metric)
         os.makedirs(metric_folder, exist_ok=True)
-
-    def _save_metric(self, metric: str, series: pd.Series) -> None:
-        """
-        Function that saves the metrics in the respective folders
-        If the file already exists, the new data is appended.
-        """
-        self._validate_folder(metric=metric)
-        metric_filename = os.path.join(
-            self.filename, metric, f"{self.uid}_{self.algorithm}.csv"
-        )
-
-        series.to_csv(
-            metric_filename,
-            mode="a",
-            header=not os.path.exists(metric_filename),
-            index=False,
-        )

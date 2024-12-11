@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import mock_open, patch
 
 import pandas as pd
 
@@ -40,6 +40,7 @@ class TestMADDPG(unittest.TestCase):
     @patch("simon.assets.supply.Supply.load_default_state")
     @patch("simon.assets.demand.Demand.load_default_state")
     def setUp(self, *mocks) -> None:
+        # mock yaml.dump and open to avoid writing to disk
         self.alg = MADDPG(config=get_new_config())
         self.alg_saving = MADDPG(config=get_new_config(), save_energy_flows=True)
 

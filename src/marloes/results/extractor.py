@@ -1,6 +1,9 @@
+import numpy as np
+
+
 class Extractor:
     def __init__(self) -> None:
-        self.metrics = ["reward", "loss"]
+        self.data = {"metric": np.zeros(10)}
 
 
 class ExtensiveExtractor(Extractor):
