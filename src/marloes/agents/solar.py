@@ -32,11 +32,26 @@ class SolarAgent(Agent):
         """Each subclass must define its default configuration."""
         return {
             "name": "Solar",
-            "max_power_out": min(config.pop("AC"), config.pop("DC")),
+            "max_power_out": min(config["AC"], config["DC"]),
             # Solar parks are curtailable
             "curtailable_by_solver": True,
             "upward_dispatchable": False,
         }
+
+    @staticmethod
+    def merge_configs(default_config: dict, config: dict) -> dict:
+        """Merge the default configuration with user-provided values."""
+        merged_config = default_config.copy()  # Start with defaults
+        merged_config.update(config)  # Override with provided values
+
+        # Enforce constraints with regards to the grid
+        merged_config["max_power_out"] = min(
+            merged_config.get("max_power_out", np.inf),
+            merged_config.pop("AC"),
+            merged_config.pop("DC"),
+        )
+
+        return merged_config
 
     def map_action_to_setpoint(self, action: float) -> float:
         # Solar has a continous action space, range: [0, 1]
