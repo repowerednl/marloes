@@ -78,9 +78,7 @@ class EnergyValley(MultiAgentEnv):
         for agent_config in config["agents"]:
             self.add_agent(agent_config)
         # add the grid agent
-        self.agents.append(
-            GridAgent(config=config.get("grid", {}), start_time=self.start_time)
-        )
+        self.grid = GridAgent(config=config.get("grid", {}), start_time=self.start_time)
 
     def _initialize_model(self):
         """
@@ -88,10 +86,12 @@ class EnergyValley(MultiAgentEnv):
         It adds all agents to the model, and dynamically adds priorities to agent connections.
         """
         self.model = Model()
-
-        # Add agents to the model
+        # Add agents to the model, temporarily add the grid agent
+        self.agents.append(self.grid)
         for agent in self.agents:
             self.model.add_asset(agent.asset, self._get_targets(agent))
+        # Remove the grid agent
+        self.agents.pop()
 
     def _combine_states(self):
         """Function to combine all agents states into one observation"""

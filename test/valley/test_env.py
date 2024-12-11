@@ -60,14 +60,15 @@ class TestEnergyValleyEnv(unittest.TestCase):
         self.solar_agent = self.env.agents[1]
         self.battery_agent = self.env.agents[2]
         self.second_demand_agent = self.env.agents[3]
-        self.grid_agent = self.env.agents[4]
+        self.grid_agent = self.env.grid
 
     def test_agent_initialization(self):
-        self.assertEqual(len(self.env.agents), 5)  # 4 agents + 1 grid
+        self.assertEqual(len(self.env.agents), 4)  # 4 agents
         # check if the agents are of the right type
         self.assertIsInstance(self.demand_agent, DemandAgent)
         self.assertIsInstance(self.solar_agent, SolarAgent)
         self.assertIsInstance(self.battery_agent, BatteryAgent)
+        self.assertIsInstance(self.second_demand_agent, DemandAgent)
         self.assertIsInstance(self.grid_agent, GridAgent)
         # check start time of each agent, should be equal to each other
         self.assertEqual(
@@ -118,7 +119,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         )
         # Test the targets of the solar agent (should have all demand, battery/electrolyser and grid agents)
         self.assertEqual(
-            self.env._get_targets(self.solar_agent),
+            self.env._get_targets(self.solar_agent) + [(self.grid_agent.asset, 1)],
             [
                 (self.demand_agent.asset, 3),
                 (self.battery_agent.asset, 2),
@@ -128,7 +129,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         )
         # Test the targets of the battery agent (should have demand and grid agents)
         self.assertEqual(
-            self.env._get_targets(self.battery_agent),
+            self.env._get_targets(self.battery_agent) + [(self.grid_agent.asset, 1)],
             [
                 (self.demand_agent.asset, 3),
                 (self.second_demand_agent.asset, 3),
@@ -152,7 +153,9 @@ class TestEnergyValleyEnv(unittest.TestCase):
         self.assertIsInstance(self.env.model, Model)
         num_nodes = len(self.env.model.graph.nodes)
         num_agents = len(self.env.agents)
-        self.assertEqual(num_nodes, num_agents)  # each agent should be a node
+        self.assertEqual(
+            num_nodes, num_agents + 1
+        )  # each agent should be a node (add grid)
         # edges should be supply targets thus solar (4) + battery (3) + grid (4)
         self.assertEqual(len(self.env.model.graph.edges), 10)
         # check if the agents are in the model
@@ -168,7 +171,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         Test the step method
         """
         # dummy actions
-        actions = [0, 0, 0, 0]  # For now the Grid also has an action
+        actions = [0, 0, 0]
         observation, reward, done, info = self.env.step(actions=actions)
         # and if the state time is updated with self.env.time_step
         self.assertEqual(
