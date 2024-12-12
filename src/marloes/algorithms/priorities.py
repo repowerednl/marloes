@@ -30,3 +30,9 @@ class Priorities(Algorithm):
 
         # Stash any final results
         self.save()
+
+    def get_actions(self, observation):
+        pass
+
+    def load(self):
+        pass
