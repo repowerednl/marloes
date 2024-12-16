@@ -24,8 +24,6 @@ class Priorities(Algorithm):
             # Take a step in the environment
             observation, reward, done, info = self.valley.step(actions)
 
-            # save results? (Extractor in the valley also saves the results)
-
             # no need to learn any algorithm with the reward
 
         # Stash any final results
