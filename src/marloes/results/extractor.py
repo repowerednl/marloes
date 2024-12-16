@@ -1,3 +1,4 @@
+import os
 import time
 from collections import defaultdict
 from typing import Dict, Tuple, Type
@@ -20,30 +21,26 @@ class Extractor:
     Extractor class to gather and store simulation metrics.
     """
 
-    def __init__(self, chunk_size: int = 0):
+    def __init__(self, from_model: bool = True, chunk_size: int = 0):
         """
         Initialize the Extractor with preallocated numpy arrays for metrics.
         """
         self.chunk_size = chunk_size
         self.i = 0
         self.start_time = time.time()
-        size = MINUTES_IN_A_YEAR // self.chunk_size
+        self.size = MINUTES_IN_A_YEAR // self.chunk_size
 
-        # Marl(oes) info
-        self.elapsed_time = np.zeros(size)
-        self.loss = np.zeros(size)
-        self.action_probability_distribution = np.zeros(size)
+        if from_model:
+            # Marl(oes) info
+            self.elapsed_time = np.zeros(self.size)
+            self.loss = np.zeros(self.size)
 
-        # Metrics/Reward info
-        self.grid_to_demand = np.zeros(size)
-        self.demand_state = np.zeros(size)
-        self.grid_state = np.zeros(size)
-
-        # Emission info
-        self.total_solar_production = np.zeros(size)
-        self.total_battery_production = np.zeros(size)
-        self.total_wind_production = np.zeros(size)
-        self.total_grid_production = np.zeros(size)
+            # Reward info
+            self.grid_state = np.zeros(self.size)
+            self.total_solar_production = np.zeros(self.size)
+            self.total_battery_production = np.zeros(self.size)
+            self.total_wind_production = np.zeros(self.size)
+            self.total_grid_production = np.zeros(self.size)
 
     def clear(self):
         """Reset the timestep index to zero."""
@@ -57,24 +54,19 @@ class Extractor:
         """
         Extract and store metrics from the given simulation model.
         """
-        if self.i >= len(self.elapsed_time):
+        if self.i >= self.size:
             raise IndexError("Extractor has reached its maximum capacity.")
 
         # Tracking
         self.elapsed_time[self.i] = time.time() - self.start_time
 
         # Marl(oes) info
-        # TODO: Implement loss and action_probability_distribution tracking
+        # TODO: Implement loss tracking
         # self.loss[self.i] = loss
-        # self.action_probability_distribution[self.i] = action_probability_distribution
 
         # Metrics/Reward info
-        self.grid_to_demand[self.i] = self._get_total_flow_between_types(
-            model, type1=Connection, type2=Demand
-        )
-        power_data, output_power_data = self.get_current_power_by_type(model)
-        self.demand_state[self.i] = power_data.get(DemandAgent.__name__, 0.0)
-        self.grid_state[self.i] = power_data.get(GridAgent.__name__, 0.0)
+        output_power_data = self.get_current_power_by_type(model)
+        self.grid_state[self.i] = list(model.graph.nodes)[-1].state.power
 
         # Emission info
         self.total_solar_production[self.i] = output_power_data.get(
@@ -89,12 +81,25 @@ class Extractor:
         )
         self.update()
 
-    def from_files(self, uid: int):
+    def from_files(self, uid: int | None = None, dir: str = "results") -> None:
         """
         Extract information from files based on a unique identifier.
+        If no identifier is given, the latest identifier is used.
         """
-        # TODO: Implement file-based extraction logic
-        self.update()
+        # If uid is None, extract latest uid from results/uid.txt
+        if uid is None:
+            with open(f"{dir}/uid.txt", "r") as f:
+                uid = int(f.read().strip()) - 1
+
+        # Loop over each folder in the ./results directory
+        # If there is a file in a folder with the given uid (ends in "_uid.npy"), extract the data and save it to
+        # an attribute corresponding to the folder name
+        # If there is no file with the given uid just skip the folder
+        for folder in os.listdir(dir):
+            if os.path.isdir(folder):
+                for file in os.listdir(folder):
+                    if file.endswith(f"_{uid}.npy"):
+                        self.__setattr__(folder, np.load(f"{dir}/{folder}/{file}"))
 
     @staticmethod
     def _get_total_flow_between_types(model: Model, type1: Type, type2: Type) -> float:
@@ -110,18 +115,28 @@ class Extractor:
     @staticmethod
     def get_current_power_by_type(
         model: Model,
-    ) -> Tuple[Dict[str, float], Dict[str, float]]:
+    ) -> dict[str, float]:
         """
         Aggregate the current power production/intake for all assets, grouped by their type.
         """
-        power_data = defaultdict(float)
         output_power_data = defaultdict(float)
 
         for asset in model.graph.nodes:
             power = asset.state.power
             asset_type = asset.name.split()[0]  # Take generic part of the name
 
-            power_data[asset_type] += power
             output_power_data[asset_type] += max(0, power)
 
-        return dict(power_data), dict(output_power_data)
+        return dict(output_power_data)
+
+
+class ExtensiveExtractor(Extractor):
+    def __init__(self, from_model: bool = True, chunk_size: int = 0):
+        super.__init__(from_model, chunk_size)
+
+        if from_model:
+            # Additional marl info
+            self.action_probability_distribution = np.zeros(self.size)
+
+            # Complete flows/state dataframe
+            pass
