@@ -63,8 +63,9 @@ class Algorithm(ABC):
     def get_actions(self, observation):
         pass
 
-    @abstractmethod
     def save(self):
+        """Saves the information from the EnergyValley.Extractor using Saver"""
+        # self.saver(self.valley.extractor)
         pass
 
     @abstractmethod
