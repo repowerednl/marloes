@@ -185,3 +185,72 @@ class TestEnergyValleyEnv(unittest.TestCase):
             self.demand_agent.asset.state.time,
             self.start_time + timedelta(seconds=self.env.time_step),
         )
+
+    def test_non_priorities_algorithm_targets(self):
+        """
+        Test the priority mapping when the algorithm type is NOT 'PRIORITIES'.
+        """
+        algorithm_type = AlgorithmType.MODEL_FREE
+
+        # SolarAgent targets in non-priorities mode
+        solar_targets = self.env._get_targets(self.solar_agent, algorithm_type)
+        self.assertEqual(
+            solar_targets + [(self.grid_agent.asset, 10)],
+            [
+                (self.demand_agent.asset, 0),
+                (self.battery_agent.asset, 0),
+                (self.second_demand_agent.asset, 0),
+                (self.grid_agent.asset, 10),
+            ],
+        )
+
+        # BatteryAgent targets in non-priorities mode
+        battery_targets = self.env._get_targets(self.battery_agent, algorithm_type)
+        self.assertEqual(
+            battery_targets + [(self.grid_agent.asset, 10)],
+            [
+                (self.demand_agent.asset, 0),
+                (self.second_demand_agent.asset, 0),
+                (self.grid_agent.asset, 10),
+            ],
+        )
+
+        # GridAgent targets in non-priorities mode
+        grid_targets = self.env._get_targets(self.grid_agent, algorithm_type)
+        self.assertEqual(
+            grid_targets,
+            [
+                (self.demand_agent.asset, 10),
+                (self.battery_agent.asset, 10),
+                (self.second_demand_agent.asset, 10),
+            ],
+        )
+
+    def test_priorities_algorithm_targets(self):
+        """
+        Test the priority mapping when the algorithm type is 'PRIORITIES'.
+        """
+        algorithm_type = AlgorithmType.PRIORITIES
+
+        # SolarAgent targets in PRIORITIES mode
+        solar_targets = self.env._get_targets(self.solar_agent, algorithm_type)
+        self.assertEqual(
+            solar_targets + [(self.grid_agent.asset, -1)],
+            [
+                (self.demand_agent.asset, 3),
+                (self.battery_agent.asset, 2),
+                (self.second_demand_agent.asset, 3),
+                (self.grid_agent.asset, -1),
+            ],
+        )
+
+        # GridAgent targets in PRIORITIES mode
+        grid_targets = self.env._get_targets(self.grid_agent, algorithm_type)
+        self.assertEqual(
+            grid_targets,
+            [
+                (self.demand_agent.asset, 3),
+                (self.battery_agent.asset, 2),
+                (self.second_demand_agent.asset, 3),
+            ],
+        )
