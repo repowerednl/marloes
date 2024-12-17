@@ -119,7 +119,7 @@ class EnergyValley(MultiAgentEnv):
         return [
             (
                 other_agent.asset,
-                self._get_priority[type(agent), type(other_agent), algorithm_type],
+                self._get_priority(type(agent), type(other_agent), algorithm_type),
             )
             for other_agent in self.agents
             if other_agent != agent and is_target(other_agent) and can_supply(agent)

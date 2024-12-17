@@ -9,6 +9,7 @@ from marloes.agents.demand import DemandAgent
 from marloes.agents.solar import SolarAgent
 from marloes.agents.battery import BatteryAgent
 from marloes.agents.grid import GridAgent
+from marloes.algorithms.types import AlgorithmType
 from marloes.valley.env import EnergyValley
 
 
@@ -42,6 +43,7 @@ def get_new_config():  # function to return a new configuration, pop caused issu
             "name": "Grid_One",
             "max_power_in": 1000,
         },
+        "algorithm": "priorities",
     }
 
 
@@ -113,13 +115,15 @@ class TestEnergyValleyEnv(unittest.TestCase):
         Test the _get_targets method
         """
         # Test the targets of the demand agent (should be empty)
+        algorithm_type = AlgorithmType.PRIORITIES
         self.assertEqual(
-            self.env._get_targets(self.demand_agent),
+            self.env._get_targets(self.demand_agent, algorithm_type=algorithm_type),
             [],
         )
         # Test the targets of the solar agent (should have all demand, battery/electrolyser and grid agents)
         self.assertEqual(
-            self.env._get_targets(self.solar_agent) + [(self.grid_agent.asset, 1)],
+            self.env._get_targets(self.solar_agent, algorithm_type)
+            + [(self.grid_agent.asset, 1)],
             [
                 (self.demand_agent.asset, 3),
                 (self.battery_agent.asset, 2),
@@ -129,7 +133,8 @@ class TestEnergyValleyEnv(unittest.TestCase):
         )
         # Test the targets of the battery agent (should have demand and grid agents)
         self.assertEqual(
-            self.env._get_targets(self.battery_agent) + [(self.grid_agent.asset, 1)],
+            self.env._get_targets(self.battery_agent, algorithm_type)
+            + [(self.grid_agent.asset, 1)],
             [
                 (self.demand_agent.asset, 3),
                 (self.second_demand_agent.asset, 3),
@@ -138,7 +143,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         )
         # Test the targets of the grid agent (should be able to supply demand and flexible assets)
         self.assertEqual(
-            self.env._get_targets(self.grid_agent),
+            self.env._get_targets(self.grid_agent, algorithm_type),
             [
                 (self.demand_agent.asset, 3),
                 (self.battery_agent.asset, 2),
@@ -163,7 +168,9 @@ class TestEnergyValleyEnv(unittest.TestCase):
             self.assertIn(agent.asset, self.env.model.graph.nodes)
         # check if the connections are in the model
         for agent in self.env.agents:
-            for target, _ in self.env._get_targets(agent):
+            for target, _ in self.env._get_targets(
+                agent, algorithm_type=AlgorithmType.PRIORITIES
+            ):
                 self.assertIn((agent.asset, target), self.env.model.graph.edges)
 
     def test_step(self):
