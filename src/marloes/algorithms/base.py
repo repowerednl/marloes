@@ -35,7 +35,7 @@ class BaseAlgorithm(ABC):
             self._train_step(observations, rewards, dones, infos)
 
             # After chunk is "full", it should be saved
-            if epoch % self.chunk_size == 0:
+            if self.chunk_size != 0 and epoch % self.chunk_size == 0:
                 pass
                 # self.saver.save()
 
