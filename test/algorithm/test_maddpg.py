@@ -41,7 +41,9 @@ class TestMADDPG(unittest.TestCase):
     @patch("simon.assets.demand.Demand.load_default_state")
     def setUp(self, *mocks) -> None:
         # mock yaml.dump and open to avoid writing to disk
-        with patch("marloes.results.saver.Saver._save_config_to_yaml"):
+        with patch("marloes.results.saver.Saver._save_config_to_yaml") and patch(
+            "marloes.results.saver.Saver._update_simulation_number", return_value=0
+        ):
             self.alg = MADDPG(config=get_new_config())
             self.alg_saving = MADDPG(config=get_new_config(), save_energy_flows=True)
 

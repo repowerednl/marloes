@@ -11,7 +11,7 @@ class Saver:
     Class that saves the data extracted by the Extractor
     """
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: dict, test: bool = False) -> None:
         self.name = "Saver"
         self.algorithm = config["algorithm"]
         # allows testing with different filenames
@@ -21,10 +21,14 @@ class Saver:
         self._save_config_to_yaml(config)
 
     def save(self, extractor: Extractor) -> None:
-        for _, attr_value in extractor.__dict__.items():
-            if self._is_savable(attr_value):
-                for metric, array in attr_value.items():
-                    self._save_metric(metric, array)
+        for (
+            attr,
+            value,
+        ) in extractor.__dict__.items():  # loop over the attributes of the extractor
+            if self._is_savable(value):
+                self._save_metric(
+                    attr, value[: extractor.i]
+                )  # change to save only the data up to the current iteration
 
     def save_model(self, alg) -> None:
         """
@@ -59,13 +63,11 @@ class Saver:
         with open(config_filename, "w") as f:
             yaml.dump(config, f)
 
-    def _is_savable(self, data: dict) -> bool:
+    def _is_savable(self, value) -> bool:
         """
-        Function that checks if the data is savable(should be a dictionary, with value as a np.array)
+        Function that checks if the data is savable (numpy array)
         """
-        return isinstance(data, dict) and all(
-            isinstance(value, np.ndarray) for value in data.values()
-        )
+        return isinstance(value, np.ndarray)
 
     def _update_simulation_number(self) -> int:
         """

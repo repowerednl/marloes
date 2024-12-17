@@ -6,12 +6,11 @@ import numpy as np
 from marloes.results.saver import Saver
 from marloes.results.extractor import Extractor
 
-from unittest.mock import patch, mock_open
+from unittest.mock import patch, mock_open, MagicMock
 
 
 class SaverTestCase(unittest.TestCase):
-    @patch("marloes.results.extractor.Extractor.__init__")
-    def setUp(self, mock_extractor):
+    def setUp(self):
         self.config = {
             "algorithm": "model_based",
             "epochs": "100",
@@ -29,32 +28,70 @@ class SaverTestCase(unittest.TestCase):
                 },
             ],
         }
-        with patch("marloes.results.saver.Saver._save_config_to_yaml"):
-            self.saver = Saver(self.config)
+        with patch("marloes.results.saver.Saver._save_config_to_yaml"), patch(
+            "marloes.results.saver.Saver._update_simulation_number", return_value=0
+        ):
+            self.saver = Saver(self.config, test=True)
         self.saver.base_file_path = "test"
         self.saver.id_name = "test_uid.txt"
-        mock_extractor.return_value = None
         self.extractor = Extractor()
+        self.extractor.test_metric = np.array([0.1, 0.2, 0.3])
+        self.extractor.i = 2  # current iteration index
 
     def tearDown(self):
-        # reset the uid.txt file
-        with open(os.path.join(self.saver.filename, self.saver.id_name), "w") as f:
+        # reset the test_uid.txt file
+        with open(
+            os.path.join(self.saver.base_file_path, self.saver.id_name), "w"
+        ) as f:
             f.write("0")
+
+    @patch("numpy.save")
+    @patch("numpy.load")
+    @patch("os.path.exists")
+    def test_save_metric(self, mock_exists, mock_load, mock_save):
+        mock_exists.return_value = False
+        array = np.zeros(3)
+        self.saver._save_metric("test_metric", array)
+        # Manually extract the arguments passed to numpy.save
+        args, _ = mock_save.call_args
+
+        # Expected file path and data
+        expected_path = os.path.join(
+            self.saver.base_file_path,
+            "test_metric",
+            f"{self.saver.uid}_{self.saver.algorithm}.npy",
+        )
+        expected_data = array
+
+        # Assert that the file path matches
+        assert args[0] == expected_path
+
+        # Assert that the numpy array matches
+        np.testing.assert_array_equal(args[1], expected_data)
+
+    @patch("numpy.save")
+    def test_save(self, mock_save):
+        self.saver.save(self.extractor)
+
+        # Manually extract the arguments passed to numpy.save
+        args, _ = mock_save.call_args
+
+        # Expected file path and data
+        expected_path = os.path.join(
+            self.saver.base_file_path,
+            "test_metric",
+            f"{self.saver.uid}_{self.saver.algorithm}.npy",
+        )
+        expected_data = np.array([0.1, 0.2])
+
+        # Assert that the file path matches
+        assert args[0] == expected_path
+
+        # Assert that the numpy array matches
+        np.testing.assert_array_equal(args[1], expected_data)
 
     def test_update_simulation_number(self):
         uid = self.saver._update_simulation_number()
         self.assertEqual(uid, 0)
         uid = self.saver._update_simulation_number()
         self.assertEqual(uid, 1)
-
-    @patch("pandas.Series.to_csv")
-    @patch("builtins.open", new_callable=mock_open)
-    def test_save_metric(self, mock_open, mock_to_csv):
-        array = np.zeros(3)
-        self.saver._save_metric("test_metric", array)
-        mock_to_csv.assert_called()
-
-    @patch("pandas.Series.to_csv")
-    def test_save(self, mock_to_csv):
-        self.saver.save(self.extractor)
-        # how many times do we expect mock to be called, depends on Extractor
