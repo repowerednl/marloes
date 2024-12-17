@@ -1,15 +1,17 @@
 import os
 import unittest
-from unittest.mock import patch, mock_open
 import pandas as pd
 import numpy as np
 
 from marloes.results.saver import Saver
 from marloes.results.extractor import Extractor
 
+from unittest.mock import patch, mock_open
+
 
 class SaverTestCase(unittest.TestCase):
-    def setUp(self):
+    @patch("marloes.results.extractor.Extractor.__init__")
+    def setUp(self, mock_extractor):
         self.config = {
             "algorithm": "model_based",
             "epochs": "100",
@@ -27,37 +29,32 @@ class SaverTestCase(unittest.TestCase):
                 },
             ],
         }
-        self.saver = Saver(self.config)
+        with patch("marloes.results.saver.Saver._save_config_to_yaml"):
+            self.saver = Saver(self.config)
+        self.saver.base_file_path = "test"
+        self.saver.id_name = "test_uid.txt"
+        mock_extractor.return_value = None
         self.extractor = Extractor()
 
     def tearDown(self):
         # reset the uid.txt file
-        with open(os.path.join(self.saver.filename, "uid.txt"), "w") as f:
+        with open(os.path.join(self.saver.filename, self.saver.id_name), "w") as f:
             f.write("0")
 
-    @patch("os.makedirs")
-    @patch("os.path.exists", return_value=False)
-    @patch("builtins.open", new_callable=mock_open, read_data="0")
-    def test_update_simulation_number(self, mock_open, mock_exists, mock_makedirs):
+    def test_update_simulation_number(self):
         uid = self.saver._update_simulation_number()
         self.assertEqual(uid, 0)
-        mock_open().write.assert_called_with("1")
+        uid = self.saver._update_simulation_number()
+        self.assertEqual(uid, 1)
 
+    @patch("pandas.Series.to_csv")
     @patch("builtins.open", new_callable=mock_open)
-    def test_save_metric(self, mock_open):
-        self.saver._validate_folder("metric")
+    def test_save_metric(self, mock_open, mock_to_csv):
         array = np.zeros(3)
-        self.saver._save_metric("metric", array)
-        mock_open().write.assert_called()
+        self.saver._save_metric("test_metric", array)
+        mock_to_csv.assert_called()
 
-    @patch("builtins.open", new_callable=mock_open)
-    @patch("os.makedirs")
-    def test_save(self, mock_makedirs, mock_open):
+    @patch("pandas.Series.to_csv")
+    def test_save(self, mock_to_csv):
         self.saver.save(self.extractor)
-        mock_open().write.assert_called()
-
-    @patch("builtins.open", new_callable=mock_open)
-    @patch("os.makedirs")
-    def test_save_config_to_yaml(self, mock_makedirs, mock_open):
-        self.saver._save_config_to_yaml(self.config)
-        mock_open().write.assert_called()
+        # how many times do we expect mock to be called, depends on Extractor

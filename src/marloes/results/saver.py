@@ -14,7 +14,9 @@ class Saver:
     def __init__(self, config: dict) -> None:
         self.name = "Saver"
         self.algorithm = config["algorithm"]
-        self.filename = "results"
+        # allows testing with different filenames
+        self.base_file_path = "results"
+        self.id_name = "uid.txt"
         self.uid = self._update_simulation_number()
         self._save_config_to_yaml(config)
 
@@ -37,16 +39,19 @@ class Saver:
         """
         self._validate_folder(metric=metric)
         metric_filename = os.path.join(
-            self.filename, metric, f"{self.uid}_{self.algorithm}.csv"
+            self.base_file_path, metric, f"{self.uid}_{self.algorithm}.npy"
         )
-        # write the data to the file, if it already exists, append the data
-        pd.Series(array).to_csv(metric_filename, mode="a", header=False, index=False)
+        # save the data as .npy file, if it already exists, load the existing data and append the new data
+        if os.path.exists(metric_filename):
+            existing_data = np.load(metric_filename, mmap_mode="r+")
+            array = np.concatenate((existing_data, array))
+        np.save(metric_filename, array)
 
     def _save_config_to_yaml(self, config: dict) -> None:
         """
         Function that saves the configuration to a yaml file
         """
-        config_files = os.path.join(self.filename, "configs")
+        config_files = os.path.join(self.base_file_path, "configs")
         os.makedirs(config_files, exist_ok=True)
         config_filename = os.path.join(
             config_files, f"{self.uid}_{self.algorithm}.yaml"
@@ -66,7 +71,7 @@ class Saver:
         """
         Function that extracts and updates the uid.txt file in root folder/results/uid.txt
         """
-        uid_path = os.path.join(self.filename, "uid.txt")
+        uid_path = os.path.join(self.base_file_path, self.id_name)
         with open(uid_path, "r+") as f:
             uid = int(f.read())
             f.seek(0)
@@ -78,5 +83,5 @@ class Saver:
         """
         Function that validates the folder for a single metric, if it does not exist, it is created
         """
-        metric_folder = os.path.join(self.filename, metric)
+        metric_folder = os.path.join(self.base_file_path, metric)
         os.makedirs(metric_folder, exist_ok=True)
