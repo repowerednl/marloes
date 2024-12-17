@@ -96,8 +96,9 @@ class Extractor:
         # an attribute corresponding to the folder name
         # If there is no file with the given uid just skip the folder
         for folder in os.listdir(dir):
-            if os.path.isdir(folder):
-                for file in os.listdir(folder):
+            folder_path = os.path.join(dir, folder)
+            if os.path.isdir(folder_path):
+                for file in os.listdir(folder_path):
                     if file.endswith(f"_{uid}.npy"):
                         self.__setattr__(folder, np.load(f"{dir}/{folder}/{file}"))
 

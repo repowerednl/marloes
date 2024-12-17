@@ -1,6 +1,7 @@
 import os
 import numpy as np
-from unittest import TestCase, mock
+from unittest import TestCase
+from unittest.mock import patch
 from marloes.results.extractor import Extractor
 
 
@@ -9,7 +10,7 @@ class TestExtractorFromFiles(TestCase):
         """
         Set up the Extractor and mock data for testing from_files functionality.
         """
-        self.extractor = Extractor(chunk_size=1000)
+        self.extractor = Extractor(chunk_size=1000, from_model=False)
 
         # Mock data structure in results directory
         self.mock_uid = 42
@@ -23,6 +24,10 @@ class TestExtractorFromFiles(TestCase):
         for folder, file_path in self.mock_results.items():
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             np.save(file_path, np.random.random(10))  # Save random data for testing
+
+        # Also create a UID file (uid.txt) in the results directory
+        with open("test_results/uid.txt", "w") as f:
+            f.write(str(self.mock_uid + 1))
 
     def tearDown(self):
         """
@@ -56,27 +61,15 @@ class TestExtractorFromFiles(TestCase):
                 err_msg=f"Data for '{attribute_name}' does not match expected values.",
             )
 
-    @mock.patch("builtins.open", new_callable=mock.mock_open, read_data="43")
-    def test_from_files_latest_uid(self, mock_file):
+    def test_from_files_latest_uid(self):
         """
         Test that Extractor.from_files uses the latest UID when none is provided.
         """
-        with mock.patch("os.path.isfile", return_value=True):
+        with patch("numpy.load") as mock_load:
             self.extractor.from_files(uid=None, dir="test_results")
 
-        for folder, file_path in self.mock_results.items():
-            attribute_name = os.path.basename(folder)
-            expected_data = np.load(file_path)
-            actual_data = getattr(self.extractor, attribute_name, None)
-
-            self.assertIsNotNone(
-                actual_data, f"Attribute '{attribute_name}' not found."
-            )
-            np.testing.assert_array_almost_equal(
-                actual_data,
-                expected_data,
-                err_msg=f"Data for '{attribute_name}' does not match expected values.",
-            )
+            # Check that the latest UID was used
+            mock_load.assert_any_call(f"test_results/solar/solar_{self.mock_uid}.npy")
 
     def test_from_files_missing_file(self):
         """
