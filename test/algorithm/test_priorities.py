@@ -41,37 +41,25 @@ class TestPriorities(unittest.TestCase):
     @patch("simon.assets.demand.Demand.load_default_state")
     def setUp(self, *mocks) -> None:
         self.alg = Priorities(config=get_new_config())
-        self.alg_saving = Priorities(config=get_new_config(), save_energy_flows=True)
 
     def test_init(self):
         # no saving
         self.assertEqual(self.alg.epochs, 10)
-        self.assertEqual(len(self.alg.valley.agents), 3)
-        self.assertFalse(self.alg.saving)
-        self.assertIsNone(self.alg.flows, None)
-        self.assertEqual(self.alg.algorithm, AlgorithmType.PRIORITIES)
-        # saving
-        self.assertTrue(self.alg_saving.saving)
-        self.assertIsInstance(self.alg_saving.flows, list)
+        self.assertEqual(len(self.alg.environment.agents), 3)
+        self.assertEqual(self.alg.algorithm_type, AlgorithmType.PRIORITIES)
 
     def test_agent_types(self):
         # check if the agents are of the right type
-        self.assertEqual(len(self.alg.valley.agents), 3)
-        self.assertEqual(len(self.alg_saving.valley.agents), 3)
+        self.assertEqual(len(self.alg.environment.agents), 3)
         self.assertEqual(
-            [agent.__class__.__name__ for agent in self.alg.valley.agents],
+            [agent.__class__.__name__ for agent in self.alg.environment.agents],
             ["DemandAgent", "SolarAgent", "BatteryAgent"],
         )
-        self.assertEqual(
-            [agent.__class__.__name__ for agent in self.alg_saving.valley.agents],
-            ["DemandAgent", "SolarAgent", "BatteryAgent"],
-        )
-        self.assertEqual(self.alg.valley.grid.asset.name, "Grid")
-        self.assertEqual(self.alg_saving.valley.grid.asset.name, "Grid")
+        self.assertEqual(self.alg.environment.grid.asset.name, "Grid")
 
     def test_grid(self):
         # check if the grid agent is correctly initialized (default)
-        grid = self.alg.valley.grid
+        grid = self.alg.environment.grid
         self.assertEqual(grid.asset.name, "Grid")
         self.assertEqual(grid.asset.max_power_in, float("inf"))
         self.assertEqual(grid.asset.max_power_out, float("inf"))
@@ -79,7 +67,7 @@ class TestPriorities(unittest.TestCase):
     @patch("marloes.valley.env.EnergyValley.step")
     @patch("marloes.valley.env.EnergyValley.reset")
     def test_train(self, mock_reset, mock_step):
-        mock_reset.return_value = 1
+        mock_reset.return_value = {}, {}
         mock_step.return_value = (1, 2, 3, 4)
         self.alg.train()
         self.assertEqual(mock_reset.call_count, 1)
