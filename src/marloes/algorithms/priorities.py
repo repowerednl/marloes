@@ -1,36 +1,25 @@
-from .base import Algorithm
+from .base import BaseAlgorithm
 
 
-class Priorities(Algorithm):
+class Priorities(BaseAlgorithm):
     """
-    This algorithm simply uses the priority functionality from simon to solve the energy flows.
-    Stepping the model will automatically solve the energy flows.
+    Priority-based algorithm that solves energy flows using pre-defined priorities.
     """
 
-    def __init__(self, config: dict, save_energy_flows: bool = False):
-        super().__init__(config, save_energy_flows)
-
-    def train(self):
+    def __init__(self, config: dict):
         """
-        Run the simulation/training phase of the algorithm, can be overridden by subclasses.
+        Initializes the Priorities algorithm.
         """
-        # Get the initial observation
-        observation = self.valley.reset()
+        super().__init__(config)
 
-        for epoch in range(self.epochs):
-            # The priorities are set in the agents, so no actions should be provided
-            actions = {}
+    def get_actions(self, observations) -> dict:
+        """
+        No explicit actions are needed as the priorities are predefined.
+        """
+        return {}
 
-            # Take a step in the environment
-            observation, reward, done, info = self.valley.step(actions)
-
-            # no need to learn any algorithm with the reward
-
-        # Stash any final results
-        self.save()
-
-    def get_actions(self, observation):
-        pass
-
-    def load(self):
+    def _train_step(self, observations, rewards, dones, infos) -> None:
+        """
+        Overrides the training step. No learning is required for the priority-based algorithm.
+        """
         pass
