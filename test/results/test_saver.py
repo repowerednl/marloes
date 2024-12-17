@@ -39,10 +39,8 @@ class SaverTestCase(unittest.TestCase):
         self.extractor.i = 2  # current iteration index
 
     def tearDown(self):
-        # reset the test_uid.txt file
-        with open(
-            os.path.join(self.saver.base_file_path, self.saver.id_name), "w"
-        ) as f:
+        # after testing, also reset the test_uid.txt file to 0
+        with open("test/test_uid.txt", "w") as f:
             f.write("0")
 
     @patch("numpy.save")
