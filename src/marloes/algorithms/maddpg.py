@@ -1,18 +1,13 @@
-from .base import Algorithm
+from .base import BaseAlgorithm
 
 
-class MADDPG(Algorithm):
-    def __init__(self, config: dict, save_energy_flows: bool = False):
-        super().__init__(config, save_energy_flows)  # Initialize the valley/epochs
+# TODO: inherit from the preconfigured algorithm
+class MADDPG(BaseAlgorithm):
+    def __init__(self, config: dict):
+        """
+        Initializes the MADDPG.
+        """
+        super().__init__(config)
 
-    def get_actions(self, observation):
-        pass
-
-    def train(self, observation, reward, done, info):
-        pass
-
-    def save(self):
-        pass
-
-    def load(self):
+    def train(self) -> None:
         pass
