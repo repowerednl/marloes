@@ -39,6 +39,8 @@ class BaseAlgorithm(ABC):
                 pass
                 # self.saver.save()
 
+        # self.saver.save_model()
+
     @abstractmethod
     def get_actions(self, observations) -> dict:
         """
