@@ -30,7 +30,7 @@ class SaverTestCase(unittest.TestCase):
         }
         with patch("marloes.results.saver.Saver._save_config_to_yaml"), patch(
             "marloes.results.saver.Saver._update_simulation_number", return_value=0
-        ):
+        ), patch("marloes.results.saver.Saver._validate_folder"):
             self.saver = Saver(self.config, test=True)
         self.saver.base_file_path = "test"
         self.saver.id_name = "test_uid.txt"

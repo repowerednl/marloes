@@ -33,6 +33,7 @@ def get_new_config():  # function to return a new configuration, pop caused issu
         # no grid agent should default to name="Grid", max_power_in and max_power_out should be inf
     }
 
+
 # TODO: re-add this when the MADDPG algorithm is implemented
 # class TestMADDPG(unittest.TestCase):
 #     @patch("marloes.agents.solar.read_series", return_value=pd.Series())
@@ -40,6 +41,9 @@ def get_new_config():  # function to return a new configuration, pop caused issu
 #     @patch("simon.assets.supply.Supply.load_default_state")
 #     @patch("simon.assets.demand.Demand.load_default_state")
 #     def setUp(self, *mocks) -> None:
+#         with patch("marloes.results.saver.Saver._save_config_to_yaml"), patch(
+#     "marloes.results.saver.Saver._update_simulation_number", return_value=0
+# ), patch("marloes.results.saver.Saver._validate_folder"):
 #         self.alg = MADDPG(config=get_new_config())
 
 

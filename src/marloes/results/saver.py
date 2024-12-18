@@ -1,6 +1,5 @@
 import os
 import yaml
-import pandas as pd
 import numpy as np
 
 from .extractor import Extractor
@@ -32,9 +31,11 @@ class Saver:
 
     def save_model(self, alg) -> None:
         """
-        Should access the model in the algorithm and save the weights/parameters
+        Should access the 'model' in the algorithm and save the weights/parameters into a file.
         """
-        pass
+        models_folder = os.path.join(self.base_file_path, "models")
+        os.makedirs(models_folder, exist_ok=True)
+        # save the model from alg to a file
 
     def _save_metric(self, metric: str, array: np.ndarray) -> None:
         """

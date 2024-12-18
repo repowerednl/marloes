@@ -21,7 +21,7 @@ class Extractor:
     Extractor class to gather and store simulation metrics.
     """
 
-    def __init__(self, from_model: bool = True, chunk_size: int = 0):
+    def __init__(self, from_model: bool = True, chunk_size: int = 1):
         """
         Initialize the Extractor with preallocated numpy arrays for metrics.
         """
