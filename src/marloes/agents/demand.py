@@ -36,7 +36,12 @@ class DemandAgent(Agent):
             "curtailable_by_solver": False,
         }
 
-    def act(self, action: float):
+    def map_action_to_setpoint(self, action: float) -> float:
+        # Demand has no setpoints
+        pass
+
+    def act(self, action: float, timestamp: datetime) -> None:
+        # Demand has no setpoints, so no acting is needed
         pass
 
     def observe(self):

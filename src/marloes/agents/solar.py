@@ -18,7 +18,7 @@ class SolarAgent(Agent):
 
     def _get_production_series(self, config: dict) -> pd.Series:
         # Read in the right 1 MWp profile from the solar data
-        series = read_series(f"Solar_{config['orientation']}.parquet")
+        series = read_series(f"Solar_{config.pop('orientation')}.parquet")
 
         # Scale to the right size
         series = series * config["DC"] / 1000  # from kWp to MWp
@@ -26,25 +26,39 @@ class SolarAgent(Agent):
         # Cap at the AC capacity
         series[series > config["AC"]] = config["AC"]
 
-        # Remove used arguments from config
-        config.pop("orientation", None)
-        config.pop("DC", None)
-        config.pop("AC", None)
-
         return series
 
     def get_default_config(cls, config: dict) -> dict:
         """Each subclass must define its default configuration."""
         return {
             "name": "Solar",
-            "max_power_out": np.inf,
+            "max_power_out": min(config["AC"], config["DC"]),
             # Solar parks are curtailable
             "curtailable_by_solver": True,
             "upward_dispatchable": False,
         }
 
-    def act(self, action: float):
-        pass
+    @staticmethod
+    def merge_configs(default_config: dict, config: dict) -> dict:
+        """Merge the default configuration with user-provided values."""
+        merged_config = default_config.copy()  # Start with defaults
+        merged_config.update(config)  # Override with provided values
+
+        # Enforce constraints with regards to the grid
+        merged_config["max_power_out"] = min(
+            merged_config.get("max_power_out", np.inf),
+            merged_config.pop("AC"),
+            merged_config.pop("DC"),
+        )
+
+        return merged_config
+
+    def map_action_to_setpoint(self, action: float) -> float:
+        # Solar has a continous action space, range: [0, 1]
+        if action < 0:
+            return 0
+        else:
+            return self.asset.max_power_out * action
 
     def observe(self):
         pass
