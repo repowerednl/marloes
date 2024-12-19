@@ -40,7 +40,10 @@ class TestPriorities(unittest.TestCase):
     @patch("simon.assets.supply.Supply.load_default_state")
     @patch("simon.assets.demand.Demand.load_default_state")
     def setUp(self, *mocks) -> None:
-        self.alg = Priorities(config=get_new_config())
+        with patch("marloes.results.saver.Saver._save_config_to_yaml"), patch(
+            "marloes.results.saver.Saver._update_simulation_number", return_value=0
+        ), patch("marloes.results.saver.Saver._validate_folder"):
+            self.alg = Priorities(config=get_new_config())
 
     def test_init(self):
         # no saving
