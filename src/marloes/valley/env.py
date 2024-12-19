@@ -1,7 +1,7 @@
 """
 Environment that holds all necessary information for the Simulation, called EnergyValley
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from simon.solver import Model
 from marloes.agents.base import Agent
@@ -13,32 +13,85 @@ from marloes.agents.wind import WindAgent
 from marloes.agents.grid import GridAgent
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
+from marloes.algorithms.base import AlgorithmType
+from marloes.algorithms.types import parse_algorithm_type
+from marloes.results.extractor import ExtensiveExtractor, Extractor
+
 
 class EnergyValley(MultiAgentEnv):
+    """
+    Environment that holds all necessary information for the simulation.
+    """
+
+    AGENT_TYPE_MAP = {
+        "battery": BatteryAgent,
+        "electrolyser": ElectrolyserAgent,
+        "demand": DemandAgent,
+        "solar": SolarAgent,
+        "wind": WindAgent,
+    }
+    EXTRACTOR_MAP = {
+        "default": Extractor,
+        "extensive": ExtensiveExtractor,
+    }
+
     def __init__(self, config: dict):
+        """
+        Initializes the environment, agents, and solver model.
+        """
         super().__init__()
         self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        self.time_stamp = self.start_time
         self.time_step = 60  # 1 minute in seconds
+
+        self.agents: list[Agent] = []
+        self.grid: GridAgent = None
+        self.model: Model = None
+        self.extractor = self.EXTRACTOR_MAP[config.pop("extractor_type", "default")]()
+
+        algorithm_type = parse_algorithm_type(config.get("algorithm"))
         self._initialize_agents(config)
-        self._initialize_model()  # Model has a graph (nx.DiGraph) with assets as nodes and edges as connections
+        self._initialize_model(
+            algorithm_type
+        )  # Model has a graph (nx.DiGraph) with assets as nodes and edges as connections
 
-        # TODO: handle other config parameters, include in testing
+    def _initialize_agents(self, config: dict) -> None:
+        """
+        Function to initialize all agents with the given configuration.
+        Requires config with "agents" key (list of dicts), and "grid" key (dict).
+        """
+        for agent_config in config.get("agents", []):
+            self._add_agent(agent_config)
+        # Add the grid agent
+        self.grid = GridAgent(config=config.get("grid", {}), start_time=self.start_time)
 
-    def add_agent(self, agent_config: dict):
-        match agent_config.pop("type"):
-            case "battery":
-                agent = BatteryAgent(agent_config, self.start_time)
-            case "electrolyser":
-                agent = ElectrolyserAgent(agent_config, self.start_time)
-            case "demand":
-                agent = DemandAgent(agent_config, self.start_time)
-            case "solar":
-                agent = SolarAgent(agent_config, self.start_time)
-            case "wind":
-                agent = WindAgent(agent_config, self.start_time)
-        self.agents.append(agent)
+    def _add_agent(self, agent_config: dict) -> None:
+        """
+        Adds an agent based on its type from the configuration.
+        """
+        agent_type = agent_config.pop("type", None)
+        if agent_type not in self.AGENT_TYPE_MAP:
+            raise ValueError(f"Unknown agent type: '{agent_type}'")
 
-    def _get_targets(self, agent):
+        agent_class = self.AGENT_TYPE_MAP[agent_type]
+        self.agents.append(agent_class(agent_config, self.start_time))
+
+    def _initialize_model(self, algorithm_type: AlgorithmType) -> None:
+        """
+        Function to initialize the Model imported from Simon.
+        It adds all agents to the model, and dynamically adds priorities to agent connections.
+        """
+        self.model = Model()
+        # Add agents to the model, temporarily add the grid agent
+        self.agents.append(self.grid)
+        for agent in self.agents:
+            self.model.add_asset(agent.asset, self._get_targets(agent, algorithm_type))
+        # Remove the grid agent
+        self.agents.pop()
+
+    def _get_targets(
+        self, agent: Agent, algorithm_type: AlgorithmType
+    ) -> list[tuple[Agent, int]]:
         """
         Get the targets for a Supply/Flexible agent, Demand/Flexible/Grid agents are targets
         A list of Tuple(Asset, Priority) with:
@@ -47,71 +100,75 @@ class EnergyValley(MultiAgentEnv):
             - Grid Agent of priority 1
         """
 
-        def _can_supply(a):
+        def can_supply(a):
             return isinstance(
                 a, (SolarAgent, WindAgent, BatteryAgent, ElectrolyserAgent, GridAgent)
             )
 
-        def _is_target(a):
+        def is_target(a):
             return isinstance(
-                a, (DemandAgent, BatteryAgent, ElectrolyserAgent, GridAgent)
+                a,
+                (
+                    DemandAgent,
+                    BatteryAgent,
+                    ElectrolyserAgent,
+                    GridAgent,
+                ),  # Add CurtailmentAgent
             )
 
-        priority_map = {
-            DemandAgent: 3,
-            BatteryAgent: 2,
-            ElectrolyserAgent: 2,
-            GridAgent: 1,
-        }
         return [
-            (other_agent.asset, priority_map[type(other_agent)])
+            (
+                other_agent.asset,
+                self._get_priority(type(agent), type(other_agent), algorithm_type),
+            )
             for other_agent in self.agents
-            if other_agent != agent and _is_target(other_agent) and _can_supply(agent)
+            if other_agent != agent and is_target(other_agent) and can_supply(agent)
         ]
 
-    def _initialize_agents(self, config: dict):
+    @staticmethod
+    def _get_priority(
+        agent_type: type, target_agent_type: type, algorithm_type: AlgorithmType
+    ) -> float:
         """
-        Function to initialize all agents with the given configuration.
-        Requires config with "agents" key (list of dicts), and "grid" key (dict).
+        Get the right priority map for the right algorithm.
         """
-        self.agents: list[Agent] = []
-        for agent_config in config["agents"]:
-            self.add_agent(agent_config)
-        # add the grid agent
-        self.agents.append(
-            GridAgent(config=config.get("grid", {}), start_time=self.start_time)
-        )
-
-    def _initialize_model(self):
-        """
-        Function to initialize the Model imported from Simon.
-        It adds all agents to the model, and dynamically adds priorities to agent connections.
-        """
-        self.model = Model()
-
-        # Add agents to the model
-        for agent in self.agents:
-            self.model.add_asset(agent.asset, self._get_targets(agent))
+        if algorithm_type == AlgorithmType.PRIORITIES:
+            priority_map = {
+                DemandAgent: 3,
+                BatteryAgent: 2,
+                ElectrolyserAgent: 2,
+                # Add CurtailmentAgent: 0,
+                GridAgent: -1,
+            }
+            return priority_map[target_agent_type]
+        elif agent_type == GridAgent:
+            return 10
+        else:
+            priority_map = {
+                DemandAgent: 0,
+                BatteryAgent: 0,
+                ElectrolyserAgent: 0,
+                # Add CurtailmentAgent: 0,
+                GridAgent: 10,
+            }
+            return priority_map[target_agent_type]
 
     def _combine_states(self):
         """Function to combine all agents states into one observation"""
-        pass
+        return {agent.id: agent.asset.state.model_dump() for agent in self.agents}
 
     def _calculate_reward(self):
         """Function to calculate the reward"""
         pass
 
-    def _extract_results(self):
-        """Function to extract the relevant results from the model"""
-        pass
-
-    def reset(self):
+    def reset(self) -> tuple[dict, dict]:
         """
         Function should return the initial state.
         """
         for agent in self.agents:
             agent.asset.load_default_state(self.start_time)
-        return self._combine_states()
+        self.time_stamp = self.start_time
+        return self._combine_states(), {agent.id: {} for agent in self.agents}
 
     def step(self, actions: dict):
         """Function should return the observation, reward, done, info"""
@@ -120,14 +177,17 @@ class EnergyValley(MultiAgentEnv):
         for agent in self.agents:
             if agent.id in actions:
                 action = actions[agent.id]
-                agent.act(action)
+                agent.act(action, self.time_stamp)
+
+        # Update the time_stamp
+        self.time_stamp += timedelta(seconds=self.time_step)
 
         # Solve and step the model
         self.model.solve(self.time_step)
         self.model.step(self.time_step)
 
         # Extract results and calculate next states
-        self._extract_results()
+        # self.extractor.from_model(self.model)
         observations = self._combine_states()
         rewards = self._calculate_reward()
 

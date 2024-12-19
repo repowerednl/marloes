@@ -2,8 +2,9 @@
 Functions to set up the assets with necessary constraints
 """
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
 from simon.assets.asset import Asset
+from simon.data.asset_data import AssetSetpoint
 import pandas as pd
 
 
@@ -24,9 +25,9 @@ class Agent(ABC):
         default_config = self.get_default_config(config)
         config = self.merge_configs(default_config, config)
         if series is not None:
-            self.asset = asset(series=series, **config)
+            self.asset: Asset = asset(series=series, **config)
         else:
-            self.asset = asset(**config)
+            self.asset: Asset = asset(**config)
         self.asset.load_default_state(start_time)
 
     @classmethod
@@ -43,8 +44,20 @@ class Agent(ABC):
         return merged_config
 
     @abstractmethod
-    def act(self, action: float):
+    def map_action_to_setpoint(self, action: float) -> float:
         pass
+
+    def act(self, action: float, timestamp: datetime) -> None:
+        # Map the action to a setpoint value
+        value = self.map_action_to_setpoint(action)
+
+        # Create setpoint for the coming minute
+        setpoint = AssetSetpoint(
+            value=value, start=timestamp, stop=timestamp + timedelta(minutes=1)
+        )
+
+        # Set the setpoint
+        self.asset.set_setpoint(setpoint)
 
     @abstractmethod
     def observe(self):
