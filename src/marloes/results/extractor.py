@@ -132,7 +132,7 @@ class Extractor:
 
 
 class ExtensiveExtractor(Extractor):
-    def __init__(self, from_model: bool = True, chunk_size: int = 0):
+    def __init__(self, from_model: bool = True, chunk_size: int = 1):
         super.__init__(from_model, chunk_size)
 
         if from_model:
