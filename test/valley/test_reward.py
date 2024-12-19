@@ -1,8 +1,7 @@
 import unittest
-from unittest.mock import Mock
 import numpy as np
 from marloes.factories import ExtractorFactory, RewardFactory
-from marloes.valley.reward import Reward
+from marloes.valley.rewards.reward import Reward
 
 
 class TestReward(unittest.TestCase):
@@ -22,7 +21,9 @@ class TestReward(unittest.TestCase):
         ## Test actual
         # Also test whether not passing a scaling factor defaults to 1.0
         reward = Reward(actual=True, CO2={"active": True})
-        reward.EMISSION_COEFFICIENTS = RewardFactory.EMMISSION_COEFFICIENTS
+        reward.sub_rewards[
+            "CO2"
+        ].EMISSION_COEFFICIENTS = RewardFactory.EMISSION_COEFFICIENTS
         result = reward.get(self.extractor)
 
         # Expected CO2 penalty:
@@ -32,7 +33,9 @@ class TestReward(unittest.TestCase):
 
         ## Test not actual
         reward = Reward(actual=False, CO2=self.default_scaling)
-        reward.EMISSION_COEFFICIENTS = RewardFactory.EMMISSION_COEFFICIENTS
+        reward.sub_rewards[
+            "CO2"
+        ].EMISSION_COEFFICIENTS = RewardFactory.EMISSION_COEFFICIENTS
         result = reward.get(self.extractor)
 
         # Expected CO2 penalty:
@@ -123,7 +126,9 @@ class TestReward(unittest.TestCase):
             NC={"active": True, "scaling_factor": 1.0},
             NB={"active": True, "scaling_factor": 0.5},
         )
-        reward.EMISSION_COEFFICIENTS = RewardFactory.EMMISSION_COEFFICIENTS
+        reward.sub_rewards[
+            "CO2"
+        ].EMISSION_COEFFICIENTS = RewardFactory.EMISSION_COEFFICIENTS
         result = reward.get(self.extractor)
 
         # Sub-rewards:
@@ -145,7 +150,9 @@ class TestReward(unittest.TestCase):
             NC={"active": True, "scaling_factor": 1.0},
             NB={"active": True, "scaling_factor": 0.5},
         )
-        reward.EMISSION_COEFFICIENTS = RewardFactory.EMMISSION_COEFFICIENTS
+        reward.sub_rewards[
+            "CO2"
+        ].EMISSION_COEFFICIENTS = RewardFactory.EMISSION_COEFFICIENTS
         result = reward.get(self.extractor)
 
         # Sub-rewards:
