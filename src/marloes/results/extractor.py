@@ -159,7 +159,9 @@ class ExtensiveExtractor(Extractor):
         super().from_model(model)
 
         if self.results is None:
-            self.results = SimulationResults(indices=[pd.RangeIndex(self.size)])
+            self.results = SimulationResults(
+                indices=[pd.Series(pd.RangeIndex(self.size))]
+            )
 
         # Store the extra results
         for asset in model.graph.nodes:
