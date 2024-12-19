@@ -1,11 +1,13 @@
 """
 Environment that holds all necessary information for the Simulation, called EnergyValley
 """
+
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from simon.solver import Model
 from marloes.agents.base import Agent
 from marloes.agents.battery import BatteryAgent
+from marloes.agents.curtailment import CurtailmentAgent
 from marloes.agents.electrolyser import ElectrolyserAgent
 from marloes.agents.demand import DemandAgent
 from marloes.agents.solar import SolarAgent
@@ -82,12 +84,16 @@ class EnergyValley(MultiAgentEnv):
         It adds all agents to the model, and dynamically adds priorities to agent connections.
         """
         self.model = Model()
-        # Add agents to the model, temporarily add the grid agent
+        # Add agents to the model, temporarily add the grid agent and curtailment if algorithm is priorities
         self.agents.append(self.grid)
+        if algorithm_type == AlgorithmType.PRIORITIES:
+            self.agents.append(CurtailmentAgent({}, self.start_time))
         for agent in self.agents:
             self.model.add_asset(agent.asset, self._get_targets(agent, algorithm_type))
-        # Remove the grid agent
+        # Remove the grid agent and curtailment if algorithm is priorities
         self.agents.pop()
+        if algorithm_type == AlgorithmType.PRIORITIES:
+            self.agents.pop()
 
     def _get_targets(
         self, agent: Agent, algorithm_type: AlgorithmType
@@ -137,7 +143,7 @@ class EnergyValley(MultiAgentEnv):
                 DemandAgent: 3,
                 BatteryAgent: 2,
                 ElectrolyserAgent: 2,
-                # Add CurtailmentAgent: 0,
+                CurtailmentAgent: 0,
                 GridAgent: -1,
             }
             return priority_map[target_agent_type]
@@ -148,7 +154,6 @@ class EnergyValley(MultiAgentEnv):
                 DemandAgent: 0,
                 BatteryAgent: 0,
                 ElectrolyserAgent: 0,
-                # Add CurtailmentAgent: 0,
                 GridAgent: 10,
             }
             return priority_map[target_agent_type]
