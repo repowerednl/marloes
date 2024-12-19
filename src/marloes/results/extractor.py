@@ -147,6 +147,7 @@ class ExtensiveExtractor(Extractor):
             self.results = None
 
     def clear(self):
+        # Stash the dataframe as part of the clear operation
         super().clear()
         self.results = self.results.stash_df()
 
@@ -169,18 +170,9 @@ class ExtensiveExtractor(Extractor):
                 model.edge_flow_tracker[(asset1, asset2)]
             )
 
-    def to_pandas(self) -> pd.DataFrame:
-        """
-        Convert stored results to a pandas DataFrame.
-        """
-        if self.results:
-            return self.results.to_pandas()
-        else:
-            raise ValueError("No results to convert to DataFrame.")
-
     def from_files(self, uid=None, dir="results"):
         uid = super().from_files(uid, dir)
 
-        parquet_path = f"{dir}/results_{uid}.parquet"
+        parquet_path = f"{dir}/dataframes/results_{uid}.parquet"
         if os.path.exists(parquet_path):
             self.results = pd.read_parquet(parquet_path)
