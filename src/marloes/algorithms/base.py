@@ -39,7 +39,9 @@ class BaseAlgorithm(ABC):
                 self.saver.save(extractor=self.environment.extractor)
                 # clear the extractor
                 self.environment.extractor.clear()
-        # self.saver.save_model(self)
+
+        # Save the final results and TODO: model
+        self.saver.final_save(self, self.environment.extractor)
 
     @abstractmethod
     def get_actions(self, observations) -> dict:

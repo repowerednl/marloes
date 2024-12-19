@@ -2,7 +2,8 @@ import os
 import yaml
 import numpy as np
 
-from .extractor import Extractor
+from .extractor import ExtensiveExtractor, Extractor
+from simon.simulation import SimulationResults
 
 
 class Saver:
@@ -19,7 +20,7 @@ class Saver:
         self.uid = self._update_simulation_number()
         self._save_config_to_yaml(config)
 
-    def save(self, extractor: Extractor) -> None:
+    def save(self, extractor: Extractor | ExtensiveExtractor) -> None:
         for (
             attr,
             value,
@@ -29,13 +30,27 @@ class Saver:
                     attr, value[: extractor.i]
                 )  # change to save only the data up to the current iteration
 
-    def save_model(self, alg) -> None:
+    def final_save(self, extractor, alg=None) -> None:
         """
         Should access the 'model' in the algorithm and save the weights/parameters into a file.
+        In case of extensive extractor, the data from the results attribute should be saved here as well.
         """
         models_folder = os.path.join(self.base_file_path, "models")
         os.makedirs(models_folder, exist_ok=True)
-        # save the model from alg to a file
+
+        # Save the model from alg to a file
+        if alg is not None:
+            pass
+
+        # Save the results from the extensive extractor
+        if isinstance(extractor, ExtensiveExtractor):
+            results = extractor.results
+            if isinstance(results, SimulationResults):
+                results_folder = os.path.join(self.base_file_path, "dataframes")
+                df = results.to_pandas()
+                df.to_parquet(
+                    os.path.join(results_folder, f"results_{self.uid}.parquet")
+                )
 
     def _save_metric(self, metric: str, array: np.ndarray) -> None:
         """
@@ -43,9 +58,7 @@ class Saver:
         If the file already exists, the new data is appended.
         """
         self._validate_folder(metric=metric)
-        metric_filename = os.path.join(
-            self.base_file_path, metric, f"{self.uid}_{self.algorithm}.npy"
-        )
+        metric_filename = os.path.join(self.base_file_path, metric, f"{self.uid}.npy")
         # save the data as .npy file, if it already exists, load the existing data and append the new data
         if os.path.exists(metric_filename):
             existing_data = np.load(metric_filename, mmap_mode="r+")
@@ -58,9 +71,7 @@ class Saver:
         """
         config_files = os.path.join(self.base_file_path, "configs")
         os.makedirs(config_files, exist_ok=True)
-        config_filename = os.path.join(
-            config_files, f"{self.uid}_{self.algorithm}.yaml"
-        )
+        config_filename = os.path.join(config_files, f"{self.uid}.yaml")
         with open(config_filename, "w") as f:
             yaml.dump(config, f)
 
