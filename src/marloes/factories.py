@@ -1,16 +1,23 @@
 # tests/factories.py
 
 from time import time
+
 import factory
 import numpy as np
+from simon.assets.asset import Asset
+from simon.assets.battery import Battery
+from simon.assets.demand import Demand
 from simon.assets.grid import Connection
 from simon.assets.supply import Supply
-from simon.assets.battery import Battery
-from simon.assets.asset import Asset
-from simon.assets.demand import Demand
 
 from marloes.results.extractor import Extractor
-from marloes.valley.reward import Reward, SubReward
+from marloes.valley.rewards.reward import Reward
+from marloes.valley.rewards.subrewards import (
+    CO2SubReward,
+    NBSubReward,
+    NCSubReward,
+    SSSubReward,
+)
 
 
 class AssetFactory(factory.Factory):
@@ -126,7 +133,7 @@ class RewardFactory(factory.Factory):
     class Meta:
         model = Reward
 
-    EMMISSION_COEFFICIENTS = {
+    EMISSION_COEFFICIENTS = {
         "solar": 0.2,
         "wind": 0.1,
         "battery": 0.3,
@@ -134,11 +141,38 @@ class RewardFactory(factory.Factory):
         "electrolyser": 0.4,
     }
 
-    VALID_SUB_REWARDS = {"CO2", "SS", "NC", "NB"}
-
     actual = True
 
-    CO2 = {"active": True, "scaling_factor": 1.0}
-    SS = {"active": True, "scaling_factor": 1.0}
-    NC = {"active": True, "scaling_factor": 1.0}
-    NB = {"active": True, "scaling_factor": 1.0}
+    # Default sub-reward configurations
+    sub_rewards = {
+        "CO2": {"active": True, "scaling_factor": 1.0},
+        "SS": {"active": True, "scaling_factor": 1.0},
+        "NC": {"active": True, "scaling_factor": 1.0},
+        "NB": {"active": True, "scaling_factor": 1.0},
+    }
+
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        """
+        Dynamically initializes the Reward instance with the correct sub-reward classes.
+        """
+        sub_rewards_config = kwargs.pop("sub_rewards", cls.sub_rewards)
+        actual = kwargs.pop("actual", cls.actual)
+        emission_coefficients = kwargs.pop(
+            "emission_coefficients", cls.EMISSION_COEFFICIENTS
+        )
+
+        # Create the sub-reward instances
+        sub_rewards = {
+            "CO2": CO2SubReward(**sub_rewards_config.get("CO2", {})),
+            "SS": SSSubReward(**sub_rewards_config.get("SS", {})),
+            "NC": NCSubReward(**sub_rewards_config.get("NC", {})),
+            "NB": NBSubReward(**sub_rewards_config.get("NB", {})),
+        }
+
+        # Initialize the Reward with the generated sub-rewards
+        return model_class(
+            actual=actual,
+            sub_rewards=sub_rewards,
+            emission_coefficients=emission_coefficients,
+        )
