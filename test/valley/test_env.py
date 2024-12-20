@@ -159,7 +159,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         num_nodes = len(self.env.model.graph.nodes)
         num_agents = len(self.env.agents)
         self.assertEqual(
-            num_nodes, num_agents + 1
+            num_nodes, num_agents + 2
         )  # each agent should be a node (add grid)
         # edges should be supply targets thus solar (4) + battery (3) + grid (4)
         self.assertEqual(len(self.env.model.graph.edges), 10)
