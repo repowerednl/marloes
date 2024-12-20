@@ -3,7 +3,9 @@ import argparse
 import yaml
 from PyQt6.QtWidgets import QApplication
 import gui.startup as startup
-from marloes.simulation import Simulation
+from gui.visualizer import VisualizerGUI
+from marloes.results.calculator import Calculator
+from marloes.results.visualizer import Visualizer
 
 
 def load_config():
@@ -19,19 +21,38 @@ def main():
         action="store_true",
         help="Load config file instead of running the app",
     )
+    parser.add_argument(
+        "--visualizer",
+        action="store_true",
+        help="Start the Visualizer GUI",
+    )
     args = parser.parse_args()
 
     if args.default:
+        # Load the default configuration and run the simulation
         config = load_config()
         for key, value in config.items():
             print(f"\n{key}: {value}")
-        # TODO: run the experiment with the configuration
-        simulation = Simulation(config)
-        simulation.run()
+        # algorithm = Algorithm(config)
+        # algorithm.train()
     else:
         app = QApplication(sys.argv)
-        window = startup.ExperimentSetupApp()
-        window.show()
+
+        if args.visualizer:
+            calculator = Calculator()
+            visualizer = Visualizer(calculator)
+
+            # Define available metrics
+            available_metrics = ["Metric1", "Metric2", "Metric3", "Metric4"]
+
+            # Show the Visualizer GUI
+            visualizer_window = VisualizerGUI(visualizer, available_metrics)
+            visualizer_window.show()
+        else:
+            # Start the normal ExperimentSetupApp GUI
+            window = startup.ExperimentSetupApp()
+            window.show()
+
         sys.exit(app.exec())
 
 
