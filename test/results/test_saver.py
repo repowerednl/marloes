@@ -57,7 +57,7 @@ class SaverTestCase(unittest.TestCase):
         expected_path = os.path.join(
             self.saver.base_file_path,
             "test_metric",
-            f"{self.saver.uid}_{self.saver.algorithm}.npy",
+            f"{self.saver.uid}.npy",
         )
         expected_data = array
 
@@ -78,7 +78,7 @@ class SaverTestCase(unittest.TestCase):
         expected_path = os.path.join(
             self.saver.base_file_path,
             "test_metric",
-            f"{self.saver.uid}_{self.saver.algorithm}.npy",
+            f"{self.saver.uid}.npy",
         )
         expected_data = np.array([0.1, 0.2])
 
