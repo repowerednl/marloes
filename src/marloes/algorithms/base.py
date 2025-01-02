@@ -13,7 +13,7 @@ class BaseAlgorithm(ABC):
         """
         Initializes the algorithm with a configuration dictionary.
         """
-        self.saver = Saver()
+        self.saver = Saver(config=config)
         self.chunk_size = config.get("chunk_size", 0)
         self.algorithm_type = parse_algorithm_type(config.get("algorithm"))
         self.epochs = config.get("epochs", 100)
@@ -36,10 +36,10 @@ class BaseAlgorithm(ABC):
 
             # After chunk is "full", it should be saved
             if self.chunk_size != 0 and epoch % self.chunk_size == 0:
-                pass
-                # self.saver.save()
-
-        # self.saver.save_model()
+                self.saver.save(extractor=self.environment.extractor)
+                # clear the extractor
+                self.environment.extractor.clear()
+        # self.saver.save_model(self)
 
     @abstractmethod
     def get_actions(self, observations) -> dict:

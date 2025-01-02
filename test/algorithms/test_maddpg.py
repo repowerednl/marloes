@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import mock_open, patch
 
 import pandas as pd
 
@@ -41,7 +41,11 @@ def get_new_config():  # function to return a new configuration, pop caused issu
 #     @patch("simon.assets.supply.Supply.load_default_state")
 #     @patch("simon.assets.demand.Demand.load_default_state")
 #     def setUp(self, *mocks) -> None:
+#         with patch("marloes.results.saver.Saver._save_config_to_yaml"), patch(
+#     "marloes.results.saver.Saver._update_simulation_number", return_value=0
+# ), patch("marloes.results.saver.Saver._validate_folder"):
 #         self.alg = MADDPG(config=get_new_config())
+
 
 #     def test_init(self):
 #         # no saving
