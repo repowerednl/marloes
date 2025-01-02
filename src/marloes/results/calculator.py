@@ -11,7 +11,7 @@ class Calculator:
         self.extractor.from_files(uid, dir)
         # information can be accessed through the extractor attributes
 
-    def _get_metrics(self, metrics: list[str]) -> list:
+    def get_metrics(self, metrics: list[str]) -> list:
         """
         Function to get the necessary information (metrics/attributes from the extractor)
         """
@@ -24,15 +24,17 @@ class Calculator:
                 continue
             metric_values.append(getattr(self.extractor, attribute))
 
-    def _match_metric_to_attribute(self, metric: str) -> str | None:
+    def _match_metrics_to_attributes(self, metrics: list[str]) -> list[str]:
         """
         Function to match the metric to the corresponding attribute in the extractor
         """
-        # check if the metric is in the extractor attributes
-        if hasattr(self.extractor, metric):
-            return metric
+        attributes = []
+        for metric in metrics:
+            # check if the metric is in the extractor attributes
+            if hasattr(self.extractor, metric):
+                attributes.append(metric)
         # if not, return None
-        return None
+        return attributes
 
-    def calculate(self):
+    def _calculate(self):
         return self.extractor.extract() + 1
