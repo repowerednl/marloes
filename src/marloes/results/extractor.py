@@ -4,9 +4,11 @@ from collections import defaultdict
 from typing import Dict, Tuple, Type
 
 import numpy as np
+import pandas as pd
 from simon.assets.demand import Demand
 from simon.assets.grid import Connection
 from simon.solver import Model
+from simon.simulation import SimulationResults
 
 from marloes.agents.battery import BatteryAgent
 from marloes.agents.demand import DemandAgent
@@ -81,7 +83,7 @@ class Extractor:
         )
         self.update()
 
-    def from_files(self, uid: int | None = None, dir: str = "results") -> None:
+    def from_files(self, uid: int | None = None, dir: str = "results") -> int:
         """
         Extract information from files based on a unique identifier.
         If no identifier is given, the latest identifier is used.
@@ -101,6 +103,8 @@ class Extractor:
                 for file in os.listdir(folder_path):
                     if file.endswith(f"_{uid}.npy"):
                         self.__setattr__(folder, np.load(f"{dir}/{folder}/{file}"))
+
+        return uid
 
     @staticmethod
     def _get_total_flow_between_types(model: Model, type1: Type, type2: Type) -> float:
@@ -133,11 +137,44 @@ class Extractor:
 
 class ExtensiveExtractor(Extractor):
     def __init__(self, from_model: bool = True, chunk_size: int = 1):
-        super.__init__(from_model, chunk_size)
+        super().__init__(from_model, chunk_size)
 
         if from_model:
-            # Additional marl info
+            # Additional MARL info
             self.action_probability_distribution = np.zeros(self.size)
 
             # Complete flows/state dataframe
-            pass
+            self.results = None
+
+    def clear(self):
+        # Stash the dataframe as part of the clear operation
+        super().clear()
+        self.results = self.results.stash_df()
+
+    def from_model(self, model: Model) -> None:
+        """
+        Extract and store metrics from the simulation model,
+        including detailed state/flow information.
+        """
+        super().from_model(model)
+
+        if self.results is None:
+            self.results = SimulationResults(
+                indices=[pd.Series(pd.RangeIndex(self.size))]
+            )
+
+        # Store the extra results
+        for asset in model.graph.nodes:
+            self.results.states[asset].append(asset.get_state())
+            self.results.setpoints[asset].append(asset.setpoint)
+        for asset1, asset2 in model.edge_flow_tracker.keys():
+            self.results.flows[(asset1, asset2)].append(
+                model.edge_flow_tracker[(asset1, asset2)]
+            )
+
+    def from_files(self, uid=None, dir="results"):
+        uid = super().from_files(uid, dir)
+
+        parquet_path = f"{dir}/dataframes/results_{uid}.parquet"
+        if os.path.exists(parquet_path):
+            self.results = pd.read_parquet(parquet_path)
