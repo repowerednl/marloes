@@ -11,6 +11,7 @@ from simon.assets.grid import Connection
 from simon.assets.supply import Supply
 
 from marloes.results.extractor import Extractor
+from marloes.results.calculator import Calculator
 from marloes.valley.rewards.reward import Reward
 from marloes.valley.rewards.subrewards import (
     CO2SubReward,
@@ -123,6 +124,31 @@ class ExtractorFactory(factory.Factory):
         for key, value in kwargs.items():
             if hasattr(self, key):
                 setattr(self, key, np.array(value))
+
+
+class CalculatorFactory(factory.Factory):
+    """
+    Factory for Calculator classes.
+    """
+
+    class Meta:
+        model = Calculator
+
+    uid = 1
+    dir = "results"
+
+    @factory.post_generation
+    def set_dynamic_attributes(self, create, extracted, **kwargs):
+        """
+        Overwrite dynamically created attributes after Calculator initialization.
+        """
+        # Default values for dynamically created attributes
+        self.extractor = ExtractorFactory()
+
+        # Overwrite with user-provided values if present in kwargs
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
 
 
 class RewardFactory(factory.Factory):

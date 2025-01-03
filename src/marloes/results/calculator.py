@@ -60,7 +60,7 @@ class Calculator:
             else:
                 if len(value) > max_length:
                     issues.append(f"{key} is longer than a year.")
-                if np.nan in value:
+                if np.isnan(value).any():
                     issues.append(f"{key} contains NaN values.")
             info[key] = issues
         return info
