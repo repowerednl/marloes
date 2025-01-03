@@ -9,6 +9,8 @@ class NCSubReward(SubReward):
     Sub-reward for penalizing electricity given to the grid (net congestion).
     """
 
+    name = "NC"
+
     def calculate(
         self, extractor: Extractor, actual: bool, **kwargs
     ) -> float | np.ndarray:

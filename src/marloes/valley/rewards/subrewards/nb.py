@@ -9,6 +9,8 @@ class NBSubReward(SubReward):
     Sub-reward for incentivizing net-positive energy balance.
     """
 
+    name = "NB"
+
     def calculate(
         self, extractor: Extractor, actual: bool, prev_net_grid_state: float, **kwargs
     ) -> float | np.ndarray:
