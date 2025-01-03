@@ -14,8 +14,8 @@ class Saver:
         self.name = "Saver"
         self.algorithm = config["algorithm"]
         # allows testing with different filenames
-        self.base_file_path = "results"
-        self.id_name = "uid.txt"
+        self.base_file_path = "results" if not test else "test"
+        self.id_name = "uid.txt" if not test else "test_uid.txt"
         self.uid = self._update_simulation_number()
         self._save_config_to_yaml(config)
 
