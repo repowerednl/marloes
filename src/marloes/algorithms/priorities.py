@@ -6,6 +6,8 @@ class Priorities(BaseAlgorithm):
     Priority-based algorithm that solves energy flows using pre-defined priorities.
     """
 
+    __name__ = "Priorities"
+
     def __init__(self, config: dict):
         """
         Initializes the Priorities algorithm.

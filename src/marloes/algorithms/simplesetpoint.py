@@ -7,6 +7,8 @@ class SimpleSetpoint(BaseAlgorithm):
     Simple setpoint algorithm that sets the power of any asset to a random value between -1 and 1.
     """
 
+    __name__ = "SimpleSetpoint"
+
     def __init__(self, config: dict):
         """
         Initializes the SimpleSetpoint algorithm.
