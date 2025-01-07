@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QApplication
 import gui.startup as startup
 from gui.visualizer import VisualizerGUI
 from marloes.results.calculator import Calculator
+from marloes.results.metrics import Metrics
 from marloes.results.visualizer import Visualizer
 
 
@@ -39,14 +40,11 @@ def main():
         app = QApplication(sys.argv)
 
         if args.visualizer:
-            calculator = Calculator()
-            visualizer = Visualizer(calculator)
-
             # Define available metrics
-            available_metrics = ["Metric1", "Metric2", "Metric3", "Metric4"]
+            available_metrics = [item.value for item in Metrics]
 
             # Show the Visualizer GUI
-            visualizer_window = VisualizerGUI(visualizer, available_metrics)
+            visualizer_window = VisualizerGUI(available_metrics)
             visualizer_window.show()
         else:
             # Start the normal ExperimentSetupApp GUI
