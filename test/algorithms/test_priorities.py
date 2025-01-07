@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from marloes.algorithms.base import AlgorithmType
 from marloes.algorithms.priorities import Priorities
 
 
@@ -49,7 +48,6 @@ class TestPriorities(unittest.TestCase):
         # no saving
         self.assertEqual(self.alg.epochs, 10)
         self.assertEqual(len(self.alg.environment.agents), 3)
-        self.assertEqual(self.alg.algorithm_type, AlgorithmType.PRIORITIES)
 
     def test_agent_types(self):
         # check if the agents are of the right type
