@@ -18,12 +18,11 @@ from marloes.results.visualizer import Visualizer
 
 
 class VisualizerGUI(QWidget):
-    def __init__(self, visualizer: Visualizer, metrics: list[str]):
+    def __init__(self, metrics: list[str]):
         """
         Initialize the Visualizer GUI.
         """
         super().__init__()
-        self.visualizer = visualizer
         self.metrics = metrics
 
         self.setWindowTitle("Visualizer")
@@ -76,13 +75,11 @@ class VisualizerGUI(QWidget):
         ]
         save_png = self.save_png_checkbox.isChecked()
 
-        if not uid:
-            ErrorScreen("Please enter a valid UID.")
-            return
-
         if not selected_metrics:
-            ErrorScreen("Please select at least one metric.")
+            self.error_screen = ErrorScreen("Please select at least one metric.", self)
+            self.error_screen.show()
+            self.close()
             return
 
         # Plot the metrics using the Visualizer
-        self.visualizer.plot_metric(uid, selected_metrics, save_png)
+        Visualizer(uid).plot_metric(selected_metrics, save_png)
