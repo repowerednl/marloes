@@ -25,6 +25,11 @@ class TestExtractorFromFiles(TestCase):
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             np.save(file_path, np.random.random(10))  # Save random data for testing
 
+        # Make config file
+        os.makedirs("test_results/configs", exist_ok=True)
+        with open(f"test_results/configs/{self.mock_uid}.yaml", "w") as f:
+            f.write("config data")
+
         # Also create a UID file (uid.txt) in the results directory
         with open("test_results/uid.txt", "w") as f:
             f.write(str(self.mock_uid + 1))

@@ -24,7 +24,7 @@ class Calculator:
         self.extractor = Extractor(from_model=False)
         self.extractor.from_files(uid, dir)
 
-    def get_metrics(self, metrics: list[str]) -> list[np.ndarray | None]:
+    def get_metrics(self, metrics: list[str]) -> dict[str, np.ndarray | None]:
         """
         Function to calculate the metrics.
         Returns a dictionary with the metrics as keys and the results as values,

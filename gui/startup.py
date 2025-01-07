@@ -178,7 +178,7 @@ class ExperimentSetupApp(QWidget):
         self.collect_config()
         valid, error_message = self.validate()
         if not valid:
-            self.error_screen = ErrorScreen(error_message)
+            self.error_screen = ErrorScreen(error_message, self)
             self.error_screen.show()
             self.close()
         else:

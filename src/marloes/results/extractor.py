@@ -89,9 +89,13 @@ class Extractor:
         If no identifier is given, the latest identifier is used.
         """
         # If uid is None, extract latest uid from results/uid.txt
-        if uid is None:
+        if not uid:
             with open(f"{dir}/uid.txt", "r") as f:
                 uid = int(f.read().strip()) - 1
+
+        # Check if there is a config saved with the given uid
+        if not os.path.exists(f"{dir}/configs/{uid}.yaml"):
+            raise FileNotFoundError(f"No config found with uid {uid}")
 
         # Loop over each folder in the ./results directory
         # If there is a file in a folder with the given uid (ends in "_uid.npy"), extract the data and save it to
