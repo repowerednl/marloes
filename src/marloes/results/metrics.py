@@ -3,13 +3,13 @@ from enum import StrEnum, auto
 
 class Metrics(StrEnum):
     # Default metrics
-    TIME = auto()
+    TIME = "elapsed_time"
     LOSS = auto()
     REWARD = auto()
-    CO2 = auto()
-    SS = auto()
-    NC = auto()
-    NB = auto()
+    CO2 = "CO2"
+    SS = "SS"
+    NC = "NC"
+    NB = "NB"
     GRID_STATE = auto()
 
     # Extensive metrics

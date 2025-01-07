@@ -9,6 +9,8 @@ class SSSubReward(SubReward):
     Sub-reward for penalizing lack of self-sufficiency.
     """
 
+    name = "SS"
+
     def calculate(
         self, extractor: Extractor, actual: bool, prev_net_grid_state: float, **kwargs
     ) -> float | np.ndarray:
