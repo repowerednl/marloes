@@ -1,4 +1,4 @@
-algorithm: priorities
+algorithm: Priorities
 agents:
   - type: solar
     AC: 900
