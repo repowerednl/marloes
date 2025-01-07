@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from marloes.algorithms.base import AlgorithmType
+from marloes.algorithms.base import BaseAlgorithm
 
 
 class TrainingData(BaseModel):
@@ -7,7 +7,7 @@ class TrainingData(BaseModel):
     Data class for training data.
     """
 
-    algorithm: AlgorithmType
+    algorithm: BaseAlgorithm
     epoch: int
     reward: float
     loss: float
