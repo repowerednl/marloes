@@ -9,6 +9,8 @@ class CO2SubReward(SubReward):
     Sub-reward for penalizing CO2 emissions.
     """
 
+    name = "CO2"
+
     EMISSION_COEFFICIENTS = {
         "solar": 0,
         "wind": 0,
