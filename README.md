@@ -37,9 +37,17 @@ python main.py
 
 This will prompt a experiment startup screen for you to select a configuration to run a grid search, or an experiment with your personal preferences.
 
+### Visualization
+Alternatively, to view the metrics resulting from your experiment, the following code can be run:
+```sh
+python main.py --visualizer
+```
+
+This will prompt a simple interface which allows you to fill in the uid(s) of the experiments you want to visualize and select the metrics to plot. Leaving the uid field empty will automatically select the latest run experiment. Multiple experiments can be plotted against each other by filling in multiple uids seperated by commas.
+
 ## This project uses ADRs (Architecture Decision Records) to document choices that need justification.
 
-## Installation
+### Installation
 On linux, navigate to the folder you want the repository. It does not have to be in the same folder as marloes:
 ```
 git clone https://github.com/npryce/adr-tools.git
