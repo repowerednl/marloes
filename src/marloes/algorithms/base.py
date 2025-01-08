@@ -1,5 +1,6 @@
+import logging
 from abc import ABC, abstractmethod
-from marloes.algorithms.types import AlgorithmType, parse_algorithm_type
+
 from marloes.results.saver import Saver
 from marloes.valley.env import EnergyValley
 
@@ -9,15 +10,24 @@ class BaseAlgorithm(ABC):
     Abstract base class for energy optimization algorithms.
     """
 
+    # Registry for all subclasses of BaseAlgorithm
+    _registry = {}
+
     def __init__(self, config: dict):
         """
         Initializes the algorithm with a configuration dictionary.
         """
+        logging.info(
+            f"Initializing {self.__class__.__name__} algorithm and setting up the environment..."
+        )
         self.saver = Saver(config=config)
-        self.chunk_size = config.get("chunk_size", 0)
-        self.algorithm_type = parse_algorithm_type(config.get("algorithm"))
-        self.epochs = config.get("epochs", 100)
-        self.environment = EnergyValley(config)
+        self.chunk_size = config.get("chunk_size", 10000)
+        self.epochs = config.get("epochs", 100000)
+        self.environment = EnergyValley(config, self.__class__.__name__)
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        BaseAlgorithm._registry[cls.__name__] = cls
 
     def train(self) -> None:
         """
@@ -25,9 +35,13 @@ class BaseAlgorithm(ABC):
 
         This method can be overridden by subclasses for algorithm-specific behavior.
         """
+        logging.info("Starting training process...")
         observations, infos = self.environment.reset()
 
         for epoch in range(self.epochs):
+            if epoch % 1000 == 0:
+                logging.info(f"Reached epoch {epoch}/{self.epochs}...")
+
             actions = self.get_actions(observations)
             observations, rewards, dones, infos = self.environment.step(actions)
 
@@ -36,12 +50,16 @@ class BaseAlgorithm(ABC):
 
             # After chunk is "full", it should be saved
             if self.chunk_size != 0 and epoch % self.chunk_size == 0:
+                logging.info("Saving intermediate results and resetting extractor...")
                 self.saver.save(extractor=self.environment.extractor)
                 # clear the extractor
                 self.environment.extractor.clear()
 
         # Save the final results and TODO: model
+        logging.info("Training finished. Saving results...")
         self.saver.final_save(self, self.environment.extractor)
+
+        logging.info("Training process completed.")
 
     @abstractmethod
     def get_actions(self, observations) -> dict:
@@ -65,3 +83,14 @@ class BaseAlgorithm(ABC):
         Loads a parameter configuration from a file.
         """
         pass
+
+    @staticmethod
+    def get_algorithm(name: str, config: dict):
+        """
+        Retrieve the correct subclass based on its name.
+        """
+        if name not in BaseAlgorithm._registry:
+            raise ValueError(
+                f"Algorithm '{name}' is not registered as a subclass of BaseAlgorithm."
+            )
+        return BaseAlgorithm._registry[name](config)

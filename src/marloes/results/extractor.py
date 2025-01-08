@@ -1,14 +1,15 @@
+import logging
 import os
 import time
 from collections import defaultdict
-from typing import Dict, Tuple, Type
+from typing import Type
 
 import numpy as np
 import pandas as pd
 from simon.assets.demand import Demand
 from simon.assets.grid import Connection
-from simon.solver import Model
 from simon.simulation import SimulationResults
+from simon.solver import Model
 
 from marloes.agents.battery import BatteryAgent
 from marloes.agents.demand import DemandAgent
@@ -101,11 +102,12 @@ class Extractor:
         # If there is a file in a folder with the given uid (ends in "_uid.npy"), extract the data and save it to
         # an attribute corresponding to the folder name
         # If there is no file with the given uid just skip the folder
+        logging.info(f"Extracting data for uid {uid} from {dir}...")
         for folder in os.listdir(dir):
             folder_path = os.path.join(dir, folder)
             if os.path.isdir(folder_path):
                 for file in os.listdir(folder_path):
-                    if file.endswith(f"_{uid}.npy"):
+                    if file.endswith(f"{uid}.npy"):
                         self.__setattr__(folder, np.load(f"{dir}/{folder}/{file}"))
 
         return uid

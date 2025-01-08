@@ -9,7 +9,7 @@ from marloes.agents.demand import DemandAgent
 from marloes.agents.solar import SolarAgent
 from marloes.agents.battery import BatteryAgent
 from marloes.agents.grid import GridAgent
-from marloes.algorithms.types import AlgorithmType
+from marloes.algorithms.priorities import Priorities
 from marloes.valley.env import EnergyValley
 
 
@@ -43,7 +43,6 @@ def get_new_config():  # function to return a new configuration, pop caused issu
             "name": "Grid_One",
             "max_power_in": 1000,
         },
-        "algorithm": "priorities",
     }
 
 
@@ -57,7 +56,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         mock_series = pd.Series([100], index=[self.start_time])
         mock_demand.return_value = mock_series
         mock_solar.return_value = mock_series
-        self.env = EnergyValley(config=get_new_config())
+        self.env = EnergyValley(get_new_config(), "Priorities")
         self.demand_agent = self.env.agents[0]
         self.solar_agent = self.env.agents[1]
         self.battery_agent = self.env.agents[2]
@@ -115,7 +114,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         Test the _get_targets method
         """
         # Test the targets of the demand agent (should be empty)
-        algorithm_type = AlgorithmType.PRIORITIES
+        algorithm_type = Priorities.__name__
         self.assertEqual(
             self.env._get_targets(self.demand_agent, algorithm_type=algorithm_type),
             [],
@@ -169,7 +168,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         # check if the connections are in the model
         for agent in self.env.agents:
             for target, _ in self.env._get_targets(
-                agent, algorithm_type=AlgorithmType.PRIORITIES
+                agent, algorithm_type=Priorities.__name__
             ):
                 self.assertIn((agent.asset, target), self.env.model.graph.edges)
 
@@ -190,7 +189,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         """
         Test the priority mapping when the algorithm type is NOT 'PRIORITIES'.
         """
-        algorithm_type = AlgorithmType.MODEL_FREE
+        algorithm_type = "NOT_PRIORITIES"
 
         # SolarAgent targets in non-priorities mode
         solar_targets = self.env._get_targets(self.solar_agent, algorithm_type)
@@ -230,7 +229,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         """
         Test the priority mapping when the algorithm type is 'PRIORITIES'.
         """
-        algorithm_type = AlgorithmType.PRIORITIES
+        algorithm_type = Priorities.__name__
 
         # SolarAgent targets in PRIORITIES mode
         solar_targets = self.env._get_targets(self.solar_agent, algorithm_type)

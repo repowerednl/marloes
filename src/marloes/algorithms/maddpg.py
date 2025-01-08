@@ -3,6 +3,8 @@ from .base import BaseAlgorithm
 
 # TODO: inherit from the preconfigured algorithm
 class MADDPG(BaseAlgorithm):
+    __name__ = "MADDPG"
+
     def __init__(self, config: dict):
         """
         Initializes the MADDPG.

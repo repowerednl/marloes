@@ -5,6 +5,7 @@ from marloes.valley.rewards.subrewards.co2 import CO2SubReward
 from marloes.valley.rewards.subrewards.nb import NBSubReward
 from marloes.valley.rewards.subrewards.nc import NCSubReward
 from marloes.valley.rewards.subrewards.ss import SSSubReward
+import logging
 
 
 class Calculator:
@@ -22,7 +23,7 @@ class Calculator:
 
     def __init__(self, uid: int | None = None, dir: str = "results"):
         self.extractor = Extractor(from_model=False)
-        self.extractor.from_files(uid, dir)
+        self.uid = self.extractor.from_files(uid, dir)
 
     def get_metrics(self, metrics: list[str]) -> dict[str, np.ndarray | None]:
         """
@@ -46,9 +47,8 @@ class Calculator:
         reward_class = self.REWARD_CLASSES.get(metric)
         return reward_class(active=True, scaling_factor=1) if reward_class else None
 
-    def _sanity_check(
-        self, results: dict[str, np.ndarray | None]
-    ) -> dict[str, list[str]]:
+    @staticmethod
+    def _sanity_check(results: dict[str, np.ndarray | None]) -> dict[str, list[str]]:
         info = {}
         max_length = 1 * 60 * 24 * 365
         for key, value in results.items():
@@ -64,3 +64,16 @@ class Calculator:
                     issues.append(f"{key} contains NaN values.")
             info[key] = issues
         return info
+
+    @staticmethod
+    def log_sanity_check(info_dict: dict[str, list[str]]):
+        """
+        Logs the info dictionary from the Calculator's sanity check.
+        """
+        for metric, issues in info_dict.items():
+            if not issues:
+                logging.info(f"No issues found for metric '{metric}'.")
+            else:
+                # Log each issue for this metric
+                for issue in issues:
+                    logging.info(f"Issue for metric '{metric}': {issue}")

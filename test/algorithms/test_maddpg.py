@@ -3,7 +3,6 @@ from unittest.mock import mock_open, patch
 
 import pandas as pd
 
-from marloes.algorithms.base import AlgorithmType
 from marloes.algorithms.maddpg import MADDPG
 
 

@@ -10,11 +10,19 @@ from PyQt6.QtWidgets import (
     QCheckBox,  # Added import for QCheckBox
 )
 
+from gui.success_screen import SuccessScreen
+
 from .loading_screen import LoadingScreen
 from .img import LogoWindow
 from .errors import ErrorScreen
 from src.marloes.validation.validate_config import validate_config
 import yaml  # Import for handling YAML files
+from src.marloes.algorithms import BaseAlgorithm, MADDPG, SimpleSetpoint, Priorities
+import logging
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
 
 
 class ExperimentSetupApp(QWidget):
@@ -57,14 +65,17 @@ class ExperimentSetupApp(QWidget):
         self.algorithm_buttons = QButtonGroup(self)
         self.algorithm_model_based = QRadioButton("model_based")
         self.algorithm_model_free = QRadioButton("model_free")
-        self.algorithm_simon_solver = QRadioButton("priorities")
+        self.algorithm_simon_solver = QRadioButton("Priorities")
+        self.algorithm_simple_setpoint = QRadioButton("SimpleSetpoint")
         self.algorithm_buttons.addButton(self.algorithm_model_based)
         self.algorithm_buttons.addButton(self.algorithm_model_free)
         self.algorithm_buttons.addButton(self.algorithm_simon_solver)
+        self.algorithm_buttons.addButton(self.algorithm_simple_setpoint)
 
         layout.addWidget(self.algorithm_model_based)
         layout.addWidget(self.algorithm_model_free)
         layout.addWidget(self.algorithm_simon_solver)
+        layout.addWidget(self.algorithm_simple_setpoint)
 
         # EPOCHS
         self.epochs_label = QLabel("Epochs:")  # Must be an integer
@@ -140,21 +151,8 @@ class ExperimentSetupApp(QWidget):
             self.hide_all_params()
             self.grid_search_radio.setChecked(False)
             self.grid_search_radio.setDisabled(True)
-            # Deselect algorithms and disable them
-            self.algorithm_model_based.setChecked(False)
-            self.algorithm_model_free.setChecked(False)
-            self.algorithm_simon_solver.setChecked(False)
-            self.algorithm_buttons.setExclusive(False)
-            self.algorithm_model_based.setDisabled(True)
-            self.algorithm_model_free.setDisabled(True)
-            self.algorithm_simon_solver.setDisabled(True)
-            self.algorithm_buttons.setExclusive(True)
         else:
-            # Enable all options again
             self.grid_search_radio.setDisabled(False)
-            self.algorithm_model_based.setDisabled(False)
-            self.algorithm_model_free.setDisabled(False)
-            self.algorithm_simon_solver.setDisabled(False)
 
     def hide_params(self):
         """Hides parameter fields (not needed for grid search or priorities)."""
@@ -176,17 +174,26 @@ class ExperimentSetupApp(QWidget):
 
     def start_experiment(self):
         self.collect_config()
-        valid, error_message = self.validate()
-        if not valid:
-            self.error_screen = ErrorScreen(error_message, self)
-            self.error_screen.show()
-            self.close()
-        else:
-            print(f"Running experiment with configuration: {self.config}")
-            # Switch to the loading screen
-            self.loading_screen = LoadingScreen(self.config)
-            self.loading_screen.show()
-            self.close()
+        # valid, error_message = self.validate()
+        # if not valid:
+        #     self.error_screen = ErrorScreen(error_message, self)
+        #     self.error_screen.show()
+        #     self.close()
+        # else:
+        print(f"Running experiment with configuration: {self.config}")
+        # Switch to the loading screen
+        # self.loading_screen = LoadingScreen(self.config)
+        # self.loading_screen.show()
+        # self.close()
+        algorithm: BaseAlgorithm = BaseAlgorithm.get_algorithm(
+            self.config["algorithm"], self.config
+        )
+        algorithm.train()
+
+        # Show success message after training has finished
+        self.success_screen = SuccessScreen()
+        self.success_screen.show()
+        self.close()
 
     def collect_config(self):
         config = {}
@@ -198,26 +205,21 @@ class ExperimentSetupApp(QWidget):
             except Exception as e:
                 config = {}
                 print(f"Error loading default config: {e}")
-        else:
-            # Collect user inputs
-            config["grid_search"] = (
-                True if self.grid_search_radio.isChecked() else False
-            )
-            config["coverage"] = (
-                self.coverage_input.value()
-                if self.grid_search_radio.isChecked()
-                else None
-            )
-            config["algorithm"] = (
-                self.algorithm_buttons.checkedButton().text()
-                if self.algorithm_buttons.checkedButton()
-                else None
-            )
-            config["epochs"] = self.epochs.value() if self.epochs.isVisible() else None
-            config["learning_rate"] = (
-                self.learning_rate.value() if self.learning_rate.isVisible() else None
-            )
-            # TODO: add additional parameters as needed
+
+        if self.grid_search_radio.isChecked():
+            config["grid_search"] = True
+            config["coverage"] = self.coverage_input.value()
+
+        if self.algorithm_buttons.checkedButton():
+            config["algorithm"] = self.algorithm_buttons.checkedButton().text()
+
+        if self.epochs.isVisible():
+            config["epochs"] = self.epochs.value()
+
+        if self.learning_rate.isVisible():
+            config["learning_rate"] = self.learning_rate.value()
+
+        # TODO: add additional parameters as needed
         self.config = config
 
     def validate(self):

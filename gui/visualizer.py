@@ -67,7 +67,7 @@ class VisualizerGUI(QWidget):
         Handle the Plot button click.
         """
         # Get the UID and selected metrics
-        uid = self.uid_input.text()
+        uids = self.uid_input.text()
         selected_metrics = [
             metric
             for metric, checkbox in self.metric_checkboxes.items()
@@ -81,5 +81,10 @@ class VisualizerGUI(QWidget):
             self.close()
             return
 
+        if uids:
+            uids = [int(uid.strip()) for uid in uids.split(",")]
+
         # Plot the metrics using the Visualizer
-        Visualizer(uid).plot_metric(selected_metrics, save_png)
+        Visualizer(uids).plot_metrics(selected_metrics, save_png)
+
+        self.close()

@@ -2,21 +2,21 @@
 Environment that holds all necessary information for the Simulation, called EnergyValley
 """
 
+import logging
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
+from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from simon.solver import Model
+
 from marloes.agents.base import Agent
 from marloes.agents.battery import BatteryAgent
 from marloes.agents.curtailment import CurtailmentAgent
-from marloes.agents.electrolyser import ElectrolyserAgent
 from marloes.agents.demand import DemandAgent
+from marloes.agents.electrolyser import ElectrolyserAgent
+from marloes.agents.grid import GridAgent
 from marloes.agents.solar import SolarAgent
 from marloes.agents.wind import WindAgent
-from marloes.agents.grid import GridAgent
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
-
-from marloes.algorithms.base import AlgorithmType
-from marloes.algorithms.types import parse_algorithm_type
 from marloes.results.extractor import ExtensiveExtractor, Extractor
 
 
@@ -37,7 +37,7 @@ class EnergyValley(MultiAgentEnv):
         "extensive": ExtensiveExtractor,
     }
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, algorithm_type: str):
         """
         Initializes the environment, agents, and solver model.
         """
@@ -49,9 +49,10 @@ class EnergyValley(MultiAgentEnv):
         self.agents: list[Agent] = []
         self.grid: GridAgent = None
         self.model: Model = None
-        self.extractor = self.EXTRACTOR_MAP[config.pop("extractor_type", "default")]()
+        self.extractor: Extractor = self.EXTRACTOR_MAP[
+            config.pop("extractor_type", "default")
+        ]()
 
-        algorithm_type = parse_algorithm_type(config.get("algorithm"))
         self._initialize_agents(config)
         self._initialize_model(
             algorithm_type
@@ -62,6 +63,7 @@ class EnergyValley(MultiAgentEnv):
         Function to initialize all agents with the given configuration.
         Requires config with "agents" key (list of dicts), and "grid" key (dict).
         """
+        logging.info("Adding agents to the environment...")
         for agent_config in config.get("agents", []):
             self._add_agent(agent_config)
         # Add the grid agent
@@ -78,25 +80,26 @@ class EnergyValley(MultiAgentEnv):
         agent_class = self.AGENT_TYPE_MAP[agent_type]
         self.agents.append(agent_class(agent_config, self.start_time))
 
-    def _initialize_model(self, algorithm_type: AlgorithmType) -> None:
+    def _initialize_model(self, algorithm_type: str) -> None:
         """
         Function to initialize the Model imported from Simon.
         It adds all agents to the model, and dynamically adds priorities to agent connections.
         """
+        logging.info("Constructing the networkx model...")
         self.model = Model()
         # Add agents to the model, temporarily add the grid agent and curtailment if algorithm is priorities
         self.agents.append(self.grid)
-        if algorithm_type == AlgorithmType.PRIORITIES:
+        if algorithm_type == "Priorities":
             self.agents.append(CurtailmentAgent({}, self.start_time))
         for agent in self.agents:
             self.model.add_asset(agent.asset, self._get_targets(agent, algorithm_type))
         # Remove the grid agent and curtailment if algorithm is priorities
         self.agents.pop()
-        if algorithm_type == AlgorithmType.PRIORITIES:
+        if algorithm_type == "Priorities":
             self.agents.pop()
 
     def _get_targets(
-        self, agent: Agent, algorithm_type: AlgorithmType
+        self, agent: Agent, algorithm_type: str
     ) -> list[tuple[Agent, int]]:
         """
         Get the targets for a Supply/Flexible agent, Demand/Flexible/Grid agents are targets.
@@ -141,12 +144,12 @@ class EnergyValley(MultiAgentEnv):
 
     @staticmethod
     def _get_priority(
-        agent_type: type, target_agent_type: type, algorithm_type: AlgorithmType
+        agent_type: type, target_agent_type: type, algorithm_type: str
     ) -> float:
         """
         Get the right priority map for the right algorithm.
         """
-        if algorithm_type == AlgorithmType.PRIORITIES:
+        if algorithm_type == "Priorities":
             priority_map = {
                 DemandAgent: 3,
                 BatteryAgent: 2,
@@ -200,7 +203,7 @@ class EnergyValley(MultiAgentEnv):
         self.model.step(self.time_step)
 
         # Extract results and calculate next states
-        # self.extractor.from_model(self.model)
+        self.extractor.from_model(self.model)
         observations = self._combine_states()
         rewards = self._calculate_reward()
 
