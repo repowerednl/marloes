@@ -95,7 +95,7 @@ class Extractor:
         # If uid is None, extract latest uid from results/uid.txt
         if not uid:
             with open(f"{dir}/uid.txt", "r") as f:
-                uid = int(f.read().strip()) - 1
+                uid = int(f.read().strip()) - 2
 
         # Check if there is a config saved with the given uid
         if not os.path.exists(f"{dir}/configs/{uid}.yaml"):
@@ -116,7 +116,7 @@ class Extractor:
         # Load the results from the extensive extractor if present
         parquet_path = f"{dir}/dataframes/{uid}.parquet"
         if os.path.exists(parquet_path):
-            self.results = pd.read_parquet(parquet_path)
+            self.extensive_data = pd.read_parquet(parquet_path)
 
         return uid
 

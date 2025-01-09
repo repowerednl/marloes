@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from .extractor import Extractor
 from marloes.valley.rewards.subrewards.base import SubReward
 from marloes.valley.rewards.subrewards.co2 import CO2SubReward
@@ -55,12 +56,14 @@ class Calculator:
             issues = []
             if value is None:
                 issues.append(f"{key} is None.")
-            elif not isinstance(value, np.ndarray):
-                issues.append(f"{key} is not a numpy array or None.")
+            elif not (isinstance(value, np.ndarray) or isinstance(value, pd.DataFrame)):
+                issues.append(f"{key} is not a numpy array or pandas DataFrame.")
             else:
                 if len(value) > max_length:
                     issues.append(f"{key} is longer than a year.")
-                if np.isnan(value).any():
+                if isinstance(value, np.ndarray) and np.isnan(value).any():
+                    issues.append(f"{key} contains NaN values.")
+                if isinstance(value, pd.DataFrame) and value.isnull().values.any():
                     issues.append(f"{key} contains NaN values.")
             info[key] = issues
         return info

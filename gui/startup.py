@@ -90,7 +90,7 @@ class ExperimentSetupApp(QWidget):
         self.epochs_label = QLabel("Epochs:")  # Must be an integer
         self.epochs = QSpinBox()
         self.epochs.setRange(1000, 1000000)
-        self.epochs.setValue(10000)
+        self.epochs.setValue(100000)
         layout.addWidget(self.epochs_label)
         layout.addWidget(self.epochs)
 

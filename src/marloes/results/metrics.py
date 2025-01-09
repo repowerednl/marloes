@@ -16,4 +16,4 @@ class Metrics(StrEnum):
     ACTION_PROB_DIST = auto()
     GRID_TO_DEMAND = auto()
     DEMAND_STATE = auto()
-    ENERGY_FLOWS = auto()
+    EXTENSIVE_DATA = auto()
