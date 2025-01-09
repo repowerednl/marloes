@@ -1,6 +1,11 @@
 from datetime import datetime
 import numpy as np
 from simon.assets.grid import Connection
+import copy
+
+
+def patched_get_state(self):
+    return copy.deepcopy(self.state)
 
 
 class GridAgent:
@@ -17,14 +22,8 @@ class GridAgent:
         self.asset = Connection(
             **self._merge_configs(self._get_default_grid_config(), config)
         )
+        self.asset.get_state = patched_get_state.__get__(self.asset)
         self.asset.load_default_state(start_time)
-
-    def get_state(self):
-        """
-        Returns the current state of the 'Connection' asset from Simon.
-        This is an AssetState with 'time' and 'power'.
-        """
-        return self.asset.state
 
     @classmethod
     def _get_default_grid_config(cls) -> dict:

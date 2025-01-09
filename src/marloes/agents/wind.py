@@ -13,7 +13,7 @@ class WindAgent(Agent):
         # TODO: to be implemented
         pass
 
-    def get_default_config(cls, config: dict) -> dict:
+    def get_default_config(cls, config: dict, id: str) -> dict:
         """Each subclass must define its default configuration."""
         pass
 

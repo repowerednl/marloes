@@ -27,10 +27,10 @@ class DemandAgent(Agent):
         return series
 
     @classmethod
-    def get_default_config(cls, config: dict) -> dict:
+    def get_default_config(cls, config: dict, id: str) -> dict:
         """Each subclass must define its default configuration."""
         return {
-            "name": "Demand",
+            "name": id,
             "max_power_in": np.inf,
             # Should not be curtailed
             "curtailable_by_solver": False,
