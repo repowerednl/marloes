@@ -30,7 +30,7 @@ class Saver:
                     attr, value[: extractor.i]
                 )  # change to save only the data up to the current iteration
 
-    def final_save(self, extractor, alg=None) -> None:
+    def final_save(self, extractor: Extractor | ExtensiveExtractor, alg=None) -> None:
         """
         Should access the 'model' in the algorithm and save the weights/parameters into a file.
         In case of extensive extractor, the data from the results attribute should be saved here as well.
@@ -43,14 +43,11 @@ class Saver:
             pass
 
         # Save the results from the extensive extractor
+        # First check if the extensive data attribute is present
         if isinstance(extractor, ExtensiveExtractor):
-            results = extractor.results
-            if isinstance(results, SimulationResults):
-                results_folder = os.path.join(self.base_file_path, "dataframes")
-                df = results.to_pandas()
-                df.to_parquet(
-                    os.path.join(results_folder, f"results_{self.uid}.parquet")
-                )
+            dataframe_folder = self._validate_folder("dataframes")
+            df = extractor.extensive_data.to_pandas()
+            df.to_parquet(os.path.join(dataframe_folder, f"{self.uid}.parquet"))
 
     def _save_metric(self, metric: str, array: np.ndarray) -> None:
         """
@@ -89,13 +86,14 @@ class Saver:
         with open(uid_path, "r+") as f:
             uid = int(f.read())
             f.seek(0)
-            f.write(str(uid + 1))
+            f.write(str(uid + 2))
             f.truncate()
         return uid
 
-    def _validate_folder(self, metric: str) -> None:
+    def _validate_folder(self, metric: str) -> str:
         """
         Function that validates the folder for a single metric, if it does not exist, it is created
         """
         metric_folder = os.path.join(self.base_file_path, metric)
         os.makedirs(metric_folder, exist_ok=True)
+        return metric_folder
