@@ -1,20 +1,23 @@
+from datetime import datetime
 import logging
+import math
 import os
 import time
 from collections import defaultdict
 from typing import Type
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
 from simon.assets.demand import Demand
 from simon.assets.grid import Connection
-from simon.simulation import SimulationResults
 from simon.solver import Model
 
 from marloes.agents.battery import BatteryAgent
 from marloes.agents.demand import DemandAgent
 from marloes.agents.grid import GridAgent
 from marloes.agents.solar import SolarAgent
+from marloes.results.extensive_data import ExtensiveDataStore
 
 MINUTES_IN_A_YEAR = 525600
 
@@ -31,7 +34,7 @@ class Extractor:
         self.chunk_size = chunk_size
         self.i = 0
         self.start_time = time.time()
-        self.size = MINUTES_IN_A_YEAR // self.chunk_size
+        self.size = math.ceil(MINUTES_IN_A_YEAR / self.chunk_size)
 
         if from_model:
             # Marl(oes) info
@@ -110,6 +113,11 @@ class Extractor:
                     if file.endswith(f"{uid}.npy"):
                         self.__setattr__(folder, np.load(f"{dir}/{folder}/{file}"))
 
+        # Load the results from the extensive extractor if present
+        parquet_path = f"{dir}/dataframes/{uid}.parquet"
+        if os.path.exists(parquet_path):
+            self.results = pd.read_parquet(parquet_path)
+
         return uid
 
     @staticmethod
@@ -145,17 +153,16 @@ class ExtensiveExtractor(Extractor):
     def __init__(self, from_model: bool = True, chunk_size: int = 1):
         super().__init__(from_model, chunk_size)
 
-        if from_model:
-            # Additional MARL info
-            self.action_probability_distribution = np.zeros(self.size)
+        # Additional MARL info
+        self.action_probability_distribution = np.zeros(self.size)
 
-            # Complete flows/state dataframe
-            self.results = None
+        # Complete flows/state dataframe
+        self.extensive_data = ExtensiveDataStore()
 
     def clear(self):
         # Stash the dataframe as part of the clear operation
         super().clear()
-        self.results = self.results.stash_df()
+        self.extensive_data.stash_chunk()
 
     def from_model(self, model: Model) -> None:
         """
@@ -163,24 +170,4 @@ class ExtensiveExtractor(Extractor):
         including detailed state/flow information.
         """
         super().from_model(model)
-
-        if self.results is None:
-            self.results = SimulationResults(
-                indices=[pd.Series(pd.RangeIndex(self.size))]
-            )
-
-        # Store the extra results
-        for asset in model.graph.nodes:
-            self.results.states[asset].append(asset.get_state())
-            self.results.setpoints[asset].append(asset.setpoint)
-        for asset1, asset2 in model.edge_flow_tracker.keys():
-            self.results.flows[(asset1, asset2)].append(
-                model.edge_flow_tracker[(asset1, asset2)]
-            )
-
-    def from_files(self, uid=None, dir="results"):
-        uid = super().from_files(uid, dir)
-
-        parquet_path = f"{dir}/dataframes/results_{uid}.parquet"
-        if os.path.exists(parquet_path):
-            self.results = pd.read_parquet(parquet_path)
+        self.extensive_data.add_step_data(model)
