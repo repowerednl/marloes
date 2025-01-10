@@ -1,9 +1,9 @@
 import os
-import yaml
+
 import numpy as np
+import yaml
 
 from .extractor import ExtensiveExtractor, Extractor
-from simon.simulation import SimulationResults
 
 
 class Saver:

@@ -1,6 +1,9 @@
 """Electrolyser agent with functionality from Repowered's Simon"""
+
 from datetime import datetime
+
 from simon.assets.electrolyser import Electrolyser
+
 from .base import Agent
 
 

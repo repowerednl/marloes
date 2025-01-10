@@ -1,5 +1,6 @@
-from collections import defaultdict
 import gc
+from collections import defaultdict
+
 import pandas as pd
 from simon.solver import Model
 from simon.util.encoders import jsonable_encoder

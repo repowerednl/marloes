@@ -1,11 +1,13 @@
 """Demand 'agents' with functionality from Repowered's Simon"""
+
 from datetime import datetime
+
+import numpy as np
 from simon.assets.demand import Demand
 
 from marloes.data.util import read_series
+
 from .base import Agent
-import numpy as np
-import pandas as pd
 
 
 class DemandAgent(Agent):

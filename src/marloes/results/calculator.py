@@ -1,12 +1,17 @@
+import logging
+
 import numpy as np
 import pandas as pd
+
+from marloes.valley.rewards.subrewards import (
+    CO2SubReward,
+    NBSubReward,
+    NCSubReward,
+    SSSubReward,
+    SubReward,
+)
+
 from .extractor import Extractor
-from marloes.valley.rewards.subrewards.base import SubReward
-from marloes.valley.rewards.subrewards.co2 import CO2SubReward
-from marloes.valley.rewards.subrewards.nb import NBSubReward
-from marloes.valley.rewards.subrewards.nc import NCSubReward
-from marloes.valley.rewards.subrewards.ss import SSSubReward
-import logging
 
 
 class Calculator:

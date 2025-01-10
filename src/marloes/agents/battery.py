@@ -2,9 +2,11 @@
 
 from datetime import datetime
 from functools import partial
+
 import numpy as np
 from simon.assets.battery import Battery
 from simon.data.battery_data import BatteryState
+
 from .base import Agent
 
 

@@ -1,23 +1,16 @@
-from datetime import datetime
 import logging
 import math
 import os
 import time
 from collections import defaultdict
 from typing import Type
-from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
-from simon.assets.demand import Demand
-from simon.assets.grid import Connection
 from simon.solver import Model
 
-from marloes.agents.battery import BatteryAgent
-from marloes.agents.demand import DemandAgent
-from marloes.agents.grid import GridAgent
-from marloes.agents.solar import SolarAgent
-from marloes.results.extensive_data import ExtensiveDataStore
+from marloes.agents import BatteryAgent, GridAgent, SolarAgent
+from marloes.data.extensive_data import ExtensiveDataStore
 
 MINUTES_IN_A_YEAR = 525600
 

@@ -1,7 +1,8 @@
+import copy
 from datetime import datetime
+
 import numpy as np
 from simon.assets.grid import Connection
-import copy
 
 
 def patched_get_state(self):

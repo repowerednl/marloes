@@ -1,6 +1,9 @@
 """Wind agent with functionality from Repowered's Simon"""
+
 from datetime import datetime
+
 from simon.assets.supply import Supply
+
 from .base import Agent
 
 

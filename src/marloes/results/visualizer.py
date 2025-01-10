@@ -1,13 +1,11 @@
 import logging
-import os
-import matplotlib.pyplot as plt
+
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
+
 from marloes.results.calculator import Calculator
 from marloes.results.metrics import Metrics
-import plotly.graph_objects as go
-from PIL import Image
-import plotly
 
 
 class Visualizer:

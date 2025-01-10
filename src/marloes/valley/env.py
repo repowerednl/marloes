@@ -10,14 +10,16 @@ from zoneinfo import ZoneInfo
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from simon.solver import Model
 
-from marloes.agents.base import Agent
-from marloes.agents.battery import BatteryAgent
-from marloes.agents.curtailment import CurtailmentAgent
-from marloes.agents.demand import DemandAgent
-from marloes.agents.electrolyser import ElectrolyserAgent
-from marloes.agents.grid import GridAgent
-from marloes.agents.solar import SolarAgent
-from marloes.agents.wind import WindAgent
+from marloes.agents import (
+    Agent,
+    BatteryAgent,
+    CurtailmentAgent,
+    DemandAgent,
+    ElectrolyserAgent,
+    GridAgent,
+    SolarAgent,
+    WindAgent,
+)
 from marloes.results.extractor import ExtensiveExtractor, Extractor
 
 
