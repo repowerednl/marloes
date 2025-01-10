@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QApplication
 import gui.startup as startup
 from gui.visualizer import VisualizerGUI
 from marloes.results.calculator import Calculator
-from marloes.results.metrics import Metrics
+from marloes.data.metrics import Metrics
 from marloes.results.visualizer import Visualizer
 
 

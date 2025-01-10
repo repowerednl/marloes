@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from marloes.results.calculator import Calculator
-from marloes.results.metrics import Metrics
+from marloes.data.metrics import Metrics
 
 
 class Visualizer:

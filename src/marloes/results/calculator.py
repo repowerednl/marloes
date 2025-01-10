@@ -37,17 +37,32 @@ class Calculator:
         Returns a dictionary with the metrics as keys and the results as values,
         with an additional key 'info' for possible issues.
         """
-        results = {
-            metric: (
-                self._get_reward_model(metric).calculate(self.extractor, actual=False)
-                if self._get_reward_model(metric)
-                else getattr(self.extractor, metric, None)
-            )
-            for metric in metrics
-        }
-        # Any other metrics are to be added here, so far no calculations needed because of the Reward Classes
+        results = {}
+
+        for metric in metrics:
+            # Option 1: Reward
+            reward_model = self._get_reward_model(metric)
+            if reward_model:
+                results[metric] = reward_model.calculate(self.extractor, actual=False)
+                continue
+
+            # Option 2: Custom method requires calculation in the Calculator
+            if hasattr(self, metric) and callable(getattr(self, metric)):
+                method = getattr(self, metric)
+                results[metric] = method()
+                continue
+
+            # Option 3: Just extractor metric
+            results[metric] = getattr(self.extractor, metric, None)
+
         results["info"] = self._sanity_check(results)
         return results
+
+    def cumulative_grid_state(self) -> np.ndarray:
+        """
+        Calculates the cumulative grid state.
+        """
+        return np.cumsum(self.extractor.grid_state)
 
     def _get_reward_model(self, metric: str) -> SubReward | None:
         reward_class = self.REWARD_CLASSES.get(metric)

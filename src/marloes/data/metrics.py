@@ -11,6 +11,7 @@ class Metrics(StrEnum):
     NC = "NC"
     NB = "NB"
     GRID_STATE = auto()
+    CUMULATIVE_GRID_STATE = auto()
 
     # Extensive metrics
     ACTION_PROB_DIST = auto()
