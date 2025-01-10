@@ -187,7 +187,9 @@ class ExperimentSetupApp(QWidget):
         #     self.error_screen.show()
         #     self.close()
         # else:
-        print(f"Running experiment with configuration: {self.config}")
+        logging.info("Starting experiment with the following configuration:")
+        for key, value in self.config.items():
+            logging.info(f"{key}: {value}")
         # Switch to the loading screen
         # self.loading_screen = LoadingScreen(self.config)
         # self.loading_screen.show()

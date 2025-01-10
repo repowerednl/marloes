@@ -72,7 +72,7 @@ class Extractor:
 
         # Metrics/Reward info
         output_power_data = self.get_current_power_by_type(model)
-        self.grid_state[self.i] = list(model.graph.nodes)[-1].state.power
+        self.grid_state[self.i] = list(model.graph.nodes)[0].state.power
 
         # Emission info
         self.total_solar_production[self.i] = output_power_data.get(

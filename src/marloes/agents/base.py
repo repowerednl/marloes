@@ -3,6 +3,7 @@ Functions to set up the assets with necessary constraints
 """
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
+import logging
 from simon.assets.asset import Asset
 from simon.data.asset_data import AssetSetpoint
 import pandas as pd
@@ -29,6 +30,7 @@ class Agent(ABC):
         else:
             self.asset: Asset = asset(**config)
         self.asset.load_default_state(start_time)
+        logging.info(f"{self.id} initialized...")
 
     @classmethod
     @abstractmethod

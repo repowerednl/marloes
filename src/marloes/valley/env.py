@@ -4,6 +4,7 @@ Environment that holds all necessary information for the Simulation, called Ener
 
 import logging
 from datetime import datetime, timedelta
+from typing import Optional
 from zoneinfo import ZoneInfo
 
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
@@ -47,27 +48,32 @@ class EnergyValley(MultiAgentEnv):
         self.time_step = 60  # 1 minute in seconds
 
         self.agents: list[Agent] = []
-        self.grid: GridAgent = None
-        self.model: Model = None
+        self.grid: Optional[GridAgent] = None
+        self.model: Optional[Model] = None
         self.extractor: Extractor = self.EXTRACTOR_MAP[
             config.pop("extractor_type", "default")
         ]()
 
-        self._initialize_agents(config)
+        self._initialize_agents(config, algorithm_type)
         self._initialize_model(
             algorithm_type
         )  # Model has a graph (nx.DiGraph) with assets as nodes and edges as connections
 
-    def _initialize_agents(self, config: dict) -> None:
+    def _initialize_agents(self, config: dict, algorithm_type: str) -> None:
         """
         Function to initialize all agents with the given configuration.
         Requires config with "agents" key (list of dicts), and "grid" key (dict).
         """
         logging.info("Adding agents to the environment...")
+
+        # Add the grid agent and curtailment agent to agents
+        self.grid = GridAgent(config=config.get("grid", {}), start_time=self.start_time)
+        self.agents.append(self.grid)
+        if algorithm_type == "Priorities":
+            self.agents.append(CurtailmentAgent({}, self.start_time))
+
         for agent_config in config.get("agents", []):
             self._add_agent(agent_config)
-        # Add the grid agent
-        self.grid = GridAgent(config=config.get("grid", {}), start_time=self.start_time)
 
     def _add_agent(self, agent_config: dict) -> None:
         """
@@ -88,19 +94,14 @@ class EnergyValley(MultiAgentEnv):
         logging.info("Constructing the networkx model...")
         self.model = Model()
         # Add agents to the model, temporarily add the grid agent and curtailment if algorithm is priorities
-        self.agents.append(self.grid)
-        if algorithm_type == "Priorities":
-            self.agents.append(CurtailmentAgent({}, self.start_time))
         for agent in self.agents:
-            self.model.add_asset(agent.asset, self._get_targets(agent, algorithm_type))
+            self.model.add_asset(agent.asset, self._get_targets(agent))
         # Remove the grid agent and curtailment if algorithm is priorities
-        self.agents.pop()
+        self.agents.pop(0)
         if algorithm_type == "Priorities":
-            self.agents.pop()
+            self.agents.pop(0)
 
-    def _get_targets(
-        self, agent: Agent, algorithm_type: str
-    ) -> list[tuple[Agent, int]]:
+    def _get_targets(self, agent: Agent) -> list[tuple[Agent, int]]:
         """
         Get the targets for a Supply/Flexible agent, Demand/Flexible/Grid agents are targets.
         A list of Tuple(Asset, Priority) with:
@@ -134,7 +135,7 @@ class EnergyValley(MultiAgentEnv):
         return [
             (
                 other_agent.asset,
-                self._get_priority(type(agent), type(other_agent), algorithm_type),
+                self._get_priority(type(agent), type(other_agent)),
             )
             for other_agent in self.agents
             if other_agent != agent
@@ -143,29 +144,19 @@ class EnergyValley(MultiAgentEnv):
         ]
 
     @staticmethod
-    def _get_priority(
-        agent_type: type, target_agent_type: type, algorithm_type: str
-    ) -> float:
+    def _get_priority(agent_type: type, target_agent_type: type) -> float:
         """
         Get the right priority map for the right algorithm.
         """
-        if algorithm_type == "Priorities":
+        if agent_type == GridAgent:
+            return -1
+        else:
             priority_map = {
                 DemandAgent: 3,
                 BatteryAgent: 2,
                 ElectrolyserAgent: 2,
                 CurtailmentAgent: 0,
                 GridAgent: -1,
-            }
-            return priority_map[target_agent_type]
-        elif agent_type == GridAgent:
-            return 10
-        else:
-            priority_map = {
-                DemandAgent: 0,
-                BatteryAgent: 0,
-                ElectrolyserAgent: 0,
-                GridAgent: 10,
             }
             return priority_map[target_agent_type]
 

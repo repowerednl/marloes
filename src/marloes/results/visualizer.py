@@ -7,6 +7,7 @@ from marloes.results.calculator import Calculator
 from marloes.results.metrics import Metrics
 import plotly.graph_objects as go
 from PIL import Image
+import plotly
 
 
 class Visualizer:
@@ -63,35 +64,31 @@ class Visualizer:
         """
         Plots the default metrics for each UID in a single figure per metric.
         """
-        plt.style.use("ggplot")
-
+        index = pd.date_range(
+            start="1/1/2025", periods=len(next(iter(data_by_uid.values()))), freq="min"
+        )
         # For each metric, create a single figure showing all UIDs (with some line style variation)
-        line_styles = ["--", "-.", ":"]
-        plt.figure(figsize=(10, 6))
+        line_styles = ["solid", "dot", "dash", "longdash", "dashdot", "longdashdot"]
+
+        fig = go.Figure()
         for uid, series in data_by_uid.items():
-            plt.plot(
-                series,
-                label=f"UID {uid}",
-                alpha=0.8,
-                linestyle=line_styles[uid % len(line_styles)],
+            fig.add_trace(
+                go.Scatter(
+                    x=index,
+                    y=series,
+                    mode="lines",
+                    name=f"UID {uid}",
+                    line=dict(dash=line_styles[uid % len(line_styles)]),
+                )
             )
 
-        plt.title(
-            f"{metric} across simulations {self.uids}",
-            fontsize=14,
-            fontweight="bold",
+        fig.update_layout(
+            title=f"{metric} across simulations {self.uids}",
+            xaxis_title="Time",
+            yaxis_title=metric,
+            font=dict(size=14, color="black"),
         )
-        plt.xlabel("Time", fontsize=12)
-        plt.ylabel(metric, fontsize=12)
-        plt.legend(loc="best")
-        plt.grid(True)
-
-        if save_png:
-            filename = f"results/images/{metric}_{'_'.join(map(str, self.uids))}.png"
-            plt.savefig(filename, dpi=300, bbox_inches="tight")
-            logging.info(f"Saved {metric} as {filename}")
-
-        plt.show()
+        fig.show()
 
     def plot_sankey(self, df: pd.DataFrame, uid: int, save_png: bool = False):
         """
