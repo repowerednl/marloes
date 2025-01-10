@@ -84,12 +84,12 @@ class TestExtensiveExtractor(unittest.TestCase):
         )
 
         # Check if SimulationResults were populated
-        self.assertIsNotNone(self.extractor.results)
+        self.assertIsNotNone(self.extractor.extensive_data)
         self.assertEqual(
-            len(self.extractor.results.states), len(self.model.graph.nodes)
+            len(self.extractor.extensive_data._states), len(self.model.graph.nodes)
         )
         self.assertEqual(
-            len(self.extractor.results.flows), len(self.model.edge_flow_tracker)
+            len(self.extractor.extensive_data._flows), len(self.model.edge_flow_tracker)
         )
 
     def test_from_model_no_flows(self):
@@ -102,8 +102,8 @@ class TestExtensiveExtractor(unittest.TestCase):
         self.extractor.from_model(self.model)
 
         # Check that results are initialized but empty
-        self.assertIsNotNone(self.extractor.results)
-        for _, flows in self.extractor.results.flows.items():
+        self.assertIsNotNone(self.extractor.extensive_data)
+        for _, flows in self.extractor.extensive_data._flows.items():
             self.assertEqual(len(flows), 0)
 
     def test_reaching_capacity(self):
