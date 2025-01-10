@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+
 from marloes.algorithms.base import BaseAlgorithm
 
 

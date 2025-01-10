@@ -1,6 +1,9 @@
 """Wind agent with functionality from Repowered's Simon"""
+
 from datetime import datetime
+
 from simon.assets.supply import Supply
+
 from .base import Agent
 
 
@@ -13,7 +16,7 @@ class WindAgent(Agent):
         # TODO: to be implemented
         pass
 
-    def get_default_config(cls, config: dict) -> dict:
+    def get_default_config(cls, config: dict, id: str) -> dict:
         """Each subclass must define its default configuration."""
         pass
 

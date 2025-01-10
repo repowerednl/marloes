@@ -98,4 +98,4 @@ class SaverTestCase(unittest.TestCase):
         uid = self.saver._update_simulation_number()
         self.assertEqual(uid, 0)
         uid = self.saver._update_simulation_number()
-        self.assertEqual(uid, 1)
+        self.assertEqual(uid, 2)

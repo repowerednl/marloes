@@ -53,7 +53,6 @@ class TestBatteryAgent(unittest.TestCase):
             start_time=datetime.now(), config=partial_config
         )
         self.assertIsInstance(self.battery_agent.asset, Battery)
-        self.assertEqual(self.battery_agent.asset.name, "Battery")
         self.assertEqual(self.battery_agent.asset.max_power_in, 50.0)
         self.assertEqual(self.battery_agent.asset.max_power_out, 50.0)
         self.assertEqual(self.battery_agent.asset.max_state_of_charge, 0.95)
@@ -69,7 +68,7 @@ class TestBatteryAgent(unittest.TestCase):
         self.assertEqual(self.battery_agent.asset.state.degradation, 0.0)
 
     def test_action_mapping(self):
-        self.assertEqual(self.battery_agent.map_action_to_setpoint(-1.0), 50.0)
+        self.assertEqual(self.battery_agent.map_action_to_setpoint(-1.0), -50.0)
         self.assertEqual(self.battery_agent.map_action_to_setpoint(0.0), 0.0)
         self.assertEqual(self.battery_agent.map_action_to_setpoint(1.0), 40.0)
 

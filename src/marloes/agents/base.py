@@ -1,11 +1,10 @@
-"""
-Functions to set up the assets with necessary constraints
-"""
+import logging
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
+
+import pandas as pd
 from simon.assets.asset import Asset
 from simon.data.asset_data import AssetSetpoint
-import pandas as pd
 
 
 class Agent(ABC):
@@ -22,17 +21,18 @@ class Agent(ABC):
         self.id = f"{cls_name} {Agent._id_counters[cls_name]}"
         Agent._id_counters[cls_name] += 1
 
-        default_config = self.get_default_config(config)
+        default_config = self.get_default_config(config, self.id.replace("Agent", ""))
         config = self.merge_configs(default_config, config)
         if series is not None:
             self.asset: Asset = asset(series=series, **config)
         else:
             self.asset: Asset = asset(**config)
         self.asset.load_default_state(start_time)
+        logging.info(f"{self.id} initialized...")
 
     @classmethod
     @abstractmethod
-    def get_default_config(cls, config: dict) -> dict:
+    def get_default_config(cls, config: dict, id: str) -> dict:
         """Each subclass must define its default configuration."""
         pass
 

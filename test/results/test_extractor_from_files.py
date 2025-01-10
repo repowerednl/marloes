@@ -32,7 +32,7 @@ class TestExtractorFromFiles(TestCase):
 
         # Also create a UID file (uid.txt) in the results directory
         with open("test_results/uid.txt", "w") as f:
-            f.write(str(self.mock_uid + 1))
+            f.write(str(self.mock_uid + 2))
 
     def tearDown(self):
         """

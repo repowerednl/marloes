@@ -28,10 +28,10 @@ class SolarAgent(Agent):
 
         return series
 
-    def get_default_config(cls, config: dict) -> dict:
+    def get_default_config(cls, config: dict, id: str) -> dict:
         """Each subclass must define its default configuration."""
         return {
-            "name": "Solar",
+            "name": id,
             "max_power_out": min(config["AC"], config["DC"]),
             # Solar parks are curtailable
             "curtailable_by_solver": True,

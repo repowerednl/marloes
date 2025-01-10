@@ -41,7 +41,6 @@ class TestSolarAgent(unittest.TestCase):
         }
         solar_agent = SolarAgent(start_time=datetime.now(), config=partial_config)
         self.assertIsInstance(solar_agent.asset, Supply)
-        self.assertEqual(solar_agent.asset.name, "Solar")
         self.assertEqual(solar_agent.asset.max_power_out, 800)
         self.assertTrue(solar_agent.asset.curtailable_by_solver)
         self.assertFalse(solar_agent.asset.upward_dispatchable)

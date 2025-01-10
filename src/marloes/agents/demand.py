@@ -1,11 +1,13 @@
 """Demand 'agents' with functionality from Repowered's Simon"""
+
 from datetime import datetime
+
+import numpy as np
 from simon.assets.demand import Demand
 
 from marloes.data.util import read_series
+
 from .base import Agent
-import numpy as np
-import pandas as pd
 
 
 class DemandAgent(Agent):
@@ -27,10 +29,10 @@ class DemandAgent(Agent):
         return series
 
     @classmethod
-    def get_default_config(cls, config: dict) -> dict:
+    def get_default_config(cls, config: dict, id: str) -> dict:
         """Each subclass must define its default configuration."""
         return {
-            "name": "Demand",
+            "name": id,
             "max_power_in": np.inf,
             # Should not be curtailed
             "curtailable_by_solver": False,

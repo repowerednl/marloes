@@ -1,5 +1,3 @@
-# tests/factories.py
-
 from time import time
 
 import factory

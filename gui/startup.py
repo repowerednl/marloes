@@ -1,24 +1,26 @@
+import logging
+
+import yaml
 from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QRadioButton,
-    QPushButton,
-    QLabel,
     QButtonGroup,
-    QSpinBox,
+    QCheckBox,
+    QComboBox,
     QDoubleSpinBox,
-    QCheckBox,  # Added import for QCheckBox
+    QLabel,
+    QPushButton,
+    QRadioButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
 )
 
 from gui.success_screen import SuccessScreen
-
-from .loading_screen import LoadingScreen
-from .img import LogoWindow
-from .errors import ErrorScreen
+from src.marloes.algorithms import MADDPG, BaseAlgorithm, Priorities, SimpleSetpoint
 from src.marloes.validation.validate_config import validate_config
-import yaml  # Import for handling YAML files
-from src.marloes.algorithms import BaseAlgorithm, MADDPG, SimpleSetpoint, Priorities
-import logging
+
+from .errors import ErrorScreen
+from .img import LogoWindow
+from .loading_screen import LoadingScreen
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -77,11 +79,18 @@ class ExperimentSetupApp(QWidget):
         layout.addWidget(self.algorithm_simon_solver)
         layout.addWidget(self.algorithm_simple_setpoint)
 
+        # EXTRACTOR TYPE DROPDOWN
+        self.extractor_type_label = QLabel("Extractor Type:")
+        self.extractor_type_dropdown = QComboBox()
+        self.extractor_type_dropdown.addItems(["default", "extensive"])
+        layout.addWidget(self.extractor_type_label)
+        layout.addWidget(self.extractor_type_dropdown)
+
         # EPOCHS
         self.epochs_label = QLabel("Epochs:")  # Must be an integer
         self.epochs = QSpinBox()
         self.epochs.setRange(1000, 1000000)
-        self.epochs.setValue(10000)
+        self.epochs.setValue(100000)
         layout.addWidget(self.epochs_label)
         layout.addWidget(self.epochs)
 
@@ -166,8 +175,6 @@ class ExperimentSetupApp(QWidget):
 
     def hide_all_params(self):
         """Hides all input fields when default config is selected."""
-        self.epochs_label.hide()
-        self.epochs.hide()
         self.coverage_label.hide()
         self.coverage_input.hide()
         self.hide_params()
@@ -180,7 +187,9 @@ class ExperimentSetupApp(QWidget):
         #     self.error_screen.show()
         #     self.close()
         # else:
-        print(f"Running experiment with configuration: {self.config}")
+        logging.info("Starting experiment with the following configuration:")
+        for key, value in self.config.items():
+            logging.info(f"     {key}: {value}")
         # Switch to the loading screen
         # self.loading_screen = LoadingScreen(self.config)
         # self.loading_screen.show()
@@ -188,7 +197,14 @@ class ExperimentSetupApp(QWidget):
         algorithm: BaseAlgorithm = BaseAlgorithm.get_algorithm(
             self.config["algorithm"], self.config
         )
-        algorithm.train()
+        try:
+            algorithm.train()
+        except Exception as e:
+            # print(f"Error during training: {e}")
+            # self.error_screen = ErrorScreen("Error during training", self)
+            # self.error_screen.show()
+            self.close()
+            raise e
 
         # Show success message after training has finished
         self.success_screen = SuccessScreen()
@@ -218,6 +234,8 @@ class ExperimentSetupApp(QWidget):
 
         if self.learning_rate.isVisible():
             config["learning_rate"] = self.learning_rate.value()
+
+        config["extractor_type"] = self.extractor_type_dropdown.currentText()
 
         # TODO: add additional parameters as needed
         self.config = config

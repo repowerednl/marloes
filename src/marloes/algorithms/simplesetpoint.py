@@ -1,5 +1,6 @@
-from .base import BaseAlgorithm
 import random
+
+from .base import BaseAlgorithm
 
 
 class SimpleSetpoint(BaseAlgorithm):
