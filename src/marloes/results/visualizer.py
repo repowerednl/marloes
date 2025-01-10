@@ -65,8 +65,6 @@ class Visualizer:
         index = pd.date_range(
             start="1/1/2025", periods=len(next(iter(data_by_uid.values()))), freq="min"
         )
-        # For each metric, create a single figure showing all UIDs (with some line style variation)
-        line_styles = ["solid", "dot", "dash", "longdash", "dashdot", "longdashdot"]
 
         fig = go.Figure()
         for uid, series in data_by_uid.items():
@@ -76,7 +74,6 @@ class Visualizer:
                     y=series,
                     mode="lines",
                     name=f"UID {uid}",
-                    line=dict(dash=line_styles[uid % len(line_styles)]),
                 )
             )
 
