@@ -217,3 +217,75 @@ class TestEnergyValleyEnv(unittest.TestCase):
                 (self.second_demand_agent.asset, -1),
             ],
         )
+
+
+class TestEnergyValleyEnvWithTwoBatteries(unittest.TestCase):
+    @patch("marloes.agents.solar.read_series")
+    @patch("marloes.agents.demand.read_series")
+    def setUp(self, mock_demand, mock_solar) -> None:
+        # Reset id counter to make sure the other tests don't interfere
+        Agent._id_counters = {}
+        self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        mock_series = pd.Series([100], index=[self.start_time])
+        mock_demand.return_value = mock_series
+        mock_solar.return_value = mock_series
+        config = get_new_config()
+        config["agents"].append(
+            {
+                "type": "battery",
+                "efficiency": 0.9,
+                "power": 100,
+                "energy_capacity": 1000,
+            }
+        )
+        self.env = EnergyValley(config, "Priorities")
+        self.demand_agent = self.env.agents[0]
+        self.solar_agent = self.env.agents[1]
+        self.battery_agent = self.env.agents[2]
+        self.second_demand_agent = self.env.agents[3]
+        self.second_battery_agent = self.env.agents[4]
+        self.grid_agent = self.env.grid
+
+    def test_agent_initialization(self):
+        self.assertEqual(len(self.env.agents), 5)  # 5 agents
+        # check if the agents are of the right type
+        self.assertIsInstance(self.demand_agent, DemandAgent)
+        self.assertIsInstance(self.solar_agent, SolarAgent)
+        self.assertIsInstance(self.battery_agent, BatteryAgent)
+        self.assertIsInstance(self.second_demand_agent, DemandAgent)
+        self.assertIsInstance(self.second_battery_agent, BatteryAgent)
+        self.assertIsInstance(self.grid_agent, GridAgent)
+        # check start time of each agent, should be equal to each other
+        self.assertEqual(
+            self.demand_agent.asset.state.time, self.solar_agent.asset.state.time
+        )
+        self.assertEqual(
+            self.demand_agent.asset.state.time, self.battery_agent.asset.state.time
+        )
+        self.assertEqual(
+            self.demand_agent.asset.state.time, self.grid_agent.asset.state.time
+        )
+
+    def test_battery_connections(self):
+        """
+        Test the connections of the second battery agent
+        """
+        self.assertEqual(
+            self.env._get_targets(self.battery_agent) + [(self.grid_agent.asset, 1)],
+            [
+                (self.demand_agent.asset, 3),
+                (self.second_demand_agent.asset, 3),
+                (self.second_battery_agent.asset, -2),
+                (self.grid_agent.asset, 1),
+            ],
+        )
+        self.assertEqual(
+            self.env._get_targets(self.second_battery_agent)
+            + [(self.grid_agent.asset, 1)],
+            [
+                (self.demand_agent.asset, 3),
+                (self.battery_agent.asset, -2),
+                (self.second_demand_agent.asset, 3),
+                (self.grid_agent.asset, 1),
+            ],
+        )
