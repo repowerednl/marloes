@@ -114,6 +114,9 @@ class ExperimentSetupApp(QWidget):
         # Set layout
         self.setLayout(layout)
 
+        # Set default config checkbox to checked
+        self.default_config_checkbox.setChecked(True)
+
         # Toggle fields based on selections
         self.grid_search_radio.toggled.connect(self.toggle_grid_search)
         self.algorithm_buttons.buttonToggled.connect(self.toggle_params)
