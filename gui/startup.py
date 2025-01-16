@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from PyQt6.QtCore import QTimer
 
 from gui.success_screen import SuccessScreen
 from src.marloes.algorithms import MADDPG, BaseAlgorithm, Priorities, SimpleSetpoint
@@ -17,7 +18,6 @@ from src.marloes.validation.validate_config import validate_config
 
 from .errors import ErrorScreen
 from .img import LogoWindow
-from .loading_screen import LoadingScreen
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -66,6 +66,14 @@ class ExperimentSetupApp(QWidget):
         self.epochs.setValue(100000)
         layout.addWidget(self.epochs_label)
         layout.addWidget(self.epochs)
+
+        # Chunk size
+        self.chunk_size_label = QLabel("Chunk Size:")  # Must be an integer
+        self.chunk_size = QSpinBox()
+        self.chunk_size.setRange(0, 1000000)
+        self.chunk_size.setValue(10000)
+        layout.addWidget(self.chunk_size_label)
+        layout.addWidget(self.chunk_size)
 
         # PARAMETER INPUT
         self.learning_rate_label = QLabel("Learning Rate:")  # Must be a float
@@ -135,6 +143,9 @@ class ExperimentSetupApp(QWidget):
 
         if self.epochs.isVisible():
             config["epochs"] = self.epochs.value()
+
+        if self.epochs.isVisible():
+            config["chunk_size"] = self.chunk_size.value()
 
         if self.learning_rate.isVisible():
             config["learning_rate"] = self.learning_rate.value()
