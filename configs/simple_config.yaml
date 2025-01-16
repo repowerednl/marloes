@@ -1,0 +1,14 @@
+algorithm: Priorities
+agents:
+  - type: solar
+    AC: 9000
+    DC: 10000
+    orientation: EW
+  - type: demand
+    scale: 9.5
+    profile: Farm
+  - type: battery
+    energy_capacity: 1000
+    power: 500
+grid:
+  name: Grid
