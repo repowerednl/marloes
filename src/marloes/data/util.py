@@ -2,6 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+import numpy as np
 
 
 def read_series(
@@ -155,3 +156,11 @@ def convert_to_utc(series: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame
     else:
         series.index = pd.to_datetime(series.index).tz_convert("UTC")
     return series
+
+
+def add_noise_to_series(series: pd.Series, sd: float) -> pd.Series:
+    """
+    Adds normally distributed noise to a series.
+    """
+    noise = np.random.normal(0, sd, len(series))
+    return series + noise
