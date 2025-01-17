@@ -49,7 +49,7 @@ class BaseAlgorithm(ABC):
             self._train_step(observations, rewards, dones, infos)
 
             # After chunk is "full", it should be saved
-            if self.chunk_size != 0 and epoch % self.chunk_size == 0:
+            if self.chunk_size != 0 and epoch % self.chunk_size == 0 and epoch != 0:
                 logging.info("Saving intermediate results and resetting extractor...")
                 self.saver.save(extractor=self.environment.extractor)
                 # clear the extractor
@@ -57,7 +57,7 @@ class BaseAlgorithm(ABC):
 
         # Save the final results and TODO: model
         logging.info("Training finished. Saving results...")
-        self.saver.final_save(self, self.environment.extractor)
+        self.saver.final_save(self.environment.extractor)
 
         logging.info("Training process completed.")
 

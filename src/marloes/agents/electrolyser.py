@@ -3,6 +3,7 @@
 from datetime import datetime
 import numpy as np
 from simon.assets.electrolyser import Electrolyser
+
 from .base import Agent
 
 

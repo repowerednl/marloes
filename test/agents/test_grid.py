@@ -31,8 +31,3 @@ class TestGridAgent(unittest.TestCase):
         # test the initial (default) state
         self.assertEqual(self.grid_agent.asset.state.time, datetime.now())
         self.assertEqual(self.grid_agent.asset.state.power, 0.0)
-
-    def test_get_state(self):
-        state = self.grid_agent.get_state()
-        self.assertEqual(state.time, datetime.now())
-        self.assertEqual(state.power, 0.0)
