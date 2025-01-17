@@ -2,41 +2,43 @@
 
 from datetime import datetime
 import numpy as np
-from simon.assets.electrolyser import Electrolyser
+from simon.assets.battery import Battery
 
 from .base import Agent
 
 
 class ElectrolyserAgent(Agent):
     def __init__(self, config: dict, start_time: datetime):
-        super().__init__(Electrolyser, config, start_time)
+        super().__init__(Battery, config, start_time)
 
     @classmethod
     def get_default_config(cls, config: dict) -> dict:
         """Default configuration for an Electrolyser."""
         return {
             "name": "Electrolyser",
-            "conversion_efficiency": 82,
-            "max_power_in": config["capacity"],
-            "min_power_in": config["capacity"] / 100,
-            "slew_rate_up": 100,
-            "slew_rate_down": 100,
-            "startup_time": 10,
-            "anode_pressure": 30,
-            "storage_pressure": 50,  # for pipes, for tanks it can go up to 350
+            "max_power_in": config["power"],
+            "max_power_out": config["power"],
+            "capacity": 1,  # x kgH2 / conversion_factor
+            "ramp_up_rate": 0.7,  # a certain percentage of capacity
+            "ramp_down_rate": 0.7,  # a certain percentage of capacity
+            "efficiency_input": 0.6,  # values from Stoff2? or from literature
+            "efficiency_output": 0.6,  # values from Stoff2? or from literature
         }
 
+    # SAME AS BATTERY
     @staticmethod
     def merge_configs(default_config: dict, config: dict) -> dict:
         """Merge the default configuration with user-provided values."""
-        merged_config = default_config.copy()
-        merged_config.update(config)
+        merged_config = default_config.copy()  # Start with defaults
+        merged_config.update(config)  # Override with provided values
 
-        # Enforce constraints with regards to the grid, and get rid of capacity
+        # Enforce constraints with regards to the grid
         merged_config["max_power_in"] = min(
-            merged_config.get("max_power_in", np.inf), merged_config.pop("capacity")
+            merged_config.get("max_power_in", np.inf), merged_config["power"]
         )
-        merged_config["min_power_in"] = merged_config["max_power_in"] / 100
+        merged_config["max_power_out"] = min(
+            merged_config.get("max_power_out", np.inf), merged_config.pop("power")
+        )
 
         return merged_config
 

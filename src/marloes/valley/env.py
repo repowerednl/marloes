@@ -152,9 +152,9 @@ class EnergyValley(MultiAgentEnv):
         """
         if agent_type == GridAgent:
             return -1
-        elif (
-            agent_type == target_agent_type
-        ):  # should only be the case for Battery/Electrolyser that can supply and 'demand'
+        elif (agent_type in [ElectrolyserAgent, BatteryAgent]) and (
+            target_agent_type in [ElectrolyserAgent, BatteryAgent]
+        ):
             return -2
         else:
             priority_map = {
