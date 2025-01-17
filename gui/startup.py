@@ -2,17 +2,15 @@ import logging
 
 import yaml
 from PyQt6.QtWidgets import (
-    QButtonGroup,
-    QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QLabel,
     QPushButton,
-    QRadioButton,
     QSpinBox,
     QVBoxLayout,
     QWidget,
 )
+from PyQt6.QtCore import QTimer
 
 from gui.success_screen import SuccessScreen
 from src.marloes.algorithms import MADDPG, BaseAlgorithm, Priorities, SimpleSetpoint
@@ -20,7 +18,6 @@ from src.marloes.validation.validate_config import validate_config
 
 from .errors import ErrorScreen
 from .img import LogoWindow
-from .loading_screen import LoadingScreen
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -42,42 +39,18 @@ class ExperimentSetupApp(QWidget):
         self.logo = LogoWindow()
         layout.addWidget(self.logo)
 
-        # Label
-        self.label = QLabel("Select experiment mode and setup:")
-        layout.addWidget(self.label)
-
         # DEFAULT CONFIG CHECKBOX
-        self.default_config_checkbox = QCheckBox("Use Default Config")
-        layout.addWidget(self.default_config_checkbox)
-        self.default_config_checkbox.toggled.connect(self.toggle_default_config)
-
-        # GRID SEARCH
-        self.grid_search_radio = QRadioButton("Grid Search")
-        layout.addWidget(self.grid_search_radio)
-        # Coverage input field if grid_search is selected
-        self.coverage_label = QLabel("Coverage:")
-        self.coverage_input = QSpinBox()
-        self.coverage_input.setRange(1, 100)
-        self.coverage_label.hide()
-        self.coverage_input.hide()
-        layout.addWidget(self.coverage_label)
-        layout.addWidget(self.coverage_input)
+        layout.addWidget(QLabel("Select configuration:"))
+        self.config_dropdown = QComboBox()
+        self.config_dropdown.addItems(["default_config", "simple_config"])
+        layout.addWidget(self.config_dropdown)
 
         # ALGORITHM SELECTION
-        self.algorithm_buttons = QButtonGroup(self)
-        self.algorithm_model_based = QRadioButton("model_based")
-        self.algorithm_model_free = QRadioButton("model_free")
-        self.algorithm_simon_solver = QRadioButton("Priorities")
-        self.algorithm_simple_setpoint = QRadioButton("SimpleSetpoint")
-        self.algorithm_buttons.addButton(self.algorithm_model_based)
-        self.algorithm_buttons.addButton(self.algorithm_model_free)
-        self.algorithm_buttons.addButton(self.algorithm_simon_solver)
-        self.algorithm_buttons.addButton(self.algorithm_simple_setpoint)
-
-        layout.addWidget(self.algorithm_model_based)
-        layout.addWidget(self.algorithm_model_free)
-        layout.addWidget(self.algorithm_simon_solver)
-        layout.addWidget(self.algorithm_simple_setpoint)
+        self.algorithm_label = QLabel("Select Algorithm:")
+        self.algorithm_dropdown = QComboBox(self)
+        self.algorithm_dropdown.addItems(["Priorities", "SimpleSetpoint"])
+        layout.addWidget(self.algorithm_label)
+        layout.addWidget(self.algorithm_dropdown)
 
         # EXTRACTOR TYPE DROPDOWN
         self.extractor_type_label = QLabel("Extractor Type:")
@@ -93,6 +66,14 @@ class ExperimentSetupApp(QWidget):
         self.epochs.setValue(100000)
         layout.addWidget(self.epochs_label)
         layout.addWidget(self.epochs)
+
+        # Chunk size
+        self.chunk_size_label = QLabel("Chunk Size:")  # Must be an integer
+        self.chunk_size = QSpinBox()
+        self.chunk_size.setRange(0, 1000000)
+        self.chunk_size.setValue(10000)
+        layout.addWidget(self.chunk_size_label)
+        layout.addWidget(self.chunk_size)
 
         # PARAMETER INPUT
         self.learning_rate_label = QLabel("Learning Rate:")  # Must be a float
@@ -113,74 +94,6 @@ class ExperimentSetupApp(QWidget):
 
         # Set layout
         self.setLayout(layout)
-
-        # Set default config checkbox to checked
-        self.default_config_checkbox.setChecked(True)
-
-        # Toggle fields based on selections
-        self.grid_search_radio.toggled.connect(self.toggle_grid_search)
-        self.algorithm_buttons.buttonToggled.connect(self.toggle_params)
-        self.default_config_checkbox.toggled.connect(self.toggle_default_config)
-
-    def toggle_params(self):
-        """Toggle parameters based on algorithm selection and grid search."""
-        if self.default_config_checkbox.isChecked():
-            self.hide_all_params()
-            return
-
-        selected_algorithm = self.algorithm_buttons.checkedButton()
-        if selected_algorithm:
-            algorithm = selected_algorithm.text()
-            if algorithm == "priorities":
-                self.hide_all_params()
-            elif algorithm in ["model_based", "model_free"]:
-                if not self.grid_search_radio.isChecked():
-                    self.show_params()
-                else:
-                    self.hide_params()
-        else:
-            self.hide_all_params()
-
-    def toggle_grid_search(self):
-        """Toggle coverage input field and parameter fields based on grid search selection."""
-        if self.default_config_checkbox.isChecked():
-            self.hide_all_params()
-            return
-
-        if self.grid_search_radio.isChecked():
-            self.coverage_label.show()
-            self.coverage_input.show()
-            self.hide_params()
-        else:
-            self.coverage_label.hide()
-            self.coverage_input.hide()
-            self.toggle_params()
-
-    def toggle_default_config(self):
-        """Toggle all input fields when default config is selected."""
-        if self.default_config_checkbox.isChecked():
-            # Hide all parameter fields
-            self.hide_all_params()
-            self.grid_search_radio.setChecked(False)
-            self.grid_search_radio.setDisabled(True)
-        else:
-            self.grid_search_radio.setDisabled(False)
-
-    def hide_params(self):
-        """Hides parameter fields (not needed for grid search or priorities)."""
-        self.learning_rate_label.hide()
-        self.learning_rate.hide()
-
-    def show_params(self):
-        """Shows parameter fields (needed for model_based and model_free)."""
-        self.learning_rate_label.show()
-        self.learning_rate.show()
-
-    def hide_all_params(self):
-        """Hides all input fields when default config is selected."""
-        self.coverage_label.hide()
-        self.coverage_input.hide()
-        self.hide_params()
 
     def start_experiment(self):
         self.collect_config()
@@ -216,24 +129,23 @@ class ExperimentSetupApp(QWidget):
 
     def collect_config(self):
         config = {}
-        if self.default_config_checkbox.isChecked():
-            # Load default config from YAML file
-            try:
-                with open("configs/default_config.yaml", "r") as f:
-                    config = yaml.safe_load(f)
-            except Exception as e:
-                config = {}
-                print(f"Error loading default config: {e}")
+        # Load default config from YAML file
+        chosen_config = self.config_dropdown.currentText()
+        try:
+            with open(f"configs/{chosen_config}.yaml", "r") as f:
+                config = yaml.safe_load(f)
+        except Exception as e:
+            config = {}
+            print(f"Error loading default config: {e}")
 
-        if self.grid_search_radio.isChecked():
-            config["grid_search"] = True
-            config["coverage"] = self.coverage_input.value()
-
-        if self.algorithm_buttons.checkedButton():
-            config["algorithm"] = self.algorithm_buttons.checkedButton().text()
+        if self.algorithm_dropdown.currentText():
+            config["algorithm"] = self.algorithm_dropdown.currentText()
 
         if self.epochs.isVisible():
             config["epochs"] = self.epochs.value()
+
+        if self.epochs.isVisible():
+            config["chunk_size"] = self.chunk_size.value()
 
         if self.learning_rate.isVisible():
             config["learning_rate"] = self.learning_rate.value()
