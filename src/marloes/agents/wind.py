@@ -2,7 +2,11 @@
 
 from datetime import datetime
 
+import numpy as np
+import pandas as pd
 from simon.assets.supply import Supply
+
+from marloes.data.util import read_series
 
 from .base import Agent
 
@@ -13,12 +17,36 @@ class WindAgent(Agent):
         super().__init__(Supply, config, start_time, series)
 
     def _get_production_series(self, config: dict):
-        # TODO: to be implemented
-        pass
+        # Read in the right 1 MWp profile from the wind data (is already in MW)
+        series = read_series(f"Wind_{config.pop('location')}.parquet")
+
+        # Cap at the AC capacity
+        series[series > config["AC"]] = config["AC"]
+
+        return series
 
     def get_default_config(cls, config: dict, id: str) -> dict:
         """Each subclass must define its default configuration."""
-        pass
+        return {
+            "name": id,
+            "max_power_out": min(config["AC"], config["DC"]),
+            "curtailable_by_solver": True,
+            "upward_dispatchable": False,
+        }
+
+    @staticmethod
+    def merge_configs(default_config, config):
+        """Merge the default configuration with user-provided values."""
+        merged_config = default_config.copy()
+        merged_config.update(config)
+
+        merged_config["max_power_out"] = min(
+            merged_config.get("max_power_out", np.inf),
+            merged_config.pop("AC"),
+            merged_config.pop("DC"),
+        )
+
+        return merged_config
 
     def map_action_to_setpoint(self, action: float) -> float:
         # Wind has a continous action space, range: [0, 1]
