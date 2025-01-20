@@ -4,25 +4,39 @@ from datetime import datetime
 import numpy as np
 from simon.assets.battery import Battery
 
+from functools import partial
 from .base import Agent
 
 
 class ElectrolyserAgent(Agent):
     def __init__(self, config: dict, start_time: datetime):
         super().__init__(Battery, config, start_time)
+        # the internal clock is to keep track of the start-up time of the electrolyser
+        self.start_up_time = 5
+        self.internal_clock = 0
 
     @classmethod
-    def get_default_config(cls, config: dict) -> dict:
+    def get_default_config(cls, config: dict, id: str) -> dict:
         """Default configuration for an Electrolyser."""
+        degradation_function = partial(
+            electrolyser_degradation_function,
+            capacity=config["energy_capacity"],
+            # Default to 7000 cycles
+            total_cycles=config.get("total_cycles", 7000),
+        )
         return {
-            "name": "Electrolyser",
+            "name": id,
             "max_power_in": config["power"],
             "max_power_out": config["power"],
-            "capacity": 1,  # x kgH2 / conversion_factor
-            "ramp_up_rate": 0.7,  # a certain percentage of capacity
-            "ramp_down_rate": 0.7,  # a certain percentage of capacity
-            "efficiency_input": 0.6,  # values from Stoff2? or from literature
-            "efficiency_output": 0.6,  # values from Stoff2? or from literature
+            "max_state_of_charge": 0.95,
+            "min_state_of_charge": 0.05,
+            "energy_capacity": 100,  # x kgH2 / conversion_factor
+            "ramp_up_rate": 0.4,  # a certain percentage of capacity (Reducing ramp up rate even more to account for start-up time)
+            "ramp_down_rate": 0.4,  # a certain percentage of capacity
+            "input_efficiency": 0.6,  # values from Stoff2? or from literature
+            "output_efficiency": 0.6,  # values from Stoff2? or from literature
+            "degradation_function": degradation_function,
+            "conversion_factor": 53,  # kgH2 to kWh
         }
 
     # SAME AS BATTERY
@@ -40,17 +54,34 @@ class ElectrolyserAgent(Agent):
             merged_config.get("max_power_out", np.inf), merged_config.pop("power")
         )
 
+        # Convert the capacity (kgH2) to the capacity in the model (kWh)
+        merged_config["energy_capacity"] = merged_config[
+            "energy_capacity"
+        ] / merged_config.pop("conversion_factor")
+
         return merged_config
 
     def map_action_to_setpoint(self, action: float) -> float:
         # Electrolyser has a continous action space, range: [-1, 1]
-        if action < 0:
-            return self.asset.max_power_in * -action
-        else:
+        if action <= 0:
+            # reset the internal clock
+            self.internal_clock = 0
             return self.asset.max_power_in * action
+        else:
+            # increment the internal clock
+            self.internal_clock += 1
+            return (
+                self.asset.max_power_out * action
+                if self.internal_clock > self.start_up_time
+                else 0
+            )
 
     def observe(self):
         pass
 
     def learn(self):
         pass
+
+
+def electrolyser_degradation_function(self):
+    pass
