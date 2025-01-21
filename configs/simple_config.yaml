@@ -6,8 +6,8 @@ agents:
     orientation: EW
   - type: wind
     location: Onshore
-    power: 1000
-    AC: 900
+    power: 3000
+    AC: 2000
   - type: demand
     scale: 9.5
     profile: Farm

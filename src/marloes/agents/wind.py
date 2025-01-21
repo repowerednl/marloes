@@ -17,8 +17,10 @@ class WindAgent(Agent):
         super().__init__(Supply, config, start_time, series)
 
     def _get_production_series(self, config: dict):
-        # Read in the right 1 MWp profile from the wind data (is already in MW)
+        # Read in the right 1 MWp profile from the wind data
         series = read_series(f"Wind_{config.pop('location')}.parquet")
+
+        series *= config["power"]
 
         # Cap at the AC capacity
         series[series > config["AC"]] = config["AC"]
