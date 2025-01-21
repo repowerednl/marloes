@@ -172,7 +172,10 @@ class EnergyValley(MultiAgentEnv):
 
     def _calculate_reward(self):
         """Function to calculate the reward"""
-        pass
+        reward = 0  # TODO: Implement reward calculation
+        # once the reward is calculated, also save it to the extractor
+        self.extractor.save_reward(reward)
+        return {agent.id: reward for agent in self.agents}
 
     def reset(self) -> tuple[dict, dict]:
         """
