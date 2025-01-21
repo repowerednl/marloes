@@ -16,7 +16,7 @@ class Visualizer:
         """
         self.uids = uids
 
-    def plot_metrics(self, metrics: list[str], save_png: bool = False):
+    def plot_metrics(self, metrics: list[str], save_pdf: bool = False):
         """
         Plots the selected metrics for each UID in a single figure per metric.
         """
@@ -52,12 +52,12 @@ class Visualizer:
         for metric, data_by_uid in aggregated_data.items():
             if metric == Metrics.EXTENSIVE_DATA:
                 for uid, df in data_by_uid.items():
-                    self.plot_sankey(df, uid, save_png)
+                    self.plot_sankey(df, uid, save_pdf)
             else:
-                self.plot_default(metric, data_by_uid, save_png)
+                self.plot_default(metric, data_by_uid, save_pdf)
 
     def plot_default(
-        self, metric: str, data_by_uid: dict[int, np.ndarray], save_png: bool = False
+        self, metric: str, data_by_uid: dict[int, np.ndarray], save_pdf: bool = False
     ):
         """
         Plots the default metrics for each UID in a single figure per metric.
@@ -85,7 +85,7 @@ class Visualizer:
         )
         fig.show()
 
-    def plot_sankey(self, df: pd.DataFrame, uid: int, save_png: bool = False):
+    def plot_sankey(self, df: pd.DataFrame, uid: int, save_pdf: bool = False):
         """
         Generate a Sankey diagram from a DataFrame with flow information.
         """
