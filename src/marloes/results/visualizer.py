@@ -166,20 +166,25 @@ colors = {
     "bittersweet_reddish": "#FF715B",
     "mintgreen_light": "#C5E7E2",
     "darkgreen": "#065143",
+    "vanilla": "#FFFACC",
+    "icterine": "#FFFF82",
+    "carribean_green": "#046865",
+    "fern_green": "#537A5A",
+    "kelly_green": "#57B239",
 }
 
 
 def get_node_color(node_name):
     if "Solar" in node_name:
-        return colors["oceanblue"]
+        return colors["vanilla"]
     elif "Grid" in node_name:
-        return colors["bittersweet_reddish"]
+        return colors["darkgrey"]
     elif "Demand" in node_name:
         return colors["greyblue"]
     elif "Battery" in node_name:
-        return colors["logogreen"]
+        return colors["kelly_green"]
     elif "Electrolyser" in node_name:
-        return colors["darkgreen"]
+        return colors["oceanblue"]
     elif "Wind" in node_name:
         return colors["mintgreen_light"]
     else:
