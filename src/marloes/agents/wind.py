@@ -29,7 +29,7 @@ class WindAgent(Agent):
         """Each subclass must define its default configuration."""
         return {
             "name": id,
-            "max_power_out": min(config["AC"], config["DC"]),
+            "max_power_out": min(config["AC"], config["power"]),
             "curtailable_by_solver": True,
             "upward_dispatchable": False,
         }
@@ -43,7 +43,6 @@ class WindAgent(Agent):
         merged_config["max_power_out"] = min(
             merged_config.get("max_power_out", np.inf),
             merged_config.pop("AC"),
-            merged_config.pop("DC"),
         )
 
         return merged_config

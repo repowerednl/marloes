@@ -7,6 +7,7 @@ agents:
   - type: wind
     location: Onshore
     power: 1000
+    AC: 900
   - type: demand
     scale: 9.5
     profile: Farm
