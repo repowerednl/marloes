@@ -1,4 +1,4 @@
-# 5. Solar profiles
+# 5. Solar/Wind profiles
 
 Date: 2024-12-03
 
@@ -8,11 +8,11 @@ TBJ
 
 ## Context
 
-The solar profiles in `data/profiles` should be explained/justified.
+The profiles in `data/profiles` should be explained/justified.
 
 ## Decision
 
-The change that we're proposing or have agreed to implement.
+The solar and wind profiles and their forecasts were provided by Repowered.
 
 ## Consequences
 

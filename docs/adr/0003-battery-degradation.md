@@ -1,4 +1,4 @@
-# 3. Battery degradation
+# 3. Battery/Electrolyser degradation
 
 Date: 2024-12-03
 
@@ -9,6 +9,7 @@ TBJ
 ## Context
 
 The `battery_degradation` function in `agents/battery.py` which linearly degrades a battery to 60% performance based on the total lifetime should be justified.
+Just a year; barely any degradation. Also shortly justify electrolyser here.
 
 ## Decision
 
