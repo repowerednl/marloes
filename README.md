@@ -29,6 +29,7 @@ To activate the virtual environment created by Poetry, use:
 poetry shell
 ```
 
+## Local development
 You can now run the project using:
 
 ```sh
