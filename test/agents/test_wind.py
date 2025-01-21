@@ -32,12 +32,11 @@ class TestWindAgent(unittest.TestCase):
     def test_partial_init(self, mock_default_state):
         partial_config = {
             "location": "Offshore",
-            "DC": 1500,
-            "AC": 1200,
+            "power": 1000,
         }
         wind_agent = WindAgent(start_time=datetime.now(), config=partial_config)
         self.assertIsInstance(wind_agent.asset, Supply)
-        self.assertEqual(wind_agent.asset.max_power_out, 1200)
+        self.assertEqual(wind_agent.asset.max_power_out, 1000)
         self.assertTrue(wind_agent.asset.curtailable_by_solver)
         self.assertFalse(wind_agent.asset.upward_dispatchable)
 
