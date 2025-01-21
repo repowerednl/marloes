@@ -3,9 +3,12 @@
 from datetime import datetime
 import numpy as np
 from simon.assets.battery import Battery
+from simon.data.battery_data import BatteryState
 
 from functools import partial
 from .base import Agent
+
+DEFAULT_CONVERSION_FACTOR = 33  # kgH2 to kWh
 
 
 class ElectrolyserAgent(Agent):
@@ -20,9 +23,10 @@ class ElectrolyserAgent(Agent):
         """Default configuration for an Electrolyser."""
         degradation_function = partial(
             electrolyser_degradation_function,
-            capacity=config["energy_capacity"],
-            # Default to 7000 cycles
-            total_cycles=config.get("total_cycles", 7000),
+            max_capacity=config["energy_capacity"]
+            * config.get("conversion_factor", DEFAULT_CONVERSION_FACTOR),
+            # default to 80000 hours (60000-100000, for PEMEC)
+            total_lifetime_hours=config.get("lifetime_hours", 80000),
         )
         return {
             "name": id,
@@ -30,13 +34,13 @@ class ElectrolyserAgent(Agent):
             "max_power_out": config["power"],
             "max_state_of_charge": 0.95,
             "min_state_of_charge": 0.05,
-            "energy_capacity": 100,  # x kgH2 / conversion_factor
+            "energy_capacity": config["energy_capacity"],  # x kgH2 / conversion_factor
             "ramp_up_rate": 0.4,  # a certain percentage of capacity (Reducing ramp up rate even more to account for start-up time)
             "ramp_down_rate": 0.4,  # a certain percentage of capacity
             "input_efficiency": 0.6,  # values from Stoff2? or from literature
             "output_efficiency": 0.6,  # values from Stoff2? or from literature
             "degradation_function": degradation_function,
-            "conversion_factor": 53,  # kgH2 to kWh
+            "conversion_factor": DEFAULT_CONVERSION_FACTOR,  # kgH2 to kWh
         }
 
     # SAME AS BATTERY
@@ -83,5 +87,24 @@ class ElectrolyserAgent(Agent):
         pass
 
 
-def electrolyser_degradation_function(self):
-    pass
+def electrolyser_degradation_function(
+    time_step: float,
+    state: BatteryState,
+    max_capacity: float,
+    total_lifetime_hours: float,
+) -> float:
+    """
+    Simple linear degradation function for an electrolyzer.
+    Assumptions:
+    - Total lifetime: 60% efficiency left after `total_lifetime_hours` of operation.
+    - Degradation occurs based on operational hours and relative load.
+    - Operational load is normalized to maximum capacity.
+    Source: IEA - The Future of Hydrogen
+    """
+    degradation_per_hour = (1 - 0.6) / total_lifetime_hours
+    operational_load = (
+        abs(state.power) / max_capacity
+    )  # Normalize power to max capacity
+    hours_operated = time_step / 3600 * operational_load  # Scaled by load factor
+    new_degradation = degradation_per_hour * hours_operated
+    return state.degradation + new_degradation

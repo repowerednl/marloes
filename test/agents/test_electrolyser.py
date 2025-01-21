@@ -3,7 +3,7 @@ from unittest.mock import patch
 from freezegun import freeze_time
 from datetime import datetime, timedelta
 from simon.assets.battery import Battery
-from marloes.agents.electrolyser import ElectrolyserAgent
+from marloes.agents.electrolyser import ElectrolyserAgent, DEFAULT_CONVERSION_FACTOR
 
 
 CONFIG = {
@@ -36,7 +36,10 @@ class TestElectrolyserAgent(unittest.TestCase):
         self.assertEqual(self.electrolyser_agent.asset.max_power_out, 40.0)  # Enforced
         self.assertEqual(self.electrolyser_agent.asset.max_state_of_charge, 1.0)
         self.assertEqual(self.electrolyser_agent.asset.min_state_of_charge, 0.0)
-        self.assertEqual(self.electrolyser_agent.asset.energy_capacity, 100.0 / 53)
+        self.assertEqual(
+            self.electrolyser_agent.asset.energy_capacity,
+            100.0 / DEFAULT_CONVERSION_FACTOR,
+        )
         self.assertEqual(self.electrolyser_agent.asset.ramp_up_rate, 0.2)
         self.assertEqual(self.electrolyser_agent.asset.ramp_down_rate, 0.2)
         self.assertEqual(self.electrolyser_agent.asset.input_efficiency, 0.5)
@@ -51,7 +54,7 @@ class TestElectrolyserAgent(unittest.TestCase):
     def test_partial_init(self):
         partial_config = {
             "power": 50.0,
-            "energy_capacity": 106.0,
+            "energy_capacity": 66.0,
         }
         other_electrolyser_agent = ElectrolyserAgent(
             start_time=datetime.now(), config=partial_config
