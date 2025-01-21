@@ -129,6 +129,16 @@ class Extractor:
         parquet_path = f"{dir}/dataframes/{uid}.parquet"
         if os.path.exists(parquet_path):
             self.extensive_data = pd.read_parquet(parquet_path)
+            # identify all grid to demand columns in the data
+            grid_to_demand_columns = [
+                col
+                for col in self.extensive_data.columns
+                if "grid_to_demand" in col.lower()
+            ]
+            # sum the columns (per timestep)
+            self.grid_to_demand = self.extensive_data[grid_to_demand_columns].sum(
+                axis=1
+            )
 
         return uid
 
