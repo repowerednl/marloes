@@ -9,7 +9,13 @@ import numpy as np
 import pandas as pd
 from simon.solver import Model
 
-from marloes.agents import BatteryAgent, GridAgent, SolarAgent
+from marloes.agents import (
+    BatteryAgent,
+    GridAgent,
+    SolarAgent,
+    WindAgent,
+    ElectrolyserAgent,
+)
 from marloes.data.extensive_data import ExtensiveDataStore
 
 MINUTES_IN_A_YEAR = 525600
@@ -33,11 +39,13 @@ class Extractor:
             # Marl(oes) info
             self.elapsed_time = np.zeros(self.size)
             self.loss = np.zeros(self.size)
+            self.reward = np.zeros(self.size)
 
             # Reward info
             self.grid_state = np.zeros(self.size)
             self.total_solar_production = np.zeros(self.size)
             self.total_battery_production = np.zeros(self.size)
+            self.total_electrolyser_production = np.zeros(self.size)
             self.total_wind_production = np.zeros(self.size)
             self.total_grid_production = np.zeros(self.size)
 
@@ -48,6 +56,12 @@ class Extractor:
     def update(self):
         """Increment the timestep index by one."""
         self.i += 1
+
+    def save_reward(self, reward: float) -> None:
+        """Save the reward for the current timestep."""
+        self.reward[
+            self.i - 1
+        ] = reward  # update is done in from_model() > update(), so we need to decrement by 1
 
     def from_model(self, model: Model) -> None:
         """
@@ -74,7 +88,12 @@ class Extractor:
         self.total_battery_production[self.i] = output_power_data.get(
             BatteryAgent.__name__, 0.0
         )
-        # self.total_wind_production[self.i] = output_power_data.get(WindAgent.__name__, 0.0)
+        self.total_electrolyser_production[self.i] = output_power_data.get(
+            ElectrolyserAgent.__name__, 0.0
+        )
+        self.total_wind_production[self.i] = output_power_data.get(
+            WindAgent.__name__, 0.0
+        )
         self.total_grid_production[self.i] = output_power_data.get(
             GridAgent.__name__, 0.0
         )
