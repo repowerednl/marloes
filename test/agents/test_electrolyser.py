@@ -38,7 +38,7 @@ class TestElectrolyserAgent(unittest.TestCase):
         self.assertEqual(self.electrolyser_agent.asset.min_state_of_charge, 0.0)
         self.assertEqual(
             self.electrolyser_agent.asset.energy_capacity,
-            100.0 / DEFAULT_CONVERSION_FACTOR,
+            100.0 * DEFAULT_CONVERSION_FACTOR,
         )
         self.assertEqual(self.electrolyser_agent.asset.ramp_up_rate, 0.2)
         self.assertEqual(self.electrolyser_agent.asset.ramp_down_rate, 0.2)
@@ -64,7 +64,10 @@ class TestElectrolyserAgent(unittest.TestCase):
         self.assertEqual(other_electrolyser_agent.asset.max_power_out, 50.0)
         self.assertEqual(other_electrolyser_agent.asset.max_state_of_charge, 0.95)
         self.assertEqual(other_electrolyser_agent.asset.min_state_of_charge, 0.05)
-        self.assertEqual(other_electrolyser_agent.asset.energy_capacity, 2)
+        self.assertEqual(
+            other_electrolyser_agent.asset.energy_capacity,
+            66 * DEFAULT_CONVERSION_FACTOR,
+        )
         self.assertEqual(other_electrolyser_agent.asset.ramp_up_rate, 0.4)
         self.assertEqual(other_electrolyser_agent.asset.ramp_down_rate, 0.4)
         self.assertIsNotNone(other_electrolyser_agent.asset.degradation_function)
