@@ -8,6 +8,10 @@ agents:
     AC: 5000
     DC: 5500
     orientation: S
+  - type: wind
+    location: Onshore
+    power: 1000
+    AC: 900
   - type: demand
     scale: 4.5
     profile: Farm

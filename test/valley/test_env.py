@@ -7,6 +7,7 @@ from simon.solver import Model
 from marloes.agents.base import Agent
 from marloes.agents.demand import DemandAgent
 from marloes.agents.solar import SolarAgent
+from marloes.agents.wind import WindAgent
 from marloes.agents.battery import BatteryAgent
 from marloes.agents.grid import GridAgent
 from marloes.algorithms.priorities import Priorities
@@ -287,5 +288,70 @@ class TestEnergyValleyEnvWithTwoBatteries(unittest.TestCase):
                 (self.battery_agent.asset, -2),
                 (self.second_demand_agent.asset, 3),
                 (self.grid_agent.asset, 1),
+            ],
+        )
+
+
+class TestEnergyValleyEnvWithWind(unittest.TestCase):
+    @patch("marloes.agents.wind.read_series")
+    @patch("marloes.agents.solar.read_series")
+    @patch("marloes.agents.demand.read_series")
+    def setUp(self, mock_demand, mock_solar, mock_wind) -> None:
+        # Reset id counter to make sure the other tests don't interfere
+        Agent._id_counters = {}
+        self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        mock_series = pd.Series([100], index=[self.start_time])
+        mock_demand.return_value = mock_series + 10
+        mock_solar.return_value = mock_series - 10
+        mock_wind.return_value = mock_series - 20
+        config = get_new_config()
+        config["agents"].append(
+            {
+                "type": "wind",
+                "location": "Onshore",
+                "power": 1400,
+                "AC": 1200,
+                "curtailable_by_solver": True,
+            }
+        )
+        self.env = EnergyValley(config, "Priorities")
+        self.demand_agent = self.env.agents[0]
+        self.solar_agent = self.env.agents[1]
+        self.battery_agent = self.env.agents[2]
+        self.demand_agent_2 = self.env.agents[3]
+        self.wind_agent = self.env.agents[4]
+        self.grid = self.env.grid
+
+    def test_agent_initialization(self):
+        self.assertEqual(len(self.env.agents), 5)
+        self.assertIsInstance(self.demand_agent, DemandAgent)
+        self.assertIsInstance(self.solar_agent, SolarAgent)
+        self.assertIsInstance(self.battery_agent, BatteryAgent)
+        self.assertIsInstance(self.demand_agent_2, DemandAgent)
+        self.assertIsInstance(self.wind_agent, WindAgent)
+        self.assertIsInstance(self.grid, GridAgent)
+        # check start time of each agent, should be equal to each other
+        self.assertEqual(
+            self.demand_agent.asset.state.time, self.solar_agent.asset.state.time
+        )
+        self.assertEqual(
+            self.demand_agent.asset.state.time, self.battery_agent.asset.state.time
+        )
+        self.assertEqual(
+            self.demand_agent.asset.state.time, self.wind_agent.asset.state.time
+        )
+        self.assertEqual(self.demand_agent.asset.state.time, self.grid.asset.state.time)
+
+    def test_wind_connections(self):
+        """
+        Test the connections of the wind agent
+        """
+        self.assertEqual(
+            self.env._get_targets(self.wind_agent) + [(self.grid.asset, -1)],
+            [
+                (self.demand_agent.asset, 3),
+                (self.battery_agent.asset, 2),
+                (self.demand_agent_2.asset, 3),
+                (self.grid.asset, -1),
             ],
         )
