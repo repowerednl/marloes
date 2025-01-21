@@ -42,6 +42,7 @@ class WindAgent(Agent):
 
         merged_config["max_power_out"] = min(
             merged_config.get("max_power_out", np.inf),
+            merged_config.pop("power"),
             merged_config.pop("AC"),
         )
 

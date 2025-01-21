@@ -16,7 +16,7 @@ class TestWindAgent(unittest.TestCase):
         config = {
             "name": "WindOne",
             "location": "Onshore",
-            "DC": 1500,
+            "power": 1400,
             "AC": 1200,
             "curtailable_by_solver": False,
         }
@@ -32,6 +32,7 @@ class TestWindAgent(unittest.TestCase):
     def test_partial_init(self, mock_default_state):
         partial_config = {
             "location": "Offshore",
+            "AC": 1200,
             "power": 1000,
         }
         wind_agent = WindAgent(start_time=datetime.now(), config=partial_config)
@@ -46,7 +47,7 @@ class TestWindAgent(unittest.TestCase):
         config = {
             "name": "WindOne",
             "location": "Onshore",
-            "DC": 1500,
+            "power": 1400,
             "AC": 1200,
             "curtailable_by_solver": False,
         }
@@ -55,3 +56,15 @@ class TestWindAgent(unittest.TestCase):
         self.assertEqual(wind_agent.map_action_to_setpoint(0), 0)
         self.assertEqual(wind_agent.map_action_to_setpoint(0.5), 600)
         self.assertEqual(wind_agent.map_action_to_setpoint(1), 1200)
+
+    @pytest.mark.slow
+    @patch("simon.assets.supply.Supply.load_default_state")
+    def test_wrong_config(self, mock_default_state):
+        config = {
+            "name": "WindOne",
+            "location": "Onshore",
+            "AC": 1200,
+            "curtailable_by_solver": False,
+        }
+        with self.assertRaises(KeyError):
+            WindAgent(start_time=datetime.now(), config=config)

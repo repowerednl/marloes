@@ -309,7 +309,7 @@ class TestEnergyValleyEnvWithWind(unittest.TestCase):
             {
                 "type": "wind",
                 "location": "Onshore",
-                "DC": 1500,
+                "power": 1400,
                 "AC": 1200,
                 "curtailable_by_solver": True,
             }
