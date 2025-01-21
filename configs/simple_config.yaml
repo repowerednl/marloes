@@ -9,10 +9,10 @@ agents:
     power: 3000
     AC: 2000
   - type: demand
-    scale: 9.5
+    scale: 15
     profile: Farm
   - type: battery
-    energy_capacity: 1000
-    power: 500
+    energy_capacity: 2000
+    power: 1200
 grid:
   name: Grid
