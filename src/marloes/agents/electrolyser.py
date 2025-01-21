@@ -34,7 +34,7 @@ class ElectrolyserAgent(Agent):
             "max_power_out": config["power"],
             "max_state_of_charge": 0.95,
             "min_state_of_charge": 0.05,
-            "energy_capacity": config["energy_capacity"],  # x kgH2 / conversion_factor
+            "energy_capacity": config["energy_capacity"],  # x kgH2 * conversion_factor
             "ramp_up_rate": 0.4,  # a certain percentage of capacity (Reducing ramp up rate even more to account for start-up time)
             "ramp_down_rate": 0.4,  # a certain percentage of capacity
             "input_efficiency": 0.6,  # values from Stoff2? or from literature
@@ -61,7 +61,7 @@ class ElectrolyserAgent(Agent):
         # Convert the capacity (kgH2) to the capacity in the model (kWh)
         merged_config["energy_capacity"] = merged_config[
             "energy_capacity"
-        ] / merged_config.pop("conversion_factor")
+        ] * merged_config.pop("conversion_factor")
 
         return merged_config
 
