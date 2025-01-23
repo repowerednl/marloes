@@ -1,6 +1,5 @@
 import unittest
 from zoneinfo import ZoneInfo
-import numpy as np
 import pandas as pd
 from datetime import datetime
 
@@ -10,8 +9,6 @@ from marloes.data.util import (
     _contains_leap_day,
     convert_kw_to_kwh,
     convert_kwh_to_minutely_kw,
-    convert_to_utc,
-    drop_out_series,
     read_series,
     shift_series,
 )
