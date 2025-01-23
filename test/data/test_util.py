@@ -1,5 +1,6 @@
 import unittest
 from zoneinfo import ZoneInfo
+import numpy as np
 import pandas as pd
 from datetime import datetime
 
@@ -10,6 +11,7 @@ from marloes.data.util import (
     convert_kw_to_kwh,
     convert_kwh_to_minutely_kw,
     convert_to_utc,
+    drop_out_series,
     read_series,
     shift_series,
 )
@@ -135,3 +137,63 @@ class TestReadSeries(unittest.TestCase):
         expected_kwh = df * (1 / 60)
 
         pd.testing.assert_frame_equal(df_converted, expected_kwh)
+
+
+class TestDropOutSeries(unittest.TestCase):
+    def setUp(self):
+        self.date_range = pd.date_range(start="2023-01-01", periods=1440, freq="T")
+        self.values = np.random.rand(len(self.date_range))
+        self.series = pd.Series(self.values, index=self.date_range)
+
+    def test_no_dropouts(self):
+        """Test that no dropouts occur when drop_prob and long_drop_prob are 0."""
+        modified_series = drop_out_series(
+            self.series, drop_prob=0, long_drop_prob=0, max_long_drop_days=5
+        )
+        pd.testing.assert_series_equal(modified_series, self.series)
+
+    def test_single_dropouts(self):
+        """Test that single dropouts occur with the specified probability."""
+        drop_prob = 0.1
+        modified_series = drop_out_series(
+            self.series,
+            drop_prob=drop_prob,
+            long_drop_prob=0,
+            max_long_drop_days=5,
+        )
+
+        # Count the number of dropped rows (values set to 0)
+        num_dropped = (modified_series == 0).sum()
+        expected_dropped = int(len(self.series) * drop_prob)
+
+        # Allow for some variance due to randomness
+        self.assertLess(
+            abs(num_dropped - expected_dropped),
+            len(self.series) * 0.02,  # 2% tolerance
+            msg=f"Expected approximately {expected_dropped} dropouts, got {num_dropped}",
+        )
+
+    def test_long_dropouts(self):
+        """Test that long dropouts occur with the specified probability and last for the correct duration."""
+        long_drop_prob = 0.02
+        max_long_drop_days = 2
+        modified_series = drop_out_series(
+            self.series,
+            drop_prob=0,
+            long_drop_prob=long_drop_prob,
+            max_long_drop_days=max_long_drop_days,
+        )
+
+        # Convert days to minutes
+        max_long_drop_minutes = max_long_drop_days * 1440
+
+        # Find segments of consecutive 0s
+        is_dropped = modified_series == 0
+        dropped_streaks = np.diff(np.where(~is_dropped)[0]) - 1
+
+        # Check if any dropout streak exceeds the maximum length
+        if len(dropped_streaks) > 0:
+            self.assertTrue(
+                (dropped_streaks <= max_long_drop_minutes).all(),
+                "Found a dropout longer than max_long_drop_days",
+            )

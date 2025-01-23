@@ -36,7 +36,47 @@ def read_series(
         datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC")),
         datetime(2025, 12, 31, 23, 59, tzinfo=ZoneInfo("UTC")),
     )
+    series = drop_out_series(series)
     return series
+
+
+def drop_out_series(
+    series: pd.Series,
+    drop_prob: float = 0.01,
+    long_drop_prob: float = 0.001,
+    max_long_drop_days: int = 5,
+):
+    """
+    Simulates random dropouts in a time series.
+    drop_prob = Probability of a single row being set to 0.
+    long_drop_prob = Probability of initiating a longer dropout period.
+    max_long_drop_days = Maximum number of consecutive days to drop out.
+    These parameters can be tuned to simulate different dropout scenarios.
+    """
+
+    ## Single dropouts
+    modified_series = series.copy()
+    random_values = np.random.rand(len(series))
+    single_dropout_mask = random_values < drop_prob
+    modified_series[single_dropout_mask] = 0
+
+    ## Long dropout periods
+    long_dropout_initiation = np.random.rand(len(series)) < long_drop_prob
+    long_dropout_indices = np.where(long_dropout_initiation)[0]
+
+    # Convert days to minutes
+    max_long_drop_minutes = max_long_drop_days * 1440  # 1440 minutes in a day
+    for start_idx in long_dropout_indices:
+        # Determine the length of the long dropout period
+        long_drop_length = np.random.randint(1, max_long_drop_minutes + 1)
+
+        # Find end index
+        end_idx = min(start_idx + long_drop_length, len(series))
+
+        # Set values to 0 for entire period
+        modified_series.iloc[start_idx:end_idx] = 0
+
+    return modified_series
 
 
 def convert_kwh_to_minutely_kw(df: pd.DataFrame) -> pd.DataFrame:
