@@ -51,8 +51,8 @@ class VisualizerGUI(QWidget):
         layout.addWidget(metrics_group)
 
         # Save PNG option
-        self.save_pdf_checkbox = QCheckBox("Save graphs as PDF")
-        layout.addWidget(self.save_pdf_checkbox)
+        self.save_png_checkbox = QCheckBox("Save graphs as PNG")
+        layout.addWidget(self.save_png_checkbox)
 
         # Plot button
         self.plot_button = QPushButton("Plot")
@@ -73,7 +73,7 @@ class VisualizerGUI(QWidget):
             for metric, checkbox in self.metric_checkboxes.items()
             if checkbox.isChecked()
         ]
-        save_pdf = self.save_pdf_checkbox.isChecked()
+        save_png = self.save_png_checkbox.isChecked()
 
         if not selected_metrics:
             self.error_screen = ErrorScreen("Please select at least one metric.", self)
@@ -85,6 +85,6 @@ class VisualizerGUI(QWidget):
             uids = [int(uid.strip()) for uid in uids.split(",")]
 
         # Plot the metrics using the Visualizer
-        Visualizer(uids).plot_metrics(selected_metrics, save_pdf)
+        Visualizer(uids).plot_metrics(selected_metrics, save_png)
 
         self.close()

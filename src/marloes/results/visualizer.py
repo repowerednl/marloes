@@ -17,7 +17,7 @@ class Visualizer:
         """
         self.uids = uids
 
-    def plot_metrics(self, metrics: list[str], save_pdf: bool = False):
+    def plot_metrics(self, metrics: list[str], save_png: bool = False):
         """
         Plots the selected metrics for each UID in a single figure per metric.
         """
@@ -53,12 +53,12 @@ class Visualizer:
         for metric, data_by_uid in aggregated_data.items():
             if metric == Metrics.EXTENSIVE_DATA:
                 for uid, df in data_by_uid.items():
-                    self.plot_sankey(df, uid, save_pdf)
+                    self.plot_sankey(df, uid, save_png)
             else:
-                self.plot_default(metric, data_by_uid, save_pdf)
+                self.plot_default(metric, data_by_uid, save_png)
 
     def plot_default(
-        self, metric: str, data_by_uid: dict[int, np.ndarray], save_pdf: bool = False
+        self, metric: str, data_by_uid: dict[int, np.ndarray], save_png: bool = False
     ):
         """
         Plots the default metrics for each UID in a single figure per metric.
@@ -79,21 +79,21 @@ class Visualizer:
             )
 
         fig.update_layout(
-            title=f"{metric} across simulations {self.uids}",
+            title=f"{metric.replace('_', ' ').title()} Across Simulation(s): {self.uids}",
             xaxis_title="Time",
-            yaxis_title=metric,
+            yaxis_title=metric.replace("_", " ").title(),
             font=dict(size=14, color="black"),
         )
         fig.show()
 
-        # Saving the figure as a PDF if requested
-        if save_pdf:
+        # Saving the figure as a PNG if requested
+        if save_png:
             # make sure the directory exists
             os.makedirs(f"results/img/{metric}/", exist_ok=True)
             uids_as_string = "_".join(str(uid) for uid in self.uids)
-            fig.write_image(f"results/img/{metric}/{uids_as_string}.pdf")
+            fig.write_image(f"results/img/{metric}/{uids_as_string}.png")
 
-    def plot_sankey(self, df: pd.DataFrame, uid: int, save_pdf: bool = False):
+    def plot_sankey(self, df: pd.DataFrame, uid: int, save_png: bool = False):
         """
         Generate a Sankey diagram from a DataFrame with flow information.
         """
@@ -151,11 +151,11 @@ class Visualizer:
         sankey_fig.update_layout(title_text=title, font_size=10)
         sankey_fig.show()
 
-        # Saving the figure as a PDF if requested
-        if save_pdf:
+        # Saving the figure as a PNG if requested
+        if save_png:
             # make sure the directory exists
             os.makedirs("results/img/sankey/", exist_ok=True)
-            sankey_fig.write_image(f"results/img/sankey/{uid}.pdf")
+            sankey_fig.write_image(f"results/img/sankey/{uid}.png")
 
 
 # Define colors for the nodes and flows
