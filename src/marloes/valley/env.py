@@ -153,9 +153,9 @@ class EnergyValley(MultiAgentEnv):
         """
         if agent_type == GridAgent:
             return -1
-        elif (
-            agent_type == target_agent_type
-        ):  # should only be the case for Battery/Electrolyser that can supply and 'demand'
+        elif (agent_type in [ElectrolyserAgent, BatteryAgent]) and (
+            target_agent_type in [ElectrolyserAgent, BatteryAgent]
+        ):
             return -2
         else:
             priority_map = {
@@ -173,7 +173,10 @@ class EnergyValley(MultiAgentEnv):
 
     def _calculate_reward(self):
         """Function to calculate the reward"""
-        pass
+        reward = 0  # TODO: Implement reward calculation
+        # once the reward is calculated, also save it to the extractor
+        self.extractor.save_reward(reward)
+        return {agent.id: reward for agent in self.agents}
 
     def reset(self) -> tuple[dict, dict]:
         """
