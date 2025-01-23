@@ -1,5 +1,6 @@
 import sys
 import argparse
+import numpy as np
 import yaml
 from PyQt6.QtWidgets import QApplication
 import gui.startup as startup
@@ -15,7 +16,7 @@ def load_config():
     return config
 
 
-def main():
+def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--default",
@@ -27,31 +28,44 @@ def main():
         action="store_true",
         help="Start the Visualizer GUI",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="Set the seed for the random number generator",
+    )
+    return parser.parse_args()
+
+
+def run_default_mode():
+    config = load_config()
+    for key, value in config.items():
+        print(f"\n{key}: {value}")
+    # algorithm = Algorithm(config)
+    # algorithm.train()
+
+
+def run_app_mode(args):
+    np.random.seed(args.seed if args.seed else 42)
+    app = QApplication(sys.argv)
+
+    if args.visualizer:
+        available_metrics = [item.value for item in Metrics]
+        visualizer_window = VisualizerGUI(available_metrics)
+        visualizer_window.show()
+    else:
+        window = startup.ExperimentSetupApp()
+        window.show()
+
+    sys.exit(app.exec())
+
+
+def main():
+    args = parse_arguments()
 
     if args.default:
-        # Load the default configuration and run the simulation
-        config = load_config()
-        for key, value in config.items():
-            print(f"\n{key}: {value}")
-        # algorithm = Algorithm(config)
-        # algorithm.train()
+        run_default_mode()
     else:
-        app = QApplication(sys.argv)
-
-        if args.visualizer:
-            # Define available metrics
-            available_metrics = [item.value for item in Metrics]
-
-            # Show the Visualizer GUI
-            visualizer_window = VisualizerGUI(available_metrics)
-            visualizer_window.show()
-        else:
-            # Start the normal ExperimentSetupApp GUI
-            window = startup.ExperimentSetupApp()
-            window.show()
-
-        sys.exit(app.exec())
+        run_app_mode(args)
 
 
 if __name__ == "__main__":

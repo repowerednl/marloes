@@ -158,9 +158,9 @@ def convert_to_utc(series: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame
     return series
 
 
-def add_noise_to_series(series: pd.Series, sd: float) -> pd.Series:
+def add_noise_to_series(series: pd.Series) -> pd.Series:
     """
-    Adds normally distributed noise to a series.
+    Adds normally distributed noise (5% of the absolute max/min) to a series.
     """
-    noise = np.random.normal(0, sd, len(series))
-    return series + noise
+    dev = max(series.max(), abs(series.min())) * 0.05
+    return series + np.random.normal(0, dev, series.shape[0])
