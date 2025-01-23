@@ -1,4 +1,5 @@
 import logging
+import os
 
 import numpy as np
 import pandas as pd
@@ -78,12 +79,19 @@ class Visualizer:
             )
 
         fig.update_layout(
-            title=f"{metric} across simulations {self.uids}",
+            title=f"{metric.replace('_', ' ').title()} Across Simulation(s): {self.uids}",
             xaxis_title="Time",
-            yaxis_title=metric,
+            yaxis_title=metric.replace("_", " ").title(),
             font=dict(size=14, color="black"),
         )
         fig.show()
+
+        # Saving the figure as a PNG if requested
+        if save_png:
+            # make sure the directory exists
+            os.makedirs(f"results/img/{metric}/", exist_ok=True)
+            uids_as_string = "_".join(str(uid) for uid in self.uids)
+            fig.write_image(f"results/img/{metric}/{uids_as_string}.png")
 
     def plot_sankey(self, df: pd.DataFrame, uid: int, save_png: bool = False):
         """
@@ -142,6 +150,12 @@ class Visualizer:
         title = "Energy Flows"
         sankey_fig.update_layout(title_text=title, font_size=10)
         sankey_fig.show()
+
+        # Saving the figure as a PNG if requested
+        if save_png:
+            # make sure the directory exists
+            os.makedirs("results/img/sankey/", exist_ok=True)
+            sankey_fig.write_image(f"results/img/sankey/{uid}.png")
 
 
 # Define colors for the nodes and flows
