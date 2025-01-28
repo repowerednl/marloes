@@ -12,7 +12,7 @@ The `battery_degradation` function in `agents/battery.py` which linearly degrade
 
 ## Decision
 
-The change that we're proposing or have agreed to implement.
+Again, we use the specifications of a state-of-the-art...
 
 ## Consequences
 
