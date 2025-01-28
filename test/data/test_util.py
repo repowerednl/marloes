@@ -9,7 +9,6 @@ from marloes.data.util import (
     _contains_leap_day,
     convert_kw_to_kwh,
     convert_kwh_to_minutely_kw,
-    convert_to_utc,
     read_series,
     shift_series,
 )
