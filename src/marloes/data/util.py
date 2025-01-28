@@ -36,6 +36,7 @@ def read_series(
         datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC")),
         datetime(2025, 12, 31, 23, 59, tzinfo=ZoneInfo("UTC")),
     )
+    series = add_noise_to_series(series)
     return series
 
 
@@ -160,7 +161,7 @@ def convert_to_utc(series: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame
 
 def add_noise_to_series(series: pd.Series) -> pd.Series:
     """
-    Adds normally distributed noise (5% of the absolute max/min) to a series.
+    Adds normally distributed noise (5% of the standard deviation) to a series.
     """
-    dev = max(series.max(), abs(series.min())) * 0.05
+    dev = series.std() * 0.05
     return series + np.random.normal(0, dev, series.shape[0])
