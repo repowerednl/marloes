@@ -48,6 +48,7 @@ class EnergyValley(MultiAgentEnv):
         super().__init__()
         self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
         self.time_stamp = self.start_time
+        self.i = 0  # For efficiency, we keep track of the number of steps
         self.time_step = 60  # 1 minute in seconds
 
         self.agents: list[Agent] = []
@@ -61,6 +62,14 @@ class EnergyValley(MultiAgentEnv):
         self._initialize_model(
             algorithm_type
         )  # Model has a graph (nx.DiGraph) with assets as nodes and edges as connections
+
+        # For efficiency
+        self.agent_dict = {agent.id: agent for agent in self.agents}
+        self._state_cache = {agent.id: None for agent in self.agents}
+        self._reward_cache = {agent.id: None for agent in self.agents}
+        # is the hub ever done? Is life ever done? Is life a simulation?
+        self._dones_cache = {agent.id: False for agent in self.agents}
+        self._infos_cache = {agent.id: {} for agent in self.agents}
 
     def _initialize_agents(self, config: dict, algorithm_type: str) -> None:
         """
@@ -167,16 +176,20 @@ class EnergyValley(MultiAgentEnv):
             }
             return priority_map[target_agent_type]
 
-    def _combine_states(self):
+    def _combine_states(self) -> dict:
         """Function to combine all agents states into one observation"""
-        return {agent.id: agent.asset.state.model_dump() for agent in self.agents}
+        for agent in self.agents:
+            self._state_cache[agent.id] = agent.get_state(self.i)
+        return self._state_cache
 
     def _calculate_reward(self):
         """Function to calculate the reward"""
         reward = 0  # TODO: Implement reward calculation
         # once the reward is calculated, also save it to the extractor
         self.extractor.save_reward(reward)
-        return {agent.id: reward for agent in self.agents}
+        for agent in self.agents:
+            self._reward_cache[agent.id] = reward
+        return self._reward_cache
 
     def reset(self) -> tuple[dict, dict]:
         """
@@ -191,13 +204,12 @@ class EnergyValley(MultiAgentEnv):
         """Function should return the observation, reward, done, info"""
 
         # Set setpoints for agents based on actions
-        for agent in self.agents:
-            if agent.id in actions:
-                action = actions[agent.id]
-                agent.act(action, self.time_stamp)
+        for agent_id, action in actions.items():
+            self.agent_dict[agent_id].act(action, self.time_stamp)
 
-        # Update the time_stamp
+        # Update the time_stamp and i
         self.time_stamp += timedelta(seconds=self.time_step)
+        self.i += 1
 
         # Solve and step the model
         self.model.solve(self.time_step)
@@ -208,12 +220,4 @@ class EnergyValley(MultiAgentEnv):
         observations = self._combine_states()
         rewards = self._calculate_reward()
 
-        # Done and info
-        # is the hub ever done? Is life ever done? Is life a simulation?
-        dones = {agent.id: False for agent in self.agents}
-        dones["__all__"] = False
-
-        # Empty info dicts for agents
-        infos = {agent.id: {} for agent in self.agents}
-
-        return observations, rewards, dones, infos
+        return observations, rewards, self._dones_cache, self._infos_cache
