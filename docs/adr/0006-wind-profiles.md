@@ -4,7 +4,7 @@ Date: 2025-01-21
 
 ## Status
 
-TBJ
+Accepted
 
 ## Context
 
@@ -12,7 +12,7 @@ Justify and/or mention where the wind profiles are from, how they are scaled and
 
 ## Decision
 
-The change that we're proposing or have agreed to implement.
+The wind profiles were provided by Repowered.
 
 ## Consequences
 
