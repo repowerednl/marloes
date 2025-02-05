@@ -12,7 +12,7 @@ Since we are dealing with a multi-objective reward, we should justify our way of
 
 ## Decision
 
-As of right now, we do have a multi-objective reward (self-sufficiency + emissions), but since they are in no way competing and we conclude that the overall value of taking an action is just defined by the sum of the individual rewards. Therefore, we simply take the sum of both rewards.
+As of right now, we do have a multi-objective reward (self-sufficiency and emissions), but since they are in no way competing and we conclude that the overall value of taking an action is just defined by the sum of the individual rewards. Therefore, we simply take the sum of both rewards.
 
 ## Consequences
 
