@@ -4,7 +4,7 @@ Date: 2024-12-03
 
 ## Status
 
-TBJ
+Accepted
 
 ## Context
 
@@ -12,7 +12,7 @@ The solar profiles in `data/profiles` should be explained/justified.
 
 ## Decision
 
-The change that we're proposing or have agreed to implement.
+The profiles were provided by Repowered.
 
 ## Consequences
 
