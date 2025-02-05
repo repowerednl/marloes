@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-The primary goal of the REFORMERS project is to be self-sufficient over a year, which means to produce as much as is consumed. This is quite hard to define in a reward model, since it is a sparse reward (only available at the end of the year). We need to define intermediate rewards to achieve the self-sufficiency goal. We already implemented the cumulative_grid_state, which is a measure of how much energy is taken from (or fed into) the grid. Producing as much as possible every day to meet your own demand and, if possible, feed into the grid would to the optimal result. If you are self-sufficient every day, you are self-sufficient every year.
+The primary goal of the REFORMERS project is to be self-sufficient over a year, which means to produce as much as is consumed. This is quite hard to define in a reward model, since it is a sparse reward (only available at the end of the year). We need to define intermediate rewards to achieve the self-sufficiency goal. We already implemented the cumulative_grid_state, which is a measure of how much energy is taken from (or fed into) the grid. Producing as much as possible every day to meet your own demand and, if possible, feed into the grid would lead to the optimal result. If you are self-sufficient every day, you are self-sufficient every year.
 
 ## Decision
 
