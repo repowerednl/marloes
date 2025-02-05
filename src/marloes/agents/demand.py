@@ -17,7 +17,7 @@ class DemandAgent(Agent):
 
     def _get_demand_series(self, config: dict):
         # Read in the right demand profile
-        series = read_series(f"Demand_{config['profile']}.parquet")
+        series = read_series(f"Demand_{config['profile']}.parquet", in_kw=True)
 
         # Scale to the right size
         series = series * config.get("scale", 1)
