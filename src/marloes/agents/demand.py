@@ -22,13 +22,11 @@ class DemandAgent(Agent):
         # Scale to the right size
         series = series * config.get("scale", 1)
 
-        # TODO: Uncomment this when the forecast is available
-        # forecast = read_series(f"Demand_{config.pop("profile")}_forecast.parquet")
-        # forecast = forecast * config.pop("scale", 1)
-        config.pop("profile")
-        config.pop("scale", None)
+        # Get forecast
+        forecast = read_series(f"Demand_{config.pop('profile')}.parquet", forecast=True)
+        forecast = forecast * config.pop("scale", 1)
 
-        return series, None  # forecast
+        return series, forecast
 
     @classmethod
     def get_default_config(cls, config: dict, id: str) -> dict:

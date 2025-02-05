@@ -26,12 +26,10 @@ class WindAgent(Agent):
         series[series > config["AC"]] = config["AC"]
 
         # Get forecast
-        # TODO: Uncomment this when the forecast is available
-        # forecast = read_series(f"Wind_{config.pop('location')}_forecast.parquet")
-        # forecast *= config["power"]
-        config.pop("location")
+        forecast = read_series(f"Wind_{config.pop('location')}.parquet", forecast=True)
+        forecast *= config["power"]
 
-        return series, None  # forecast
+        return series, forecast
 
     def get_default_config(cls, config: dict, id: str) -> dict:
         """Each subclass must define its default configuration."""

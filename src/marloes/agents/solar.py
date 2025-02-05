@@ -27,12 +27,12 @@ class SolarAgent(Agent):
         series[series > config["AC"]] = config["AC"]
 
         # Get forecast
-        # TODO: Uncomment this when the forecast is available
-        # forecast = read_series(f"Solar_{config.pop('orientation')}_forecast.parquet")
-        # forecast = forecast * config["DC"] / 1000
-        config.pop("orientation")
+        forecast = read_series(
+            f"Solar_{config.pop('orientation')}.parquet", forecast=True
+        )
+        forecast = forecast * config["DC"] / 1000
 
-        return series, None  # forecast
+        return series, forecast
 
     def get_default_config(cls, config: dict, id: str) -> dict:
         """Each subclass must define its default configuration."""

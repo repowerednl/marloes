@@ -6,13 +6,16 @@ import numpy as np
 
 
 def read_series(
-    filepath: str, in_kw: bool = True, filetype: str = "parquet"
+    filepath: str, in_kw: bool = True, filetype: str = "parquet", forecast: bool = False
 ) -> pd.Series:
     """
     Reads a Parquet file and returns it as a minutely kW series.
     """
     # Adjust filepath for root
-    filepath = f"src/marloes/data/profiles/{filepath}"
+    if forecast:
+        filepath = f"src/marloes/data/forecasts/{filepath}"
+    else:
+        filepath = f"src/marloes/data/profiles/{filepath}"
 
     # Read in the file given the filetype
     read_function = getattr(pd, f"read_{filetype}")
