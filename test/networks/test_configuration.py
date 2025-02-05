@@ -1,6 +1,6 @@
 import unittest
 import os
-import json
+import yaml
 from marloes.networks.configuration import NetworkConfig
 
 
@@ -8,7 +8,7 @@ class TestNetworkConfig(unittest.TestCase):
     def setUp(self):
         self.config = NetworkConfig()
         self.test_uid = "test_uid"
-        self.test_path = f"results/network/config/{self.test_uid}.json"
+        self.test_path = f"results/network/config/{self.test_uid}.yaml"
         self.test_data = {"network1": "config1", "network2": "config2"}
 
     def tearDown(self):
@@ -33,7 +33,7 @@ class TestNetworkConfig(unittest.TestCase):
     def test_load(self):
         os.makedirs(os.path.dirname(self.test_path), exist_ok=True)
         with open(self.test_path, "w") as f:
-            json.dump(self.test_data, f)
+            yaml.dump(self.test_data, f)
         self.config.load(self.test_uid)
         self.assertEqual(self.config.networks, self.test_data)
 
@@ -41,5 +41,5 @@ class TestNetworkConfig(unittest.TestCase):
         self.config.networks = self.test_data
         self.config.save(self.test_uid)
         with open(self.test_path, "r") as f:
-            data = json.load(f)
+            data = yaml.safe_load(f)
         self.assertEqual(data, self.test_data)

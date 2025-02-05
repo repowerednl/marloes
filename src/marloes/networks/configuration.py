@@ -1,5 +1,5 @@
 import os
-import json
+import yaml
 
 
 class NetworkConfig:
@@ -33,18 +33,18 @@ class NetworkConfig:
     """
 
     def load(self, uid):
-        path = f"results/network/config/{uid}.json"
+        path = f"results/network/config/{uid}.yaml"
         if os.path.exists(path):
             with open(path, "r") as f:
-                self.networks = json.load(f)
+                self.networks = yaml.safe_load(f)
         else:
             raise FileNotFoundError(f"No configuration found for UID: {uid}")
 
     def save(self, uid):
-        path = f"results/network/config/{uid}.json"
+        path = f"results/network/config/{uid}.yaml"
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
-            json.dump(self.networks, f)
+            yaml.safe_dump(self.networks, f)
 
     """
     Below is functionality that allows the NetworkConfig class to be used as a dictionary.
