@@ -6,7 +6,7 @@ import numpy as np
 
 
 def read_series(
-    filepath: str, in_kw: bool = False, filetype: str = "parquet"
+    filepath: str, in_kw: bool = True, filetype: str = "parquet"
 ) -> pd.Series:
     """
     Reads a Parquet file and returns it as a minutely kW series.
