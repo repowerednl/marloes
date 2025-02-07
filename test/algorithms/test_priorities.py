@@ -1,9 +1,9 @@
 import unittest
 from unittest.mock import patch
-
 import pandas as pd
-
+import pytest
 from marloes.algorithms.priorities import Priorities
+from marloes.agents.base import Agent
 
 
 def get_new_config() -> dict:
@@ -44,6 +44,11 @@ class TestPriorities(unittest.TestCase):
         ), patch("marloes.results.saver.Saver._validate_folder"):
             self.alg = Priorities(config=get_new_config())
 
+    def tearDown(self):
+        # reset the Agent.__id_counters to 0
+        Agent._id_counters = {}
+        return super().tearDown()
+
     def test_init(self):
         # no saving
         self.assertEqual(self.alg.epochs, 10)
@@ -65,34 +70,31 @@ class TestPriorities(unittest.TestCase):
         self.assertEqual(grid.asset.max_power_in, float("inf"))
         self.assertEqual(grid.asset.max_power_out, float("inf"))
 
-    def get_observation(self, batteries: int = 1):
-        """
-        The observation returned by reset/step (return_value[0]) should be a dictionary
-        with keys corresponding to the agent ids.
-        We care about this here because batteries should receive a setpoint.
-        """
-        obs = {}
-        for i in range(batteries):
-            obs[f"Battery {i}"] = {"power": 0}
-        obs["Solar 0"] = {"power": 0}
-        return obs
-
     @patch("marloes.valley.env.EnergyValley.step")
     @patch("marloes.valley.env.EnergyValley.reset")
     def test_train(self, mock_reset, mock_step):
-        mock_reset.return_value = self.get_observation(), {}
-        mock_step.return_value = (self.get_observation(), 2, 3, 4)
+        mock_reset.return_value = {}, {}
+        mock_step.return_value = ({}, 2, 3, 4)
         self.alg.train()
         self.assertEqual(mock_reset.call_count, 1)
         self.assertEqual(mock_step.call_count, self.alg.epochs)
+
+
+@pytest.mark.slow
+class TestPrioritiesSlow(unittest.TestCase):
+    def setUp(self) -> None:
+        self.alg = Priorities(config=get_new_config())
 
     def test_get_actions(self):
         """
         Only the battery should receive setpoints in the Priorities algorithm.
         Testing two cases: 1 battery, 1 solar and 3 batteries, 1 solar.
         """
-        observations = self.get_observation()
+        from test.util import get_accurate_observation
+
+        observations = get_accurate_observation(self.alg)
         actions = self.alg.get_actions(observations)
         self.assertEqual(actions, {})
-        observations = self.get_observation(batteries=3)
+        observations = get_accurate_observation(self.alg)
         actions = self.alg.get_actions(observations)
+        # assert False == True
