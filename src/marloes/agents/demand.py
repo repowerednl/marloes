@@ -12,21 +12,21 @@ from .base import Agent
 
 class DemandAgent(Agent):
     def __init__(self, config: dict, start_time: datetime):
-        series = self._get_demand_series(config)
-        super().__init__(Demand, config, start_time, series)
+        series, forecast = self._get_demand_series(config)
+        super().__init__(Demand, config, start_time, series, forecast)
 
     def _get_demand_series(self, config: dict):
         # Read in the right demand profile
-        series = read_series(f"Demand_{config['profile']}.parquet", in_kw=True)
+        series = read_series(f"Demand_{config.get('profile')}.parquet")
 
         # Scale to the right size
         series = series * config.get("scale", 1)
 
-        # Remove used arguments from config
-        config.pop("profile", None)
-        config.pop("scale", None)
+        # Get forecast
+        forecast = read_series(f"Demand_{config.pop('profile')}.parquet", forecast=True)
+        forecast = forecast * config.pop("scale", 1)
 
-        return series
+        return series, forecast
 
     @classmethod
     def get_default_config(cls, config: dict, id: str) -> dict:
