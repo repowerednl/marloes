@@ -141,7 +141,7 @@ class TestReadSeries(unittest.TestCase):
 
 class TestDropOutSeries(unittest.TestCase):
     def setUp(self):
-        self.date_range = pd.date_range(start="2023-01-01", periods=1440, freq="T")
+        self.date_range = pd.date_range(start="2023-01-01", periods=1440, freq="min")
         self.values = np.random.rand(len(self.date_range))
         self.series = pd.Series(self.values, index=self.date_range)
 
