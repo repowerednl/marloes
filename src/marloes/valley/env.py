@@ -215,6 +215,13 @@ class EnergyValley(MultiAgentEnv):
         self.model.solve(self.time_step)
         self.model.step(self.time_step)
 
+        # Update the electrolysers that have a slight loss of energy
+        electrolysers = (
+            agent for agent in self.agents if isinstance(agent, ElectrolyserAgent)
+        )
+        for electrolyser in electrolysers:
+            electrolyser._loss_discharge()
+
         # Extract results and calculate next states
         self.extractor.from_model(self.model)
         observations = self._combine_states()

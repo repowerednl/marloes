@@ -55,11 +55,6 @@ class ElectrolyserAgent(Agent):
             merged_config.get("max_power_out", np.inf), merged_config.pop("power")
         )
 
-        # Convert the capacity (kgH2) to the capacity in the model (kWh)
-        merged_config["energy_capacity"] = merged_config[
-            "energy_capacity"
-        ] * merged_config.pop("conversion_factor")
-
         return merged_config
 
     def map_action_to_setpoint(self, action: float) -> float:
@@ -86,9 +81,9 @@ class ElectrolyserAgent(Agent):
         # get the current state of the battery, set a new state with the slight loss
         old_state = self.asset.state
         new_state = BatteryState(
-            power=old_state.power * self.discharge_rate,
+            power=old_state.power,
             time=old_state.time,
-            state_of_charge=old_state.state_of_charge,
+            state_of_charge=old_state.state_of_charge * self.discharge_rate,
             degradation=old_state.degradation,
             is_fcr=old_state.is_fcr,
         )

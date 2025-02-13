@@ -8,7 +8,18 @@ from gui.visualizer import VisualizerGUI
 from marloes.results.calculator import Calculator
 from marloes.data.metrics import Metrics
 from marloes.results.visualizer import Visualizer
-from marloes.marloes import MARLOES
+
+MARLOES = r"""
+---------------------------------------------------
+---------------------------------------------------
+---  __  __    _    ____  _                     ---
+--- |  \/  |  / \  |  _ \| |   ___   ___  ___  ---
+--- | |\/| | / _ \ | |_|/| |  /   \ / -_)( _ ) ---
+--- | |  | |/ ___ \| |\ \| |_|  ~  | /___ \ \  ---
+--- |_|  |_/_/   \_\_| \_\____\___/ \___/(___) ---
+---------------------------------------------------
+---------------------------------------------------
+"""
 
 
 def load_config():
