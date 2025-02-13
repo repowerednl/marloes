@@ -45,12 +45,8 @@ class TestPriorities(unittest.TestCase):
         with patch("marloes.results.saver.Saver._save_config_to_yaml"), patch(
             "marloes.results.saver.Saver._update_simulation_number", return_value=0
         ), patch("marloes.results.saver.Saver._validate_folder"):
+            Agent._id_counters = {}
             self.alg = Priorities(config=get_new_config())
-
-    def tearDown(self):
-        # reset the Agent.__id_counters to 0
-        Agent._id_counters = {}
-        return super().tearDown()
 
     def test_init(self):
         # no saving
@@ -196,7 +192,6 @@ class TestPriorities(unittest.TestCase):
         ]
         for config in battery_configs:
             self.alg.environment._add_agent(config)
-
         test_cases = [
             ([0.2], -3.0, 0.4, {"BatteryAgent 0": 0}),
             ([0.2, 0.5], -3.0, 0.4, {"BatteryAgent 0": 0, "BatteryAgent 1": -500}),
@@ -232,6 +227,7 @@ class TestPriorities(unittest.TestCase):
 @pytest.mark.slow
 class TestPrioritiesSlow(unittest.TestCase):
     def setUp(self) -> None:
+        Agent._id_counters = {}
         self.alg = Priorities(config=get_new_config())
 
     def test_get_actions(self):
