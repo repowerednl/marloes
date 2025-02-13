@@ -228,7 +228,10 @@ class TestPriorities(unittest.TestCase):
 class TestPrioritiesSlow(unittest.TestCase):
     def setUp(self) -> None:
         Agent._id_counters = {}
-        self.alg = Priorities(config=get_new_config())
+        with patch(
+            "marloes.results.saver.Saver._update_simulation_number", return_value=0
+        ):
+            self.alg = Priorities(config=get_new_config())
 
     def test_get_actions(self):
         """
