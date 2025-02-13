@@ -8,6 +8,7 @@ from gui.visualizer import VisualizerGUI
 from marloes.results.calculator import Calculator
 from marloes.data.metrics import Metrics
 from marloes.results.visualizer import Visualizer
+from marloes.marloes import MARLOES
 
 
 def load_config():
@@ -60,6 +61,7 @@ def run_app_mode(args):
 
 
 def main():
+    print(MARLOES)
     args = parse_arguments()
 
     if args.default:
