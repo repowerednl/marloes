@@ -13,19 +13,23 @@ from .base import Agent
 
 class WindAgent(Agent):
     def __init__(self, config: dict, start_time: datetime):
-        series = self._get_production_series(config)
+        series, forecast = self._get_production_series(config)
         super().__init__(Supply, config, start_time, series)
 
     def _get_production_series(self, config: dict):
         # Read in the right 1 MWp profile from the wind data
-        series = read_series(f"Wind_{config.pop('location')}.parquet")
+        series = read_series(f"Wind_{config.get('location')}.parquet")
 
         series *= config["power"]
 
         # Cap at the AC capacity
         series[series > config["AC"]] = config["AC"]
 
-        return series
+        # Get forecast
+        forecast = read_series(f"Wind_{config.pop('location')}.parquet", forecast=True)
+        forecast *= config["power"]
+
+        return series, forecast
 
     def get_default_config(cls, config: dict, id: str) -> dict:
         """Each subclass must define its default configuration."""

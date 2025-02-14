@@ -173,7 +173,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         Test the step method
         """
         # dummy actions
-        actions = [0, 0, 0]
+        actions = {self.demand_agent.id: 0, self.battery_agent.id: 0}
         observation, reward, done, info = self.env.step(actions=actions)
         # and if the state time is updated with self.env.time_step
         self.assertEqual(
