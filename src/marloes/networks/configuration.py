@@ -1,5 +1,7 @@
 import os
-import yaml
+import torch
+from collections import defaultdict
+from .base import BaseNetwork
 
 
 class NetworkConfig:
@@ -20,31 +22,36 @@ class NetworkConfig:
         __len__():
             Returns the number of key-value pairs in the networks dictionary.
         load(uid):
-            Loads the network configuration from a file identified by the given UID.
+            Loads the network configuration from a file identified by the given UID and config type.
         save(uid):
-            Saves the current network configuration to a file identified by the given UID.
+            Saves the current network configuration to a file identified by the given UID and config type.
     """
 
     def __init__(self):
-        self.networks = {}
+        self.networks = defaultdict()
 
     """
     Below are the load and save functions that allow the configuration to be saved and loaded from a file.
     """
 
     def load(self, uid):
-        path = f"results/network/config/{uid}.yaml"
-        if os.path.exists(path):
-            with open(path, "r") as f:
-                self.networks = yaml.safe_load(f)
-        else:
-            raise FileNotFoundError(f"No configuration found for UID: {uid}")
+        """
+        Loading available configurations for a given UID. If UID is not found, it will return an empty dictionary.
+        """
+        if not os.path.exists(f"configs/{uid}"):
+            return {}
+        for config_type in os.listdir(f"configs/{uid}"):
+            path = f"configs/{uid}/{config_type}"
+            self.networks[config_type] = BaseNetwork(params=torch.load(path))
 
     def save(self, uid):
-        path = f"results/network/config/{uid}.yaml"
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as f:
-            yaml.safe_dump(self.networks, f)
+        """
+        Saving the current configuration to separate files identified by the given UID.
+        """
+        for config_type in self.networks:
+            path = f"configs/{uid}/{config_type}"
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            torch.save(self.networks[config_type].state_dict(), path)
 
     """
     Below is functionality that allows the NetworkConfig class to be used as a dictionary.
