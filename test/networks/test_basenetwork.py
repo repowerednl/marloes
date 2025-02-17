@@ -13,9 +13,8 @@ class TestBaseNetwork(TestCase):
 
     @classmethod
     def setUp(cls):
-        # create
-        cls.layer_details = LayerDetails(*get_valid_layerdetails())
-        cls.layer_details.validate()
+        cls.layer_details = get_valid_layerdetails()
+        # create new network
         cls.base = BaseNetwork(layer_details=cls.layer_details)
 
     def test_basenetwork_initialization(self):

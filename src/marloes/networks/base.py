@@ -171,9 +171,9 @@ class BaseNetwork(Module):
         layer_details: LayerDetails = None,
         hyper_params: HyperParams = None,
     ):
-        if not params and not layer_details:
+        if not layer_details:
             raise ValueError(
-                "Either params or input_dim and output_dim must be provided."
+                "LayerDetails must be provided to initialize the network, needed for saving and loading."
             )
         layer_details.validate()
         super(BaseNetwork, self).__init__()

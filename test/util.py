@@ -1,6 +1,7 @@
 """
 Utility functions for testing.
 """
+from marloes.networks.base import BaseNetwork, LayerDetails
 
 
 def get_valid_layerdetails(
@@ -30,4 +31,13 @@ def get_valid_layerdetails(
         "details": {"in_features": input_out, "out_features": 1 if sigmoid else 5},
         "activation": "sigmoid" if sigmoid else "relu",
     }
-    return input_details, hidden_details, output_details
+    result = LayerDetails(input_details, hidden_details, output_details)
+    result.validate()
+    return result
+
+
+def get_valid_basenetwork():
+    """
+    Returns a valid BaseNetwork object.
+    """
+    return BaseNetwork(layer_details=get_valid_layerdetails())
