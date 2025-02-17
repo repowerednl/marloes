@@ -98,7 +98,6 @@ class LayerDetails:
             value for key, value in self.hidden.items() if "dropout" not in key
         ]
         for i in range(len(hidden_layers) - 1):
-            print(hidden_layers[i]["details"])
             if (
                 hidden_layers[i]["details"]["out_features"]
                 != hidden_layers[i + 1]["details"]["in_features"]
@@ -118,9 +117,19 @@ class LayerDetails:
             raise ValueError(
                 "Output layer details must have in_features and out_features."
             )
+
+        def _get_last_layer(self):
+            """
+            returns the last layer that is not a dropout layer, if it exists, otherwise raises an error
+            """
+            for key, layer in reversed(self.hidden.items()):
+                if "dropout" not in key:
+                    return layer
+            raise ValueError("No hidden layer found that is not a dropout layer.")
+
         if (
-            self.hidden["layer_2"]["details"]["out_features"]
-            != self.output["details"]["in_features"]
+            self.output["details"]["in_features"]
+            != _get_last_layer(self)["details"]["out_features"]
         ):
             raise ValueError(
                 "Output of last hidden layer must match input of output layer."

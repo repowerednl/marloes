@@ -160,14 +160,13 @@ class TestLayerDetailsValidation(TestCase):
         with self.assertRaises(ValueError):
             layer_details.validate_output()
 
-    def test_validate_layer_details_random_init(self):
+    def test_validate_layer_details_with_dropout_before_output(self):
         """
-        Test if the layer details are created correctly with random initialization.
+        Makes sure the validation is correct when dropout is before the output layer.
         """
+        # add a dropout at the end of the hidden layers
+        self.correct_hidden["dropout_2"] = {"details": {"p": 0.5}}
         layer_details = create_layer_details(
             self.correct_input, self.correct_hidden, self.correct_output
         )
-        layer_details.random_init = True
-        self.assertIsNone(layer_details.validate_input())
-        self.assertIsNone(layer_details.validate_hidden())
-        self.assertIsNone(layer_details.validate_output())
+        self.assertIsNone(layer_details.validate())
