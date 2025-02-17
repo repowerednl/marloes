@@ -15,7 +15,6 @@ class TestBaseNetwork(TestCase):
     def setUp(cls):
         # create
         layer_details = LayerDetails(*get_valid_layerdetails())
-        print(layer_details)
         layer_details.validate()
         cls.base = BaseNetwork(layer_details=layer_details)
 
