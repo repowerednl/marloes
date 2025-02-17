@@ -51,7 +51,7 @@ class NetworkConfig:
         for config_type in self.networks:
             path = f"configs/{uid}/{config_type}"
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            torch.save(self.networks[config_type].state_dict(), path)
+            self.networks[config_type].save(path)
 
     """
     Below is functionality that allows the NetworkConfig class to be used as a dictionary.

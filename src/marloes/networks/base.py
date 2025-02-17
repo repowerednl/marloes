@@ -37,6 +37,104 @@ class LayerDetails:
     output: dict
     random_init: bool = False
 
+    def validate_input(self):
+        if not isinstance(self.input, dict):
+            raise ValueError("Input layer details must be a dictionary.")
+        if "details" not in self.input or "activation" not in self.input:
+            raise ValueError("Input layer details must have details and activation.")
+        if not all(
+            key in self.input["details"] for key in ["in_features", "out_features"]
+        ):
+            raise ValueError(
+                "Input layer details must have in_features and out_features."
+            )
+
+    def validate_hidden(self):
+        if not isinstance(self.hidden, dict):
+            raise ValueError("Hidden layer details must be a dictionary.")
+        for key, layer in self.hidden.items():
+            if "details" not in layer:
+                raise ValueError("Hidden layer details must have details.")
+            if "dropout" in key and "activation" in layer:
+                raise ValueError(
+                    "Hidden layer cannot have both dropout and activation."
+                )
+            if "dropout" not in key and not all(
+                elem in layer["details"] for elem in ["in_features", "out_features"]
+            ):
+                raise ValueError(
+                    "Hidden layer details must have in_features and out_features."
+                )
+            elif "dropout" in key and not all(
+                elem in layer["details"] for elem in ["p"]
+            ):
+                raise ValueError("Dropout layer details must have p.")
+            elif "dropout" not in key and "activation" not in layer:
+                raise ValueError("Hidden layer must have activation.")
+
+        def _get_first_layer(self):
+            """
+            returns the first layer that is not a dropout layer, if it exists, otherwise raises an error
+            """
+            for key, layer in self.hidden.items():
+                if "dropout" not in key:
+                    return layer
+            raise ValueError("No hidden layer found that is not a dropout layer.")
+
+        if (
+            self.input["details"]["out_features"]
+            != _get_first_layer(self)["details"]["in_features"]
+        ):
+            raise ValueError(
+                "Output of input layer must match input of first hidden layer."
+            )
+
+        hidden_layers = [
+            value for key, value in self.hidden.items() if "dropout" not in key
+        ]
+        for i in range(len(hidden_layers) - 1):
+            print(hidden_layers[i]["details"])
+            if (
+                hidden_layers[i]["details"]["out_features"]
+                != hidden_layers[i + 1]["details"]["in_features"]
+            ):
+                raise ValueError(
+                    "Output of hidden layer must match input of next hidden layer."
+                )
+
+    def validate_output(self):
+        if not isinstance(self.output, dict):
+            raise ValueError("Output layer details must be a dictionary.")
+        if "details" not in self.output or "activation" not in self.output:
+            raise ValueError("Output layer details must have details and activation.")
+        if not all(
+            key in self.output["details"] for key in ["in_features", "out_features"]
+        ):
+            raise ValueError(
+                "Output layer details must have in_features and out_features."
+            )
+        if (
+            self.hidden["layer_2"]["details"]["out_features"]
+            != self.output["details"]["in_features"]
+        ):
+            raise ValueError(
+                "Output of last hidden layer must match input of output layer."
+            )
+        if (
+            self.output["activation"] == "Sigmoid"
+            and self.output["details"]["out_features"] != 1
+        ):
+            raise ValueError(
+                "Output layer with sigmoid activation must have 1 output feature."
+            )
+        if (
+            self.output["activation"] == "Softmax"
+            and self.output["details"]["out_features"] <= 1
+        ):
+            raise ValueError(
+                "Output layer with softmax activation must have > 1 output feature."
+            )
+
 
 @dataclass
 class HyperParams:
@@ -63,7 +161,9 @@ class BaseNetwork(Module):
             raise ValueError(
                 "Either params or input_dim and output_dim must be provided."
             )
-        self._validate_layerdetails(layer_details)
+        layer_details.validate_input()
+        layer_details.validate_hidden()
+        layer_details.validate_output()
         super(BaseNetwork, self).__init__()
         self.initialize(params, layer_details)
         self.optimizer = Adam(
@@ -160,58 +260,3 @@ class BaseNetwork(Module):
         Method to save the network parameters to a file.
         """
         torch.save(self.state_dict(), path)
-
-    @staticmethod
-    def _validate_layerdetails(layerdetails: LayerDetails):
-        """
-        Method to validate the layer details.
-        """
-        if not isinstance(layerdetails, LayerDetails):
-            raise ValueError("Layer details must be an instance of LayerDetails.")
-        if not isinstance(layerdetails.input, dict):
-            raise ValueError("Input layer details must be a dictionary.")
-        if not isinstance(layerdetails.hidden, dict):
-            raise ValueError("Hidden layer details must be a dictionary.")
-        if not isinstance(layerdetails.output, dict):
-            raise ValueError("Output layer details must be a dictionary.")
-        if not isinstance(layerdetails.random_init, bool):
-            raise ValueError("Random init must be a boolean.")
-        # now we need to check if the output matches the next input for input > hidden > output
-        if (
-            layerdetails.input["details"]["out_features"]
-            != layerdetails.hidden[0]["details"]["in_features"]
-        ):
-            raise ValueError(
-                "Output of input layer must match input of first hidden layer."
-            )
-        for i in range(len(layerdetails.hidden) - 1):
-            if (
-                layerdetails.hidden[i]["details"]["out_features"]
-                != layerdetails.hidden[i + 1]["details"]["in_features"]
-            ):
-                raise ValueError(
-                    "Output of hidden layer must match input of next hidden layer."
-                )
-        if (
-            layerdetails.hidden[-1]["details"]["out_features"]
-            != layerdetails.output["details"]["in_features"]
-        ):
-            raise ValueError(
-                "Output of last hidden layer must match input of output layer."
-            )
-        # if the output uses a sigmoid activation, the output features must be 1
-        if (
-            layerdetails.output["activation"] == "Sigmoid"
-            and layerdetails.output["details"]["out_features"] != 1
-        ):
-            raise ValueError(
-                "Output layer with sigmoid activation must have 1 output feature."
-            )
-        # if the output uses a softmax activation, the output features must be > 1
-        if (
-            layerdetails.output["activation"] == "Softmax"
-            and layerdetails.output["details"]["out_features"] <= 1
-        ):
-            raise ValueError(
-                "Output layer with softmax activation must have > 1 output feature."
-            )
