@@ -211,17 +211,18 @@ class BaseNetwork(Module):
         )
 
     @staticmethod
-    def _select_activation(activation):
+    def _select_activation(activation: str):
         """
         Method to select the activation function.
         """
-        if activation == "ReLU":
+        activation = activation.lower()
+        if activation == "relu":
             return torch.nn.ReLU()
-        elif activation == "Sigmoid":
+        elif activation == "sigmoid":
             return torch.nn.Sigmoid()
-        elif activation == "Tanh":
+        elif activation == "tanh":
             return torch.nn.Tanh()
-        elif activation == "Softmax":
+        elif activation == "softmax":
             return torch.nn.Softmax(dim=1)
         else:
             raise ValueError("Activation function not supported")
