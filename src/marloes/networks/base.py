@@ -37,6 +37,11 @@ class LayerDetails:
     output: dict
     random_init: bool = False
 
+    def validate(self):
+        self.validate_input()
+        self.validate_hidden()
+        self.validate_output()
+
     def validate_input(self):
         if not isinstance(self.input, dict):
             raise ValueError("Input layer details must be a dictionary.")
@@ -161,9 +166,7 @@ class BaseNetwork(Module):
             raise ValueError(
                 "Either params or input_dim and output_dim must be provided."
             )
-        layer_details.validate_input()
-        layer_details.validate_hidden()
-        layer_details.validate_output()
+        layer_details.validate()
         super(BaseNetwork, self).__init__()
         self.initialize(params, layer_details)
         self.optimizer = Adam(
