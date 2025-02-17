@@ -14,11 +14,11 @@ class TestBaseNetwork(TestCase):
     @classmethod
     def setUp(cls):
         # create
-        layer_details = LayerDetails(*get_valid_layerdetails())
-        layer_details.validate()
-        cls.base = BaseNetwork(layer_details=layer_details)
+        cls.layer_details = LayerDetails(*get_valid_layerdetails())
+        cls.layer_details.validate()
+        cls.base = BaseNetwork(layer_details=cls.layer_details)
 
-    def test_basenetwork_creation(self):
+    def test_basenetwork_initialization(self):
         """
         Test if the BaseNetwork is created correctly, should have input, hidden and output.
         """
@@ -39,3 +39,34 @@ class TestBaseNetwork(TestCase):
         self.assertEqual(self.base.output[0].in_features, 4)
         self.assertEqual(self.base.output[0].out_features, 1)
         self.assertEqual(self.base.output[1].__class__.__name__, "Sigmoid")
+
+    def test_no_params_given(self):
+        """
+        If no parameters are given a default lr and weight decay are used.
+        """
+        # make sure optimizer is Adam
+        self.assertEqual(self.base.optimizer.__class__.__name__, "Adam")
+        self.assertEqual(self.base.optimizer.defaults["lr"], 0.001)
+        self.assertEqual(self.base.optimizer.defaults["weight_decay"], 0.01)
+
+    def test_forward(self):
+        """
+        Test the forward pass of the BaseNetwork.
+        """
+        # create a dummy input tensor
+        input_tensor = torch.randn(10)
+        # make sure forward pass works
+        output = self.base(input_tensor)
+        # output should be one value
+        self.assertEqual(len(output), 1)
+
+    def test_initialization_based_on_params(self):
+        """
+        Test if the model can be created if the parameters are saved correctly.
+        """
+        # save the parameters
+        params = self.base.state_dict()
+        # create a new model with the saved parameters
+        new_model = BaseNetwork(params=params, layer_details=self.layer_details)
+        # make sure the new model has the same parameters
+        self.assertEqual(new_model.state_dict(), params)

@@ -209,13 +209,10 @@ class BaseNetwork(Module):
         )
         # initialize hidden layers
         self.hidden = torch.nn.ModuleList()
-        print(layer_details.hidden)
         for key, layer in layer_details.hidden.items():
             if "dropout" in key:
-                print("added dropout")
                 self.hidden.append(torch.nn.Dropout(**layer["details"]))
             else:
-                print("added layer")
                 self.hidden.append(
                     torch.nn.Sequential(
                         torch.nn.Linear(**layer["details"]),
