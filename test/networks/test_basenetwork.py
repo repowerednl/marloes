@@ -66,7 +66,9 @@ class TestBaseNetwork(TestCase):
         """
         # save the parameters
         params = self.base.state_dict()
+        print(params)
         # create a new model with the saved parameters
         new_model = BaseNetwork(params=params, layer_details=self.layer_details)
+        print(new_model.state_dict())
         # make sure the new model has the same parameters
         self.assertEqual(new_model.state_dict(), params)
