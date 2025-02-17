@@ -177,7 +177,10 @@ class BaseNetwork(Module):
             )
         layer_details.validate()
         super(BaseNetwork, self).__init__()
-        self.initialize(params, layer_details)
+        self.initialize_network(params, layer_details)
+        # make standard HyperParams if not given
+        if not hyper_params:
+            hyper_params = HyperParams(lr=0.001, weight_decay=0.01)
         self.optimizer = Adam(
             self.parameters(),
             lr=hyper_params.lr,
@@ -185,7 +188,7 @@ class BaseNetwork(Module):
         )
         self.loss = MSELoss()
 
-    def initialize(self, params: dict, layer_details: LayerDetails):
+    def initialize_network(self, params: dict, layer_details: LayerDetails):
         """
         Method to initialize the network. Should be implemented by the child class.
         """
@@ -206,10 +209,13 @@ class BaseNetwork(Module):
         )
         # initialize hidden layers
         self.hidden = torch.nn.ModuleList()
-        for layer in layer_details.hidden.values():
-            if "dropout" in layer:
+        print(layer_details.hidden)
+        for key, layer in layer_details.hidden.items():
+            if "dropout" in key:
+                print("added dropout")
                 self.hidden.append(torch.nn.Dropout(**layer["details"]))
             else:
+                print("added layer")
                 self.hidden.append(
                     torch.nn.Sequential(
                         torch.nn.Linear(**layer["details"]),
@@ -218,7 +224,7 @@ class BaseNetwork(Module):
                 )
         # initialize output layer
         self.output = torch.nn.Sequential(
-            torch.nn.Linear(**layer_details.output),
+            torch.nn.Linear(**layer_details.output["details"]),
             self._select_activation(layer_details.output["activation"]),
         )
 
