@@ -66,9 +66,30 @@ class TestBaseNetwork(TestCase):
         """
         # save the parameters
         params = self.base.state_dict()
-        print(params)
         # create a new model with the saved parameters
         new_model = BaseNetwork(params=params, layer_details=self.layer_details)
-        print(new_model.state_dict())
         # make sure the new model has the same parameters
-        self.assertEqual(new_model.state_dict(), params)
+        for key in params:
+            self.assertTrue(torch.equal(params[key], new_model.state_dict()[key]))
+
+    def test_saving_and_loading(self):
+        """
+        Test if the model can be saved and loaded correctly.
+        """
+        save_path = "params.pth"
+        # save the model
+        self.base.save(save_path)
+        # load the model into BaseNetwork
+        new_model = BaseNetwork(
+            params=torch.load(save_path), layer_details=self.layer_details
+        )  # loading as done in NetworkConfig
+        # make sure the new model has the same parameters
+        for key in self.base.state_dict():
+            self.assertTrue(
+                torch.equal(self.base.state_dict()[key], new_model.state_dict()[key])
+            )
+        # delete the saved model
+        import os
+
+        os.remove(save_path)
+        self.assertFalse(os.path.exists(save_path))

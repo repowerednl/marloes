@@ -41,7 +41,7 @@ class NetworkConfig:
         if not os.path.exists(f"configs/{uid}"):
             return {}
         for config_type in os.listdir(f"configs/{uid}"):
-            path = f"configs/{uid}/{config_type}"
+            path = f"configs/{uid}/{config_type}.pth"
             self.networks[config_type] = BaseNetwork(params=torch.load(path))
 
     def save(self, uid):
@@ -49,7 +49,7 @@ class NetworkConfig:
         Saving the current configuration to separate files identified by the given UID.
         """
         for config_type in self.networks:
-            path = f"configs/{uid}/{config_type}"
+            path = f"configs/{uid}/{config_type}.pth"
             os.makedirs(os.path.dirname(path), exist_ok=True)
             self.networks[config_type].save(path)
 

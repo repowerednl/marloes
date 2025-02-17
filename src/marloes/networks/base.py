@@ -275,4 +275,7 @@ class BaseNetwork(Module):
         """
         Method to save the network parameters to a file.
         """
+        # add .pth extension if not present
+        if not path.endswith(".pth"):
+            path += ".pth"
         torch.save(self.state_dict(), path)
