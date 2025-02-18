@@ -26,6 +26,9 @@ class DemandAgent(Agent):
         forecast = read_series(f"Demand_{config.pop('profile')}.parquet", forecast=True)
         forecast = forecast * config.pop("scale", 1)
 
+        # To sum easily for summing forecasts return negative forecast
+        forecast = -forecast
+
         return series, forecast
 
     @classmethod
