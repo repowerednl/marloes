@@ -10,6 +10,21 @@ from marloes.data.metrics import Metrics
 from marloes.results.visualizer import Visualizer
 
 
+def marloes():
+    MARLOES = r"""
+    ---------------------------------------------------
+    ---------------------------------------------------
+    ---  __  __    _    ____  _                     ---
+    --- |  \/  |  / \  |  _ \| |   ___   ___  ___  ---
+    --- | |\/| | / _ \ | |_|/| |  /   \ / -_)( _ ) ---
+    --- | |  | |/ ___ \| |\ \| |_|  ~  | /___ \ \  ---
+    --- |_|  |_/_/   \_\_| \_\____\___/ \___/(___) ---
+    ---------------------------------------------------
+    ---------------------------------------------------
+    """
+    print(MARLOES)
+
+
 def load_config():
     with open("configs/default_config.yaml", "r") as file:
         config = yaml.safe_load(file)
@@ -60,6 +75,7 @@ def run_app_mode(args):
 
 
 def main():
+    marloes()
     args = parse_arguments()
 
     if args.default:

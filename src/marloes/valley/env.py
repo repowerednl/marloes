@@ -179,7 +179,14 @@ class EnergyValley(MultiAgentEnv):
     def _combine_states(self) -> dict:
         """Function to combine all agents states into one observation"""
         for agent in self.agents:
-            self._state_cache[agent.id] = agent.get_state(self.i)
+            full_state = agent.get_state(self.i)
+            # time is also in state, and is_fcr for battery is not relevant for now.
+            relevant_state = {
+                key: value
+                for key, value in full_state.items()
+                if key != "time" and key != "is_fcr"
+            }
+            self._state_cache[agent.id] = relevant_state
         return self._state_cache
 
     def _calculate_reward(self):
@@ -214,6 +221,13 @@ class EnergyValley(MultiAgentEnv):
         # Solve and step the model
         self.model.solve(self.time_step)
         self.model.step(self.time_step)
+
+        # Update the electrolysers that have a slight loss of energy
+        electrolysers = (
+            agent for agent in self.agents if isinstance(agent, ElectrolyserAgent)
+        )
+        for electrolyser in electrolysers:
+            electrolyser._loss_discharge()
 
         # Extract results and calculate next states
         self.extractor.from_model(self.model)

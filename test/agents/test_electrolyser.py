@@ -3,7 +3,8 @@ from unittest.mock import patch
 from freezegun import freeze_time
 from datetime import datetime, timedelta
 from simon.assets.battery import Battery
-from marloes.agents.electrolyser import ElectrolyserAgent, DEFAULT_CONVERSION_FACTOR
+from simon.data.battery_data import BatteryState
+from marloes.agents.electrolyser import ElectrolyserAgent
 
 
 CONFIG = {
@@ -38,7 +39,7 @@ class TestElectrolyserAgent(unittest.TestCase):
         self.assertEqual(self.electrolyser_agent.asset.min_state_of_charge, 0.0)
         self.assertEqual(
             self.electrolyser_agent.asset.energy_capacity,
-            100.0 * DEFAULT_CONVERSION_FACTOR,
+            100.0,
         )
         self.assertEqual(self.electrolyser_agent.asset.ramp_up_rate, 0.2)
         self.assertEqual(self.electrolyser_agent.asset.ramp_down_rate, 0.2)
@@ -66,7 +67,7 @@ class TestElectrolyserAgent(unittest.TestCase):
         self.assertEqual(other_electrolyser_agent.asset.min_state_of_charge, 0.05)
         self.assertEqual(
             other_electrolyser_agent.asset.energy_capacity,
-            66 * DEFAULT_CONVERSION_FACTOR,
+            66.0,
         )
         self.assertEqual(other_electrolyser_agent.asset.ramp_up_rate, 0.4)
         self.assertEqual(other_electrolyser_agent.asset.ramp_down_rate, 0.4)
@@ -93,6 +94,25 @@ class TestElectrolyserAgent(unittest.TestCase):
                 self.assertEqual(
                     self.electrolyser_agent.map_action_to_setpoint(1.0), 40.0
                 )
+
+    def test__loss_discharge(self):
+        """
+        Test the loss of energy is SOC over time: loss is 1 - (1 / (2 * 24 * 3600))
+        """
+        # set the initial state
+        initial_state = BatteryState(
+            time=datetime.now(), power=20.0, state_of_charge=0.5, degradation=0.5
+        )
+        self.electrolyser_agent.asset.set_state(initial_state)
+        self.electrolyser_agent._loss_discharge()
+        expected_soc = 0.5 * (1 - (1 / (2 * 24 * 3600)))
+        # make sure only the SOC is changed
+        self.assertEqual(self.electrolyser_agent.asset.state.time, datetime.now())
+        self.assertEqual(self.electrolyser_agent.asset.state.power, 20.0)
+        self.assertEqual(
+            self.electrolyser_agent.asset.state.state_of_charge, expected_soc
+        )
+        self.assertEqual(self.electrolyser_agent.asset.state.degradation, 0.5)
 
     # General agent test
     @patch("simon.assets.battery.Battery.set_setpoint")
