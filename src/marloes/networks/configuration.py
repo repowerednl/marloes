@@ -34,24 +34,31 @@ class NetworkConfig:
     Below are the load and save functions that allow the configuration to be saved and loaded from a file.
     """
 
-    def load(self, uid):
+    def load(self, uid, layer_details):
         """
         Loading available configurations for a given UID. If UID is not found, it will return an empty dictionary.
+        It requires some specifics about the network architecture to be passed as well (layer details), this should be defined in the algorithm to match the saved configuration.
         """
+        if not layer_details:
+            raise ValueError(
+                "Layer details must be provided to load the network configuration."
+            )
         if not os.path.exists(f"configs/{uid}"):
             return {}
         for config_type in os.listdir(f"configs/{uid}"):
-            path = f"configs/{uid}/{config_type}"
-            self.networks[config_type] = BaseNetwork(params=torch.load(path))
+            path = f"configs/{uid}/{config_type}.pth"
+            self.networks[config_type] = BaseNetwork(
+                params=torch.load(path), layer_details=layer_details
+            )
 
     def save(self, uid):
         """
         Saving the current configuration to separate files identified by the given UID.
         """
         for config_type in self.networks:
-            path = f"configs/{uid}/{config_type}"
+            path = f"configs/{uid}/{config_type}.pth"
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            torch.save(self.networks[config_type].state_dict(), path)
+            self.networks[config_type].save(path)
 
     """
     Below is functionality that allows the NetworkConfig class to be used as a dictionary.
