@@ -59,6 +59,15 @@ class BatteryAgent(Agent):
         else:
             return self.asset.max_power_out * action
 
+    def get_state(self, start_idx):
+        """
+        Also removes the 'is_fcr' key from the state, since this is not relevant for this stage of MARLoes.
+        """
+        state = super().get_state(start_idx)
+        if "is_fcr" in state:
+            state.pop("is_fcr")
+        return state
+
     def observe(self):
         pass
 

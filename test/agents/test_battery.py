@@ -72,6 +72,18 @@ class TestBatteryAgent(unittest.TestCase):
         self.assertEqual(self.battery_agent.map_action_to_setpoint(0.0), 0.0)
         self.assertEqual(self.battery_agent.map_action_to_setpoint(1.0), 40.0)
 
+    def test_get_state(self):
+        """
+        Tests whether the state without time or is_fcr is returned correctly.
+        """
+        state = self.battery_agent.get_state(0)
+        self.assertIn("power", state)
+        self.assertIn("state_of_charge", state)
+        self.assertIn("degradation", state)
+        self.assertNotIn("time", state)
+        self.assertNotIn("is_fcr", state)
+        self.assertEqual(len(state), 3)
+
     # General agent test
     @patch("simon.assets.battery.Battery.set_setpoint")
     def test_act_sets_correct_setpoint(self, mock_set_setpoint):

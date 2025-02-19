@@ -111,3 +111,28 @@ class TestSolarAgentGetState(unittest.TestCase):
             state["forecast"], solar_agent.forecast[1400:1500]
         )
         self.assertEqual(state["mocked_state"], True)
+
+    @patch.object(
+        SolarAgent, "__init__", lambda self, *args, **kwargs: None
+    )  # Bypass init
+    def test_get_state(self):
+        """
+        Tests whether the state without time is returned correctly.
+        """
+        solar_agent = SolarAgent()
+        solar_agent.forecast = [1, 2, 3, 4, 5]
+        solar_agent.horizon = 2
+        # Mock asset state
+        solar_agent.asset = MagicMock()
+        solar_agent.asset.state.model_dump.return_value = {
+            "time": datetime.now(),
+            "power": 0.0,
+            "available_power": 0.0,
+        }
+
+        state = solar_agent.get_state(0)
+        self.assertIn("power", state)
+        self.assertIn("available_power", state)
+        self.assertIn("forecast", state)
+        self.assertNotIn("time", state)
+        self.assertEqual(len(state), 3)

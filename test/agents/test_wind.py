@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from freezegun import freeze_time
 from datetime import datetime
 import numpy as np
@@ -68,3 +68,28 @@ class TestWindAgent(unittest.TestCase):
         }
         with self.assertRaises(KeyError):
             WindAgent(start_time=datetime.now(), config=config)
+
+    @patch.object(
+        WindAgent, "__init__", lambda self, *args, **kwargs: None
+    )  # Bypass init
+    def test_get_state(self):
+        """
+        Tests whether the state without time is returned correctly.
+        """
+        wind_agent = WindAgent()
+        wind_agent.forecast = [1, 2, 3, 4, 5]
+        wind_agent.horizon = 2
+        # Mock asset state
+        wind_agent.asset = MagicMock()
+        wind_agent.asset.state.model_dump.return_value = {
+            "time": datetime.now(),
+            "power": 0.0,
+            "available_power": 0.0,
+        }
+
+        state = wind_agent.get_state(0)
+        self.assertIn("power", state)
+        self.assertIn("available_power", state)
+        self.assertIn("forecast", state)
+        self.assertNotIn("time", state)
+        self.assertEqual(len(state), 3)
