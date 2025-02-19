@@ -83,6 +83,10 @@ class Agent(ABC):
                 start_idx:end_idx
             ]  # Numpy slicing is O(1)
 
+        # remove 'time' from the state since this is the same for all agents
+        if "time" in state:
+            state.pop("time")
+
         return state
 
     @abstractmethod

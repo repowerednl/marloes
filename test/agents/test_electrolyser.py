@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from freezegun import freeze_time
 from datetime import datetime, timedelta
 from simon.assets.battery import Battery
@@ -94,6 +94,18 @@ class TestElectrolyserAgent(unittest.TestCase):
                 self.assertEqual(
                     self.electrolyser_agent.map_action_to_setpoint(1.0), 40.0
                 )
+
+    def test_get_state(self):
+        """
+        Tests whether the state without time or is_fcr is returned correctly.
+        """
+        state = self.electrolyser_agent.get_state(0)
+        self.assertIn("power", state)
+        self.assertIn("state_of_charge", state)
+        self.assertIn("degradation", state)
+        self.assertNotIn("time", state)
+        self.assertNotIn("is_fcr", state)
+        self.assertEqual(len(state), 3)
 
     def test__loss_discharge(self):
         """
