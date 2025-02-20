@@ -156,7 +156,8 @@ class Extractor:
         self.total_solar_nomination[self.i] = nominations["Solar"]
         self.total_wind_nomination[self.i] = nominations["Wind"]
 
-    def _get_total_nomination_by_type(self, observations: dict) -> dict[str, float]:
+    @staticmethod
+    def _get_total_nomination_by_type(observations: dict) -> dict[str, float]:
         """
         At a timestep, sums the nomination of all assets of a specific (supply) type.
         - Solar
