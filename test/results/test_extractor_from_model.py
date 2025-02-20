@@ -106,9 +106,17 @@ class TestExtractorFromModel(unittest.TestCase):
 
         try:
             self.extractor.from_model(self.model)
+            # update the model
+            self.extractor.update()
+            # and add additional information
+            self.extractor.add_additional_info_from_model(self.model)
         except IndexError:
             self.fail("from_model raised IndexError unexpectedly when at last index")
 
         # Increment index beyond capacity and expect IndexError
         with self.assertRaises(IndexError):
             self.extractor.from_model(self.model)
+            # update the model
+            self.extractor.update()
+            # and add additional information
+            self.extractor.add_additional_info_from_model(self.model)

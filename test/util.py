@@ -90,3 +90,39 @@ def get_mock_observation(
         }
 
     return observation
+
+
+def get_new_config():
+    """
+    Function to return a configuration of agents for creating an Environment/Model.
+    """
+    return {
+        "agents": [
+            {
+                "type": "demand",
+                "scale": 1.5,
+                "profile": "Farm",
+            },
+            {
+                "type": "solar",
+                "AC": 900,
+                "DC": 1000,
+                "orientation": "EW",
+            },
+            {
+                "type": "battery",
+                "efficiency": 0.9,
+                "power": 100,
+                "energy_capacity": 1000,
+            },
+            {
+                "type": "demand",
+                "scale": 1.5,
+                "profile": "Farm",
+            },
+        ],
+        "grid": {
+            "name": "Grid_One",
+            "max_power_in": 1000,
+        },
+    }

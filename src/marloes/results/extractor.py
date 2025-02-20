@@ -63,9 +63,7 @@ class Extractor:
 
     def save_reward(self, reward: float) -> None:
         """Save the reward for the current timestep."""
-        self.reward[
-            self.i - 1
-        ] = reward  # update is done in from_model() > update(), so we need to decrement by 1
+        self.reward[self.i] = reward
 
     def from_model(self, model: Model) -> None:
         """
@@ -148,6 +146,7 @@ class Extractor:
     def from_observations(self, observations: dict) -> None:
         """
         Save the necessary information from the observations.
+        #TODO: extend this to save more information from observations
         - nominations
         """
         if self.i >= self.size:
@@ -200,6 +199,12 @@ class Extractor:
 
         return dict(output_power_data)
 
+    def add_additional_info_from_model(self, model: Model) -> None:
+        """
+        Extract additional information from the model.
+        """
+        pass
+
 
 class ExtensiveExtractor(Extractor):
     def __init__(self, from_model: bool = True, chunk_size: int = 1):
@@ -216,10 +221,8 @@ class ExtensiveExtractor(Extractor):
         super().clear()
         self.extensive_data.stash_chunk()
 
-    def from_model(self, model: Model) -> None:
+    def add_additional_info_from_model(self, model):
         """
-        Extract and store metrics from the simulation model,
-        including detailed state/flow information.
+        Add the flow information after the step to the extensive data.
         """
-        super().from_model(model)
         self.extensive_data.add_step_data(model)

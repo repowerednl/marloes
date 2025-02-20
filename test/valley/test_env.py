@@ -4,47 +4,17 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 import pandas as pd
 from simon.solver import Model
-from marloes.agents.base import Agent
-from marloes.agents.demand import DemandAgent
-from marloes.agents.solar import SolarAgent
-from marloes.agents.wind import WindAgent
-from marloes.agents.battery import BatteryAgent
-from marloes.agents.grid import GridAgent
-from marloes.algorithms.priorities import Priorities
+from marloes.agents import (
+    Agent,
+    BatteryAgent,
+    DemandAgent,
+    GridAgent,
+    SolarAgent,
+    WindAgent,
+)
 from marloes.valley.env import EnergyValley
 
-
-def get_new_config():  # function to return a new configuration, pop caused issues
-    return {
-        "agents": [
-            {
-                "type": "demand",
-                "scale": 1.5,
-                "profile": "Farm",
-            },
-            {
-                "type": "solar",
-                "AC": 900,
-                "DC": 1000,
-                "orientation": "EW",
-            },
-            {
-                "type": "battery",
-                "efficiency": 0.9,
-                "power": 100,
-                "energy_capacity": 1000,
-            },
-            {
-                "type": "demand",
-                "scale": 1.5,
-                "profile": "Farm",
-            },
-        ],
-        "grid": {
-            "name": "Grid_One",
-            "max_power_in": 1000,
-        },
-    }
+from test.util import get_new_config
 
 
 class TestEnergyValleyEnv(unittest.TestCase):
