@@ -18,27 +18,20 @@ class Priorities(BaseAlgorithm):
 
     @staticmethod
     def _determine_battery_actions(
-        net_power: float, batteries: dict, soc_threshold: float = 0.3
+        net_power: float, batteries: dict
     ) -> dict[str, float]:
         """
-        Determines the action for the batteries based on the net power and the battery state (SOC and capacity).
-        Batteries should first qualify (above certain SOC).
-        Then depending on the capacities, create actions to ratio > TODO
+        Determines the action for all batteries based on the net power.
+        Batteries will now always participate in charging or discharging, based on net power.
         """
-        qualified_batteries = {
-            key: battery
+        num_batteries = len(batteries)
+        ratio = 1 / num_batteries if num_batteries > 0 else 0
+
+        battery_actions = {
+            key: math.copysign(1.0, net_power) * ratio * battery["energy_capacity"]
             for key, battery in batteries.items()
-            if (battery["soc"] > soc_threshold and net_power < 0) or net_power > 0
         }
-        ratio = 1 / len(qualified_batteries) if len(qualified_batteries) > 0 else 0
-        active_batteries = {
-            # charge or discharge the battery based on the net power
-            key: (math.copysign(1.0, net_power) * ratio)
-            * qualified_batteries[key]["energy_capacity"]
-            for key in qualified_batteries.keys()
-        }
-        # return the active batteries, and the other batteries to 0
-        return {key: active_batteries.get(key, 0) for key in batteries.keys()}
+        return battery_actions
 
     def _get_batteries(self, observations: dict) -> dict:
         """
