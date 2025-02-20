@@ -114,6 +114,26 @@ class TestReward(unittest.TestCase):
         expected = -np.cumsum(self.extractor.grid_state)
         np.testing.assert_array_almost_equal(result, expected, decimal=5)
 
+    def test_ne_reward(self):
+        """
+        Test the Nomination Error reward.
+        """
+        ## Test actual
+        reward = Reward(actual=True, NE=self.default_scaling)
+        result = reward.get(self.extractor)
+        # difference in solar production and nomination should be 30 - 20 => abs(10)
+        # difference in wind production and nomination should be 25 - 30 => abs(-5)
+        expected = -(10 + 5)
+        self.assertEqual(result, expected)
+
+        ## Test not actual
+        reward = Reward(actual=False, NE=self.default_scaling)
+        result = reward.get(self.extractor)
+
+        ## difference in production/nomination: [-10, -10, -10]
+        expected = -np.array([10, 10, 15])
+        np.testing.assert_array_almost_equal(result, expected, decimal=5)
+
     def test_total_reward(self):
         """
         Test the total reward calculation with multiple active sub-rewards.
