@@ -208,3 +208,15 @@ def add_noise_to_series(series: pd.Series) -> pd.Series:
     """
     dev = series.std() * 0.05
     return series + np.random.normal(0, dev, series.shape[0])
+
+
+def convert_to_hourly_nomination(series: pd.Series) -> pd.Series:
+    """
+    Convert a minutely production series of a solar park into an hourly nomination for the day-ahead market.
+    """
+    if not isinstance(series.index, pd.DatetimeIndex):
+        raise ValueError("The input Series index must be a pandas DatetimeIndex.")
+
+    hourly_nomination = series.resample("H").agg("mean")
+
+    return hourly_nomination
