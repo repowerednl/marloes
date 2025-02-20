@@ -49,6 +49,10 @@ class Extractor:
             self.total_wind_production = np.zeros(self.size)
             self.total_grid_production = np.zeros(self.size)
 
+            # Observation info
+            self.total_solar_nomination = np.zeros(self.size)
+            self.total_wind_nomination = np.zeros(self.size)
+
     def clear(self):
         """Reset the timestep index to zero."""
         self.i = 0
@@ -97,7 +101,6 @@ class Extractor:
         self.total_grid_production[self.i] = output_power_data.get(
             GridAgent.__name__, 0.0
         )
-        self.update()
 
     def from_files(self, uid: int | None = None, dir: str = "results") -> int:
         """
@@ -141,6 +144,33 @@ class Extractor:
             )
 
         return uid
+
+    def from_observations(self, observations: dict) -> None:
+        """
+        Save the necessary information from the observations.
+        - nominations
+        """
+        if self.i >= self.size:
+            raise IndexError("Extractor has reached its maximum capacity.")
+
+        nominations = self._get_total_nomination_by_type(observations)
+        self.total_solar_nomination[self.i] = nominations["Solar"]
+        self.total_wind_nomination[self.i] = nominations["Wind"]
+
+    def _get_total_nomination_by_type(self, observations: dict) -> dict[str, float]:
+        """
+        At a timestep, sums the nomination of all assets of a specific (supply) type.
+        - Solar
+        - Wind
+        """
+        nominations = {"Solar": 0.0, "Wind": 0.0}
+
+        for agent_id, observation in observations.items():
+            agent_type = agent_id.split(" ")[0].replace("Agent", "")
+            if agent_type in nominations:
+                nominations[agent_type] += observation["nomination"]
+
+        return nominations
 
     @staticmethod
     def _get_total_flow_between_types(model: Model, type1: Type, type2: Type) -> float:

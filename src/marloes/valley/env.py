@@ -229,9 +229,19 @@ class EnergyValley(MultiAgentEnv):
         for electrolyser in electrolysers:
             electrolyser._loss_discharge()
 
+        # Combine the states of all agents as observations
+        observations = self._combine_states()
+
         # Extract results and calculate next states
         self.extractor.from_model(self.model)
-        observations = self._combine_states()
+        # TODO: add additional information, market_prices to the observations (and info for logging?)
+        # TODO: save additional information (for Rewards that use info outside the model (nomination, market-prices))
+        self.extractor.from_observations(observations)
+
+        # update the extractor
+        self.extractor.update()
+
+        # All relevant information must be added to the extractor before this is called
         rewards = self._calculate_reward()
 
         return observations, rewards, self._dones_cache, self._infos_cache
