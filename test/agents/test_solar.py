@@ -69,6 +69,7 @@ class TestSolarAgentGetState(unittest.TestCase):
         """Tests whether get_state correctly returns the forecast slice."""
         solar_agent = SolarAgent()
         solar_agent.forecast = np.linspace(0, 1, num=2000, dtype=np.float32)
+        solar_agent.nominated_volume = [1, 2, 3, 4, 5]
         solar_agent.horizon = 1440
 
         # Mock asset state
@@ -95,6 +96,7 @@ class TestSolarAgentGetState(unittest.TestCase):
         """Tests whether get_state correctly handles cases where the horizon exceeds the forecast."""
         solar_agent = SolarAgent()
         solar_agent.forecast = np.linspace(0, 1, num=1500, dtype=np.float32)
+        solar_agent.nominated_volume = [1, 2, 3, 4, 5]
         solar_agent.horizon = 1440
 
         # Mock asset state
@@ -121,6 +123,7 @@ class TestSolarAgentGetState(unittest.TestCase):
         """
         solar_agent = SolarAgent()
         solar_agent.forecast = [1, 2, 3, 4, 5]
+        solar_agent.nominated_volume = [1, 2, 3, 4, 5]
         solar_agent.horizon = 2
         # Mock asset state
         solar_agent.asset = MagicMock()
@@ -134,5 +137,6 @@ class TestSolarAgentGetState(unittest.TestCase):
         self.assertIn("power", state)
         self.assertIn("available_power", state)
         self.assertIn("forecast", state)
+        self.assertIn("nomination", state)
         self.assertNotIn("time", state)
-        self.assertEqual(len(state), 3)
+        self.assertEqual(len(state), 4)
