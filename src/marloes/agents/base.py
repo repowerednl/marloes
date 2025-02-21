@@ -54,9 +54,7 @@ class Agent(ABC):
             self.horizon = 1440  # 24 hours for now
 
             # Also add nomination based on forecast
-            self.nominated_volume: np.ndarray = convert_to_hourly_nomination(
-                self.forecast
-            )
+            self.nominated_volume: np.ndarray = convert_to_hourly_nomination(forecast)
         else:
             self.forecast = None
 
@@ -94,7 +92,7 @@ class Agent(ABC):
             hour_idx = start_idx // 60  # 60 minutes in an hour
             hour_idx = min(hour_idx, len(self.nominated_volume) - 1)  # safety
             # Add the current hour's nomination to the state
-            state["nomination_kW"] = float(self.nominated_volume[hour_idx])
+            state["nomination"] = float(self.nominated_volume[hour_idx])
 
         # remove 'time' from the state since this is the same for all agents
         if "time" in state:
