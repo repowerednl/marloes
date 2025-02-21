@@ -7,6 +7,8 @@ import pandas as pd
 from simon.assets.asset import Asset
 from simon.data.asset_data import AssetSetpoint
 
+from marloes.data.util import convert_to_hourly_nomination
+
 
 class Agent(ABC):
     _id_counters = {}
@@ -50,6 +52,9 @@ class Agent(ABC):
         if forecast is not None:
             self.forecast: np.ndarray = forecast.values.astype(np.float32)
             self.horizon = 1440  # 24 hours for now
+
+            # Also add nomination based on forecast
+            self.nominated_volume: np.ndarray = convert_to_hourly_nomination(forecast)
         else:
             self.forecast = None
 
@@ -82,6 +87,12 @@ class Agent(ABC):
             state["forecast"] = self.forecast[
                 start_idx:end_idx
             ]  # Numpy slicing is O(1)
+
+            # Also include nomination
+            hour_idx = start_idx // 60  # 60 minutes in an hour
+            hour_idx = min(hour_idx, len(self.nominated_volume) - 1)  # safety
+            # Add the current hour's nomination to the state
+            state["nomination"] = float(self.nominated_volume[hour_idx])
 
         # remove 'time' from the state since this is the same for all agents
         if "time" in state:

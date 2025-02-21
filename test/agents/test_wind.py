@@ -78,6 +78,7 @@ class TestWindAgent(unittest.TestCase):
         """
         wind_agent = WindAgent()
         wind_agent.forecast = [1, 2, 3, 4, 5]
+        wind_agent.nominated_volume = [1, 2, 3, 4, 5]
         wind_agent.horizon = 2
         # Mock asset state
         wind_agent.asset = MagicMock()
@@ -91,5 +92,6 @@ class TestWindAgent(unittest.TestCase):
         self.assertIn("power", state)
         self.assertIn("available_power", state)
         self.assertIn("forecast", state)
+        self.assertIn("nomination", state)
         self.assertNotIn("time", state)
-        self.assertEqual(len(state), 3)
+        self.assertEqual(len(state), 4)
