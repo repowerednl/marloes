@@ -16,6 +16,7 @@ from marloes.agents import (
     WindAgent,
     ElectrolyserAgent,
 )
+from marloes.agents.base import SupplyAgents, StorageAgents
 from marloes.data.extensive_data import ExtensiveDataStore
 
 MINUTES_IN_A_YEAR = 525600
@@ -163,10 +164,10 @@ class Extractor:
         - Solar
         - Wind
         """
-        nominations = {"Solar": 0.0, "Wind": 0.0}
+        nominations = {agent.value: 0.0 for agent in SupplyAgents}
 
         for agent_id, observation in observations.items():
-            agent_type = agent_id.split(" ")[0].replace("Agent", "")
+            agent_type = agent_id.split(" ")[0]
             if agent_type in nominations:
                 nominations[agent_type] += observation["nomination"]
 
