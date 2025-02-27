@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 import numpy as np
 from marloes.factories import ExtractorFactory, RewardFactory
 from marloes.valley.rewards.reward import Reward
@@ -116,23 +117,38 @@ class TestReward(unittest.TestCase):
 
     def test_ne_reward(self):
         """
-        Test the Nomination Error reward.
+        Test the Nomination Error reward. Only calculates every hour so we need to add values to the extractor.
         """
+        # Add values to the extractor using post_generation method
+        new_extractor = ExtractorFactory()
+        # change values:
+        new_extractor.total_solar_production = np.array([30] * 61)
+        new_extractor.total_solar_nomination = np.array([20] * 61)
+        new_extractor.total_wind_production = np.array([25] * 61)
+        new_extractor.total_wind_nomination = np.array([30] * 61)
+        new_extractor.grid_state = np.array([10] * 61)
+        new_extractor.i = 60
         ## Test actual
         reward = Reward(actual=True, NE=self.default_scaling)
-        result = reward.get(self.extractor)
-        # difference in solar production and nomination should be 30 - 20 => abs(10)
-        # difference in wind production and nomination should be 25 - 30 => abs(-5)
-        expected = -(10 + 5)
+        result = reward.get(new_extractor)
+        print(result)
+        # total solar production: mean(30 * 60) = 30, total solar nomination: for that hour at every timestep 20
+        # total wind production: mean(25 * 60) = 25, total wind nomination: for that hour at every timestep 30
+        expected_solar_penalty = abs(30 - 20)
+        expected_wind_penalty = abs(25 - 30)
+        expected = -(expected_solar_penalty + expected_wind_penalty)
+        print(expected)
+
         self.assertEqual(result, expected)
 
         ## Test not actual
         reward = Reward(actual=False, NE=self.default_scaling)
-        result = reward.get(self.extractor)
-
-        ## difference in production/nomination: [-10, -10, -10]
-        expected = -np.array([10, 10, 15])
-        np.testing.assert_array_almost_equal(result, expected, decimal=5)
+        result = reward.get(new_extractor)
+        # result should be np.array, with all zeros except for the hour where the penalty is calculated
+        expected = np.zeros(61)
+        expected[60] = -(expected_solar_penalty + expected_wind_penalty)
+        self.assertEqual(len(result), len(expected))
+        self.assertEqual(result[60], expected[60])
 
     def test_total_reward(self):
         """

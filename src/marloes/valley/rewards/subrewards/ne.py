@@ -18,29 +18,48 @@ class NESubReward(SubReward):
         """
         Calculates the difference between the power and nomination of all supply (wind and solar) assets.
         Is calculated every hour with the difference between the mean of the total production and the nomination.
-
         """
-        # i is current timestep (step-size is 1 minute), starting at 00:00:00 at i=0, therefore i % 60 == 0 is true every hour
-        if extractor.i % 60 != 0 and extractor.i != 0:
-            return 0
-        last_hour = slice(extractor.i - 60, extractor.i)
-        # get total solar information: mean production over the last hour, nomination
+        if actual:
+            return (
+                -self._calculate_penalty(
+                    extractor, slice(extractor.i - 60, extractor.i), actual=True
+                )
+                if self._hour_has_passed(extractor.i)
+                else 0
+            )
+
+        reward_array = np.zeros(len(extractor.total_solar_production))
+        for t in range(60, len(reward_array), 60):
+            reward_array[t] = -self._calculate_penalty(
+                extractor, slice(t - 60, t), actual=False
+            )
+
+        return reward_array
+
+    def _calculate_penalty(
+        self, extractor: Extractor, time_slice: slice, actual: bool
+    ) -> float:
+        """
+        The penalty calculations for the Nomination Error sub-reward.
+        """
         solar_production = self._get_target(
-            extractor.total_solar_production, last_hour, actual
+            extractor.total_solar_production, time_slice, actual
         )
         solar_nomination = self._get_target(
-            extractor.total_solar_nomination, last_hour, actual
+            extractor.total_solar_nomination, time_slice, actual
         )
-        # get total wind information: production, nomination
         wind_production = self._get_target(
-            extractor.total_wind_production, last_hour, actual
+            extractor.total_wind_production, time_slice, actual
         )
         wind_nomination = self._get_target(
-            extractor.total_wind_nomination, last_hour, actual
+            extractor.total_wind_nomination, time_slice, actual
         )
-        # calculate the penalty for solar and wind
-        penalties = [
-            abs(solar_production - solar_nomination),
-            abs(wind_production - wind_nomination),
-        ]
-        return -sum(penalties)
+
+        solar_penalty = abs(np.mean(solar_production) - np.mean(solar_nomination))
+        wind_penalty = abs(np.mean(wind_production) - np.mean(wind_nomination))
+
+        return solar_penalty + wind_penalty
+
+    @staticmethod
+    def _hour_has_passed(i: int) -> bool:
+        return i % 60 == 0 and i != 0
