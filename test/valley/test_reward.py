@@ -128,17 +128,15 @@ class TestReward(unittest.TestCase):
         new_extractor.total_wind_nomination = np.array([30] * 61)
         new_extractor.grid_state = np.array([10] * 61)
         new_extractor.i = 60
+
         ## Test actual
         reward = Reward(actual=True, NE=self.default_scaling)
         result = reward.get(new_extractor)
-        print(result)
         # total solar production: mean(30 * 60) = 30, total solar nomination: for that hour at every timestep 20
         # total wind production: mean(25 * 60) = 25, total wind nomination: for that hour at every timestep 30
         expected_solar_penalty = abs(30 - 20)
         expected_wind_penalty = abs(25 - 30)
         expected = -(expected_solar_penalty + expected_wind_penalty)
-        print(expected)
-
         self.assertEqual(result, expected)
 
         ## Test not actual
