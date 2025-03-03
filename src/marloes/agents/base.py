@@ -12,13 +12,13 @@ from marloes.data.util import convert_to_hourly_nomination
 
 
 class SupplyAgents(Enum):
-    SOLAR = "Solar"
-    WIND = "Wind"
+    SOLAR = "SolarAgent"
+    WIND = "WindAgent"
 
 
 class StorageAgents(Enum):
-    BATTERY = "Battery"
-    ELECTROLYSER = "Electrolyser"
+    BATTERY = "BatteryAgent"
+    ELECTROLYSER = "ElectrolyserAgent"
 
 
 class Agent(ABC):

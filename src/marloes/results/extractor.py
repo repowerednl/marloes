@@ -154,21 +154,21 @@ class Extractor:
             raise IndexError("Extractor has reached its maximum capacity.")
 
         nominations = self._get_total_nomination_by_type(observations)
-        self.total_solar_nomination[self.i] = nominations["Solar"]
-        self.total_wind_nomination[self.i] = nominations["Wind"]
+        self.total_solar_nomination[self.i] = nominations["SolarAgent"]
+        self.total_wind_nomination[self.i] = nominations["WindAgent"]
 
     @staticmethod
     def _get_total_nomination_by_type(observations: dict) -> dict[str, float]:
         """
         At a timestep, sums the nomination of all assets of a specific (supply) type.
-        - Solar
-        - Wind
+        - SolarAgent
+        - WindAgent
         TODO: demand has nominations (because they have a forecast), add it here or remove if from being created (marloes.agents.base)
         """
         nominations = {agent.value: 0.0 for agent in SupplyAgents}
 
         for agent_id, observation in observations.items():
-            agent_type = agent_id.split(" ")[0].replace("Agent", "")
+            agent_type = agent_id.split(" ")[0]
             if agent_type in nominations:
                 nominations[agent_type] += observation["nomination"]
 
@@ -204,7 +204,7 @@ class Extractor:
 
     def add_additional_info_from_model(self, model: Model) -> None:
         """
-        Extract additional information from the model.
+        Extract additional information from the model. Irrelevant for the base Extractor.
         """
         pass
 
@@ -224,7 +224,7 @@ class ExtensiveExtractor(Extractor):
         super().clear()
         self.extensive_data.stash_chunk()
 
-    def add_additional_info_from_model(self, model):
+    def add_additional_info_from_model(self, model: Model) -> None:
         """
         Add the flow information after the step to the extensive data.
         """
