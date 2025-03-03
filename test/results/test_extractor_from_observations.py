@@ -1,10 +1,10 @@
 import unittest
 from unittest.mock import patch
 from collections import defaultdict
+import pandas as pd
 
-from simon.solver import Model
-
-from marloes.valley.env import EnergyValley
+from marloes.agents.base import Agent
+from marloes.algorithms.priorities import Priorities
 from marloes.results.extractor import Extractor
 
 from test.util import get_new_config
@@ -12,30 +12,35 @@ from test.util import get_new_config
 MINUTES_IN_A_YEAR = 525600
 
 
-@patch("marloes.agents.solar.read_series")
-@patch("marloes.agents.wind.read_series")
-@patch("marloes.agents.demand.read_series")
 class TestExtractorFromObservations(unittest.TestCase):
     @classmethod
-    def setUp(cls):
-        """
-        To test _from_observations we need valid observations (from an initialized algorithm)
-        """
-        # creating a valley with Priorities algorithm
+    @patch("marloes.agents.solar.read_series", return_value=pd.Series())
+    @patch("marloes.agents.demand.read_series", return_value=pd.Series())
+    @patch("marloes.agents.wind.read_series", return_value=pd.Series())
+    @patch("simon.assets.supply.Supply.load_default_state")
+    @patch("simon.assets.demand.Demand.load_default_state")
+    @patch("simon.assets.wind.Wind.load_default_state")
+    def setUp(cls, *mocks) -> None:
         config = get_new_config()
-        # add a wind agent to config
-        config_with_wind = config["agents"].append(
+        agents_list = config["agents"]
+        agents_list.append(
             {
                 "type": "wind",
                 "location": "Onshore",
-                "power": 1400,
-                "AC": 1200,
+                "AC": 900,
+                "power": 1000,
             }
         )
+        config["agents"] = agents_list
+        config["algorithm"] = "priorities"
 
-        cls.valley = EnergyValley(config_with_wind, "Priorities")
+        with patch("marloes.results.saver.Saver._save_config_to_yaml"), patch(
+            "marloes.results.saver.Saver._update_simulation_number", return_value=0
+        ), patch("marloes.results.saver.Saver._validate_folder"):
+            Agent._id_counters = {}
+            cls.alg = Priorities(config=config)
         # make sure there are 5 + 1 agents in the config
-        assert len(cls.valley.agents) == 6
+        assert len(cls.alg.environment.agents) == 6
 
     def test_from_observations(self):
         """
