@@ -3,54 +3,92 @@ from unittest.mock import patch
 from collections import defaultdict
 import pandas as pd
 
-from marloes.agents.base import Agent
-from marloes.algorithms.priorities import Priorities
 from marloes.results.extractor import Extractor
 
-from test.util import get_new_config
+from test.util import get_mock_observation
 
 MINUTES_IN_A_YEAR = 525600
 
 
 class TestExtractorFromObservations(unittest.TestCase):
     @classmethod
-    @patch("marloes.agents.solar.read_series", return_value=pd.Series())
-    @patch("marloes.agents.demand.read_series", return_value=pd.Series())
-    @patch("marloes.agents.wind.read_series", return_value=pd.Series())
-    @patch("simon.assets.supply.Supply.load_default_state")
-    @patch("simon.assets.demand.Demand.load_default_state")
-    @patch("simon.assets.wind.Wind.load_default_state")
-    def setUp(cls, *mocks) -> None:
-        config = get_new_config()
-        agents_list = config["agents"]
-        agents_list.append(
-            {
-                "type": "wind",
-                "location": "Onshore",
-                "AC": 900,
-                "power": 1000,
-            }
+    def setUpClass(cls):
+        # initialize the Extractor
+        cls.extractor = Extractor(from_model=True, chunk_size=1000)
+        cls.base_observation = get_mock_observation(
+            solar_power=2.0,  # 3*2.0 = 6.0
+            wind_power=1.0,  # 3*1.0 = 3.0
+            solar_nomination=1.8,  # 1.8
+            wind_nomination=0.9,  # 1.8
         )
-        config["agents"] = agents_list
-        config["algorithm"] = "priorities"
-
-        with patch("marloes.results.saver.Saver._save_config_to_yaml"), patch(
-            "marloes.results.saver.Saver._update_simulation_number", return_value=0
-        ), patch("marloes.results.saver.Saver._validate_folder"):
-            Agent._id_counters = {}
-            cls.alg = Priorities(config=config)
-        # make sure there are 5 + 1 agents in the config
-        assert len(cls.alg.environment.agents) == 6
-
-    def test_from_observations(self):
-        """
-        Test that Extractor.from_observations correctly aggregates
-        - nominations
-        """
-        pass
 
     def test__get_total_nomination_per_type(self):
         """
         Test that _get_total_nomination_per_type correctly returns the sum of nominations per type.
+        Observations can be passed as a dict with agent_id as key and observation as value.
         """
-        pass
+        self.extractor.clear()
+        # Summing the observations per type should return for Solar: 1.8 and for Wind: 0.9
+        result = self.extractor._get_total_nomination_by_type(self.base_observation)
+        self.assertEqual(result["Solar"], 1.8)
+        self.assertEqual(result["Wind"], 0.9)
+
+        # Add a solar and a wind agent with different nominations
+        new_observation = self.base_observation.copy()
+        new_observation.update(
+            {
+                "SolarAgent 1": {
+                    "forecast": [2.0] * 3,
+                    "power": 2.0,
+                    "available_power": 0.1,
+                    "nomination": 2.2,
+                },
+                "WindAgent 1": {
+                    "forecast": [1.0] * 3,
+                    "power": 1.0,
+                    "available_power": 0.1,
+                    "nomination": 1.5,
+                },
+            }
+        )
+
+        result = self.extractor._get_total_nomination_by_type(new_observation)
+        self.assertEqual(result["Solar"], 4.0)
+        self.assertEqual(result["Wind"], 2.4)
+
+    def test_from_observations(self):
+        """
+        Test that Extractor.from_observations correctly aggregates per type (and saves it as attribute)
+        - nominations
+        """
+        self.extractor.clear()
+        self.extractor.from_observations(self.base_observation)
+        self.assertEqual(self.extractor.total_solar_nomination[0], 1.8)
+        self.assertEqual(self.extractor.total_wind_nomination[0], 0.9)
+
+        # Add a solar and a wind agent with different nominations
+        new_observation = self.base_observation.copy()
+        new_observation.update(
+            {
+                "SolarAgent 1": {
+                    "forecast": [2.0] * 3,
+                    "power": 2.0,
+                    "available_power": 0.1,
+                    "nomination": 2.2,
+                },
+                "WindAgent 1": {
+                    "forecast": [1.0] * 3,
+                    "power": 1.0,
+                    "available_power": 0.1,
+                    "nomination": 1.5,
+                },
+            }
+        )
+        # Somehow two assets where added after the first timestep, we update and also check the previous value
+        self.extractor.update()
+
+        self.extractor.from_observations(new_observation)
+        self.assertEqual(self.extractor.total_solar_nomination[0], 1.8)
+        self.assertEqual(self.extractor.total_wind_nomination[0], 0.9)
+        self.assertEqual(self.extractor.total_solar_nomination[1], 4.0)
+        self.assertEqual(self.extractor.total_wind_nomination[1], 2.4)

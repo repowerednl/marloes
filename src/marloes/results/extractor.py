@@ -163,11 +163,12 @@ class Extractor:
         At a timestep, sums the nomination of all assets of a specific (supply) type.
         - Solar
         - Wind
+        TODO: demand has nominations (because they have a forecast), add it here or remove if from being created (marloes.agents.base)
         """
         nominations = {agent.value: 0.0 for agent in SupplyAgents}
 
         for agent_id, observation in observations.items():
-            agent_type = agent_id.split(" ")[0]
+            agent_type = agent_id.split(" ")[0].replace("Agent", "")
             if agent_type in nominations:
                 nominations[agent_type] += observation["nomination"]
 
