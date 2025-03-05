@@ -23,7 +23,19 @@ class LayerDetails:
         },
         "layer_2": {
             "details": {"in_features": 30, "out_features": 40},
-            "activation": "ReLu"}
+            "activation": "ReLu"
+        },
+        "recurrent": {
+            "details": {
+                "input_size": 40,
+                "hidden_size": 40,
+                "num_layers": 1,
+                "nonlinearity": "tanh", # The non-linearity to use. Can be either ``'tanh'`` or ``'relu'``.
+                "bias": True, # If False, then the layer does not use bias weights `b_ih` and `b_hh`.
+                "batch_first": False, # input and output are (seq, batch, feature)
+                "dropout": 0, # dropout probability
+                "bidirectional": False
+            },
         },
     }
     output = {
@@ -64,7 +76,8 @@ class LayerDetails:
                 raise ValueError(
                     "Hidden layer cannot have both dropout and activation."
                 )
-            if "dropout" not in key and not all(
+
+            if ("dropout" not in key and "recurrent" not in key) and not all(
                 elem in layer["details"] for elem in ["in_features", "out_features"]
             ):
                 raise ValueError(
@@ -74,6 +87,37 @@ class LayerDetails:
                 elem in layer["details"] for elem in ["p"]
             ):
                 raise ValueError("Dropout layer details must have p.")
+            elif "recurrent" in key:
+                # we require all keys to be present, to avoid unwanted behaviour
+                required_keys = [
+                    "input_size",
+                    "hidden_size",
+                    "num_layers",
+                    "nonlinearity",
+                    "bias",
+                    "batch_first",
+                    "dropout",
+                    "bidirectional",
+                ]
+                if not all(elem in layer["details"] for elem in required_keys):
+                    raise ValueError(
+                        "Recurrent layer details must have input_size, hidden_size, num_layers, nonlinearity, bias, batch_first, dropout, and bidirectional."
+                    )
+                # check if nonlinearity is either tanh or relu
+                if layer["details"]["nonlinearity"] not in ["tanh", "relu"]:
+                    raise ValueError("Nonlinearity must be either 'tanh' or 'relu'.")
+                # check if bias is a boolean
+                if not isinstance(layer["details"]["bias"], bool):
+                    raise ValueError("Bias must be a boolean.")
+                # check if batch_first is a boolean
+                if not isinstance(layer["details"]["batch_first"], bool):
+                    raise ValueError("Batch_first must be a boolean.")
+                # check if dropout is a float
+                if not isinstance(layer["details"]["dropout"], float):
+                    raise ValueError("Dropout must be a float.")
+                # check if bidirectional is a boolean
+                if not isinstance(layer["details"]["bidirectional"], bool):
+                    raise ValueError("Bidirectional must be a boolean.")
             elif "dropout" not in key and "activation" not in layer:
                 raise ValueError("Hidden layer must have activation.")
 
@@ -93,7 +137,7 @@ class LayerDetails:
             raise ValueError(
                 "Output of input layer must match input of first hidden layer."
             )
-
+        # TODO: make sure make sure the RNN is accessed correctly, and that input_size is the same as previous out_features, and the output of the RNN (?) matches the input of the next layer
         hidden_layers = [
             value for key, value in self.hidden.items() if "dropout" not in key
         ]
@@ -212,6 +256,13 @@ class BaseNetwork(Module):
         for key, layer in layer_details.hidden.items():
             if "dropout" in key:
                 self.hidden.append(torch.nn.Dropout(**layer["details"]))
+            elif "recurrent" in key:
+                self.hidden.append(
+                    torch.nn.Sequential(
+                        torch.nn.RNN(**layer["details"]),
+                        self._select_activation(layer["activation"]),
+                    )
+                )
             else:
                 self.hidden.append(
                     torch.nn.Sequential(
@@ -224,6 +275,25 @@ class BaseNetwork(Module):
             torch.nn.Linear(**layer_details.output["details"]),
             self._select_activation(layer_details.output["activation"]),
         )
+
+    # input_size: The number of expected features in the input `x`
+
+    # hidden_size: The number of features in the hidden state `h`
+    # num_layers: Number of recurrent layers. E.g., setting ``num_layers=2``
+    #         would mean stacking two RNNs together to form a `stacked RNN`,
+    #         with the second RNN taking in outputs of the first RNN and
+    #         computing the final results. Default: 1
+    # nonlinearity: The non-linearity to use. Can be either ``'tanh'`` or ``'relu'``. Default: ``'tanh'``
+    # bias: If ``False``, then the layer does not use bias weights `b_ih` and `b_hh`.
+    #         Default: ``True``
+    # batch_first: If ``True``, then the input and output tensors are provided
+    #         as `(batch, seq, feature)` instead of `(seq, batch, feature)`.
+    #         Note that this does not apply to hidden or cell states. See the
+    #         Inputs/Outputs sections below for details.  Default: ``False``
+    # dropout: If non-zero, introduces a `Dropout` layer on the outputs of each
+    #         RNN layer except the last layer, with dropout probability equal to
+    #         :attr:`dropout`. Default: 0
+    # bidirectional: If ``True``, becomes a bidirectional RNN. Default: ``False`
 
     @staticmethod
     def _select_activation(activation: str):
