@@ -36,14 +36,6 @@ def get_valid_layerdetails(
     return result
 
 
-def get_layer_details_with_rnn():
-    """
-    Returns valid layer details (input, hidden, output) to create LayerDetails object.
-    Hidden also contains RNN.
-    """
-    pass
-
-
 def get_valid_basenetwork():
     """
     Returns a valid BaseNetwork object.
