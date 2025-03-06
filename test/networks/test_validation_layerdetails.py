@@ -274,6 +274,8 @@ class TestLayerDetailsValidation(TestCase):
         # check if the network is created correctly, should have input (Sequential), hidden (ModuleList), and output (Sequential)
         self.assertIsInstance(network.input, torch.nn.Sequential)
         self.assertIsInstance(network.hidden, torch.nn.ModuleList)
+        # hidden should contain the recurrent layer
+        self.assertIsInstance(network.hidden[0], torch.nn.RNN)
         self.assertIsInstance(network.output, torch.nn.Sequential)
         # loss should be MSELoss()
         self.assertIsInstance(network.loss, torch.nn.MSELoss)
