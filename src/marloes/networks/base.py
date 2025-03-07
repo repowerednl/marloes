@@ -23,7 +23,19 @@ class LayerDetails:
         },
         "layer_2": {
             "details": {"in_features": 30, "out_features": 40},
-            "activation": "ReLu"}
+            "activation": "ReLu"
+        },
+        "recurrent": {
+            "details": {
+                "input_size": 40,
+                "hidden_size": 40,
+                "num_layers": 1,
+                "nonlinearity": "tanh", # The non-linearity to use. Can be either ``'tanh'`` or ``'relu'``.
+                "bias": True, # If False, then the layer does not use bias weights `b_ih` and `b_hh`.
+                "batch_first": False, # input and output are (seq, batch, feature)
+                "dropout": 0, # dropout probability
+                "bidirectional": False
+            },
         },
     }
     output = {
@@ -60,50 +72,81 @@ class LayerDetails:
         for key, layer in self.hidden.items():
             if "details" not in layer:
                 raise ValueError("Hidden layer details must have details.")
-            if "dropout" in key and "activation" in layer:
-                raise ValueError(
-                    "Hidden layer cannot have both dropout and activation."
-                )
-            if "dropout" not in key and not all(
-                elem in layer["details"] for elem in ["in_features", "out_features"]
-            ):
-                raise ValueError(
-                    "Hidden layer details must have in_features and out_features."
-                )
-            elif "dropout" in key and not all(
-                elem in layer["details"] for elem in ["p"]
-            ):
-                raise ValueError("Dropout layer details must have p.")
-            elif "dropout" not in key and "activation" not in layer:
-                raise ValueError("Hidden layer must have activation.")
+            if "dropout" in key:
+                if "p" not in layer["details"]:
+                    raise ValueError("Dropout layer details must have p.")
+                if "activation" in layer:
+                    raise ValueError(
+                        "Hidden layer cannot have both dropout and activation."
+                    )
+            elif "recurrent" in key:
+                required_keys = [
+                    "input_size",
+                    "hidden_size",
+                    "num_layers",
+                    "nonlinearity",
+                    "bias",
+                    "batch_first",
+                    "dropout",
+                    "bidirectional",
+                ]
+                if not all(elem in layer["details"] for elem in required_keys):
+                    raise ValueError(
+                        "Recurrent layer details must have input_size, hidden_size, num_layers, nonlinearity, bias, batch_first, dropout, and bidirectional."
+                    )
+                if layer["details"]["nonlinearity"] not in ["tanh", "relu"]:
+                    raise ValueError("Nonlinearity must be either 'tanh' or 'relu'.")
+                if not isinstance(layer["details"]["bias"], bool):
+                    raise ValueError("Bias must be a boolean.")
+                if not isinstance(layer["details"]["batch_first"], bool):
+                    raise ValueError("Batch_first must be a boolean.")
+                if not isinstance(layer["details"]["dropout"], float):
+                    raise ValueError("Dropout must be a float.")
+                if not isinstance(layer["details"]["bidirectional"], bool):
+                    raise ValueError("Bidirectional must be a boolean.")
+            else:
+                if not all(
+                    elem in layer["details"] for elem in ["in_features", "out_features"]
+                ):
+                    raise ValueError(
+                        "Hidden layer details must have in_features and out_features."
+                    )
+                if "activation" not in layer:
+                    raise ValueError("Hidden layer must have activation.")
 
         def _get_first_layer(self):
             """
-            returns the first layer that is not a dropout layer, if it exists, otherwise raises an error
+            Returns the first layer that is not a dropout layer, if it exists, otherwise raises an error
             """
             for key, layer in self.hidden.items():
                 if "dropout" not in key:
                     return layer
             raise ValueError("No hidden layer found that is not a dropout layer.")
 
-        if (
-            self.input["details"]["out_features"]
-            != _get_first_layer(self)["details"]["in_features"]
-        ):
+        if self.input["details"]["out_features"] != _get_first_layer(self)[
+            "details"
+        ].get("in_features", _get_first_layer(self)["details"].get("input_size", 0)):
             raise ValueError(
-                "Output of input layer must match input of first hidden layer."
+                f"Output of input layer must match input of first hidden layer. {self.input['details']['out_features']} != {_get_first_layer(self)['details'].get('in_features', _get_first_layer(self)['details'].get('input_size', 0))}"
             )
-
         hidden_layers = [
             value for key, value in self.hidden.items() if "dropout" not in key
         ]
         for i in range(len(hidden_layers) - 1):
-            if (
-                hidden_layers[i]["details"]["out_features"]
-                != hidden_layers[i + 1]["details"]["in_features"]
-            ):
+            output = hidden_layers[i]["details"].get(
+                "out_features", hidden_layers[i]["details"].get("hidden_size", 0)
+            )  # never returns 0 as we established either out_features or hidden_size exist
+            output = (
+                output * 2
+                if hidden_layers[i]["details"].get("bidirectional", False)
+                else output
+            )  # double output if bidirectional
+            input = hidden_layers[i + 1]["details"].get(
+                "in_features", hidden_layers[i + 1]["details"].get("input_size", 0)
+            )  # never returns 0 as we established either in_features or input_size exist
+            if output != input:
                 raise ValueError(
-                    "Output of hidden layer must match input of next hidden layer."
+                    f"Output of hidden layer must match input of next hidden layer. If an RNN is bidirectional, output of RNN is doubled. {output} != {input}"
                 )
 
     def validate_output(self):
@@ -120,19 +163,23 @@ class LayerDetails:
 
         def _get_last_layer(self):
             """
-            returns the last layer that is not a dropout layer, if it exists, otherwise raises an error
+            Returns the last layer that is not a dropout layer, if it exists, otherwise raises an error
             """
             for key, layer in reversed(self.hidden.items()):
                 if "dropout" not in key:
                     return layer
             raise ValueError("No hidden layer found that is not a dropout layer.")
 
-        if (
-            self.output["details"]["in_features"]
-            != _get_last_layer(self)["details"]["out_features"]
-        ):
+        last_layer = _get_last_layer(self)
+        last_layer_output = last_layer["details"].get(
+            "out_features", last_layer["details"].get("hidden_size", 0)
+        )
+        if last_layer["details"].get("bidirectional", False):
+            last_layer_output *= 2  # double output if bidirectional
+
+        if self.output["details"]["in_features"] != last_layer_output:
             raise ValueError(
-                "Output of last hidden layer must match input of output layer."
+                f"Output of last hidden layer must match input of output layer. {self.output['details']['in_features']} != {last_layer_output}"
             )
         if (
             self.output["activation"] == "Sigmoid"
@@ -156,8 +203,9 @@ class HyperParams:
     Class to store hyperparameters for a network.
     """
 
-    lr: float
-    weight_decay: float
+    lr: float = 0.001
+    weight_decay: float = 0.01
+    loss_fn = MSELoss()
 
 
 class BaseNetwork(Module):
@@ -180,13 +228,13 @@ class BaseNetwork(Module):
         self.initialize_network(params, layer_details)
         # make standard HyperParams if not given
         if not hyper_params:
-            hyper_params = HyperParams(lr=0.001, weight_decay=0.01)
+            hyper_params = HyperParams()
         self.optimizer = Adam(
             self.parameters(),
             lr=hyper_params.lr,
             weight_decay=hyper_params.weight_decay,
         )
-        self.loss = MSELoss()
+        self.loss = hyper_params.loss_fn
 
     def initialize_network(self, params: dict, layer_details: LayerDetails):
         """
@@ -212,6 +260,10 @@ class BaseNetwork(Module):
         for key, layer in layer_details.hidden.items():
             if "dropout" in key:
                 self.hidden.append(torch.nn.Dropout(**layer["details"]))
+            elif "recurrent" in key:
+                self.hidden.append(
+                    torch.nn.RNN(**layer["details"]),
+                )
             else:
                 self.hidden.append(
                     torch.nn.Sequential(

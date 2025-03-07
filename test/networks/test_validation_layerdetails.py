@@ -1,4 +1,6 @@
-from marloes.networks.base import LayerDetails
+import torch
+
+from marloes.networks.base import LayerDetails, BaseNetwork
 from unittest import TestCase
 
 
@@ -26,6 +28,20 @@ class TestLayerDetailsValidation(TestCase):
                 "details": {"in_features": 20, "out_features": 30},
                 "activation": "ReLU",
             },
+        }
+        self.correct_recurrent = {
+            "recurrent": {
+                "details": {
+                    "input_size": 10,
+                    "hidden_size": 30,
+                    "num_layers": 1,
+                    "nonlinearity": "tanh",
+                    "bias": True,
+                    "batch_first": False,
+                    "dropout": 0.0,
+                    "bidirectional": False,
+                }
+            }
         }
         self.correct_output = {
             "details": {"in_features": 30, "out_features": 1},
@@ -170,3 +186,96 @@ class TestLayerDetailsValidation(TestCase):
             self.correct_input, self.correct_hidden, self.correct_output
         )
         self.assertIsNone(layer_details.validate())
+
+    def test_validate_layer_details_with_valid_recurrent(self):
+        """
+        Makes sure the validation is correct when LayerDetails contain a valid recurrent element.
+        """
+        layer_details = create_layer_details(
+            self.correct_input, self.correct_recurrent, self.correct_output
+        )
+        self.assertIsNone(layer_details.validate())
+
+    def test_validate_layer_details_with_valid_bidirectional_recurrent(self):
+        """
+        Makes sure the validation is correct when LayerDetails contain a valid bidirectional recurrent element.
+        """
+        # additional test case with a bidirectional RNN (input of output should be double hidden_size)
+        self.correct_recurrent["recurrent"]["details"]["bidirectional"] = True
+        self.correct_output["details"]["in_features"] = 60
+        layer_details = create_layer_details(
+            self.correct_input, self.correct_recurrent, self.correct_output
+        )
+        self.assertIsNone(layer_details.validate())
+
+        # additional test case with another hidden layer
+        self.correct_recurrent["layer_1"] = {
+            "details": {"in_features": 60, "out_features": 30},
+            "activation": "ReLU",
+        }
+        # change the output layer back
+        self.correct_output["details"]["in_features"] = 30
+        layer_details = create_layer_details(
+            self.correct_input, self.correct_recurrent, self.correct_output
+        )
+        self.assertIsNone(layer_details.validate())
+
+        # remove layer_1 and change bidirectional back to False; to avoid confusion in future testing
+        self.correct_recurrent.pop("layer_1")
+        self.correct_recurrent["recurrent"]["details"]["bidirectional"] = False
+
+    def test_validate_layer_details_with_invalid_recurrent(self):
+        """
+        Makes sure the validation is correct when LayerDetails contain an invalid recurrent element.
+        """
+        invalid_recurrent_hidden = {
+            "recurrent": {
+                "details": {
+                    "input_size": 10,
+                    "hidden_size": 20,
+                    "num_layers": 1,
+                    "nonlinearity": "invalid_nonlinearity",  # Invalid nonlinearity
+                    "bias": True,
+                    "batch_first": False,
+                    "dropout": 0.0,
+                    "bidirectional": False,
+                }
+            }
+        }
+        layer_details = create_layer_details(
+            self.correct_input, invalid_recurrent_hidden, self.correct_output
+        )
+        with self.assertRaises(ValueError):
+            layer_details.validate_hidden()
+
+    def test_actual_network_creation(self):
+        """
+        Test if the network is created correctly.
+        """
+        layer_details = create_layer_details(
+            self.correct_input, self.correct_hidden, self.correct_output
+        )
+        network = BaseNetwork(layer_details=layer_details)
+        # check if the network is created correctly, should have input (Sequential), hidden (ModuleList), and output (Sequential)
+        self.assertIsInstance(network.input, torch.nn.Sequential)
+        self.assertIsInstance(network.hidden, torch.nn.ModuleList)
+        self.assertIsInstance(network.output, torch.nn.Sequential)
+        # loss should be MSELoss()
+        self.assertIsInstance(network.loss, torch.nn.MSELoss)
+
+    def test_actual_network_creation_with_recurrent(self):
+        """
+        Test if the network is created correctly with a recurrent layer.
+        """
+        layer_details = create_layer_details(
+            self.correct_input, self.correct_recurrent, self.correct_output
+        )
+        network = BaseNetwork(layer_details=layer_details)
+        # check if the network is created correctly, should have input (Sequential), hidden (ModuleList), and output (Sequential)
+        self.assertIsInstance(network.input, torch.nn.Sequential)
+        self.assertIsInstance(network.hidden, torch.nn.ModuleList)
+        # hidden should contain the recurrent layer
+        self.assertIsInstance(network.hidden[0], torch.nn.RNN)
+        self.assertIsInstance(network.output, torch.nn.Sequential)
+        # loss should be MSELoss()
+        self.assertIsInstance(network.loss, torch.nn.MSELoss)
