@@ -67,6 +67,10 @@ class TestExtensiveExtractor(unittest.TestCase):
         self.demand.state.power = 0.0
 
         self.extractor.from_model(self.model)
+        # also update the model
+        self.extractor.update()
+        # and add addtional information
+        self.extractor.add_additional_info_from_model(self.model)
 
         # Check aggregated power
         expected_power_data = {
@@ -100,6 +104,10 @@ class TestExtensiveExtractor(unittest.TestCase):
         self.model.edge_flow_tracker = {}
         self.model.asset_flow_tracker = defaultdict(float)
         self.extractor.from_model(self.model)
+        # also update the model
+        self.extractor.update()
+        # and add addtional information
+        self.extractor.add_additional_info_from_model(self.model)
 
         # Check that results are initialized but empty
         self.assertIsNotNone(self.extractor.extensive_data)
@@ -116,9 +124,17 @@ class TestExtensiveExtractor(unittest.TestCase):
         # Should not raise an error on the last valid index
         try:
             self.extractor.from_model(self.model)
+            # also update the model
+            self.extractor.update()
+            # and add addtional information
+            self.extractor.add_additional_info_from_model(self.model)
         except IndexError:
             self.fail("from_model raised IndexError unexpectedly when at last index")
 
         # Increment index beyond capacity and expect IndexError
         with self.assertRaises(IndexError):
             self.extractor.from_model(self.model)
+            # also update the model
+            self.extractor.update()
+            # and add addtional information
+            self.extractor.add_additional_info_from_model(self.model)

@@ -56,25 +56,29 @@ def get_mock_observation(
     battery_soc: list = [0.5],
     solar_power: float = 2.0,
     wind_power: float = 1.0,
+    solar_nomination: float = 1.8,
+    wind_nomination: float = 0.9,
 ):
     """
     Returns a mock observation, with 4 assets, wind, solar, battery and demand.
     As of 12/02/2025
-    - battery has SOC, degradation (and is_fcr).
-    - solar has forecast, power and available_power.
-    - wind has forecast, power and available_power.
-    - demand has forecast and power.
+    - battery has SOC, degradation
+    - solar has forecast, power and available_power and nomination
+    - wind has forecast, power and available_power and nomination
+    - demand has forecast and power
     """
     observation = {
         "SolarAgent 0": {
             "forecast": [solar_power] * 3,
-            "power": 0.1,
+            "power": solar_power,
             "available_power": 0.1,
+            "nomination": solar_nomination,
         },
         "WindAgent 0": {
             "forecast": [wind_power] * 3,
-            "power": 0.1,
+            "power": wind_power,
             "available_power": 0.1,
+            "nomination": wind_nomination,
         },
         "DemandAgent 0": {
             "forecast": [-2.0, -3.0, -4.0],
@@ -86,7 +90,42 @@ def get_mock_observation(
         observation[f"BatteryAgent {i}"] = {
             "state_of_charge": soc,
             "degradation": 0.2,
-            "is_fcr": False,
         }
 
     return observation
+
+
+def get_new_config():
+    """
+    Function to return a configuration of agents for creating an Environment/Model.
+    """
+    return {
+        "agents": [
+            {
+                "type": "demand",
+                "scale": 1.5,
+                "profile": "Farm",
+            },
+            {
+                "type": "solar",
+                "AC": 900,
+                "DC": 1000,
+                "orientation": "EW",
+            },
+            {
+                "type": "battery",
+                "efficiency": 0.9,
+                "power": 100,
+                "energy_capacity": 1000,
+            },
+            {
+                "type": "demand",
+                "scale": 1.5,
+                "profile": "Farm",
+            },
+        ],
+        "grid": {
+            "name": "Grid_One",
+            "max_power_in": 1000,
+        },
+    }

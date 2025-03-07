@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
+from enum import Enum
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,16 @@ from simon.assets.asset import Asset
 from simon.data.asset_data import AssetSetpoint
 
 from marloes.data.util import convert_to_hourly_nomination
+
+
+class SupplyAgents(Enum):
+    SOLAR = "SolarAgent"
+    WIND = "WindAgent"
+
+
+class StorageAgents(Enum):
+    BATTERY = "BatteryAgent"
+    ELECTROLYSER = "ElectrolyserAgent"
 
 
 class Agent(ABC):

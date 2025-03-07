@@ -118,6 +118,10 @@ class ExtractorFactory(factory.Factory):
         self.grid_state = np.array([-10, 5, 10])
         self.i = 2
 
+        # Also add nomination data
+        self.total_solar_nomination = np.array([5, 15, 20])
+        self.total_wind_nomination = np.array([10, 20, 30])
+
         # Overwrite with user-provided values if present in kwargs
         for key, value in kwargs.items():
             if hasattr(self, key):
