@@ -1,4 +1,6 @@
-from marloes.networks.base import LayerDetails
+import torch
+
+from marloes.networks.base import LayerDetails, BaseNetwork
 from unittest import TestCase
 
 
@@ -245,3 +247,35 @@ class TestLayerDetailsValidation(TestCase):
         )
         with self.assertRaises(ValueError):
             layer_details.validate_hidden()
+
+    def test_actual_network_creation(self):
+        """
+        Test if the network is created correctly.
+        """
+        layer_details = create_layer_details(
+            self.correct_input, self.correct_hidden, self.correct_output
+        )
+        network = BaseNetwork(layer_details=layer_details)
+        # check if the network is created correctly, should have input (Sequential), hidden (ModuleList), and output (Sequential)
+        self.assertIsInstance(network.input, torch.nn.Sequential)
+        self.assertIsInstance(network.hidden, torch.nn.ModuleList)
+        self.assertIsInstance(network.output, torch.nn.Sequential)
+        # loss should be MSELoss()
+        self.assertIsInstance(network.loss, torch.nn.MSELoss)
+
+    def test_actual_network_creation_with_recurrent(self):
+        """
+        Test if the network is created correctly with a recurrent layer.
+        """
+        layer_details = create_layer_details(
+            self.correct_input, self.correct_recurrent, self.correct_output
+        )
+        network = BaseNetwork(layer_details=layer_details)
+        # check if the network is created correctly, should have input (Sequential), hidden (ModuleList), and output (Sequential)
+        self.assertIsInstance(network.input, torch.nn.Sequential)
+        self.assertIsInstance(network.hidden, torch.nn.ModuleList)
+        # hidden should contain the recurrent layer
+        self.assertIsInstance(network.hidden[0], torch.nn.RNN)
+        self.assertIsInstance(network.output, torch.nn.Sequential)
+        # loss should be MSELoss()
+        self.assertIsInstance(network.loss, torch.nn.MSELoss)

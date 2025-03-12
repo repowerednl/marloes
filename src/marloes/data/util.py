@@ -217,6 +217,6 @@ def convert_to_hourly_nomination(series: pd.Series) -> pd.Series:
     if not isinstance(series.index, pd.DatetimeIndex):
         return pd.Series()
 
-    hourly_nomination = series.resample("H").agg("mean")
+    hourly_nomination = series.resample("h").agg("mean")
 
     return hourly_nomination

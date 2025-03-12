@@ -27,5 +27,7 @@ class SubReward(ABC):
         pass
 
     @staticmethod
-    def _get_target(array: np.ndarray, i: int, actual: bool) -> float | np.ndarray:
+    def _get_target(
+        array: np.ndarray, i: int | slice, actual: bool
+    ) -> float | np.ndarray:
         return array[i] if actual else array

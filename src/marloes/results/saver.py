@@ -13,7 +13,6 @@ class Saver:
 
     def __init__(self, config: dict, test: bool = False) -> None:
         self.name = "Saver"
-        self.algorithm = config["algorithm"]
         # allows testing with different filenames
         self.base_file_path = "results" if not test else "test"
         self.id_name = "uid.txt" if not test else "test_uid.txt"
