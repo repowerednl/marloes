@@ -223,7 +223,6 @@ class BaseNetwork(Module):
             raise ValueError(
                 "LayerDetails must be provided to initialize the network, needed for saving and loading."
             )
-        layer_details.validate()
         super(BaseNetwork, self).__init__()
         self.initialize_network(params, layer_details)
         # make standard HyperParams if not given
@@ -240,6 +239,7 @@ class BaseNetwork(Module):
         """
         Method to initialize the network. Should be implemented by the child class.
         """
+        layer_details.validate()
         self._initialize_layers(layer_details)
         if params:
             self._load_from_params(params)
@@ -261,9 +261,7 @@ class BaseNetwork(Module):
             if "dropout" in key:
                 self.hidden.append(torch.nn.Dropout(**layer["details"]))
             elif "recurrent" in key:
-                self.hidden.append(
-                    torch.nn.RNN(**layer["details"]),
-                )
+                self.hidden.append(self._recurrent_layer(layer["details"]))
             else:
                 self.hidden.append(
                     torch.nn.Sequential(
@@ -293,6 +291,14 @@ class BaseNetwork(Module):
             return torch.nn.Softmax(dim=1)
         else:
             raise ValueError("Activation function not supported")
+
+    @staticmethod
+    def _recurrent_layer(details):
+        """
+        Method to select the recurrent layer.
+        # TODO: pop the type from details and select the wanted layer, might be different with parameters, would require changes to validation
+        """
+        return torch.nn.GRU(**details)
 
     def forward(self, x):
         """
