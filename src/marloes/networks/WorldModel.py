@@ -26,8 +26,8 @@ class WorldModel:
             hyper_params=hyper_params,
             observation_shape=observation_shape,
         )
-        self.encoder = Encoder(observation_shape, self.rssm.rnn.hidden_size)
-        self.decoder = Decoder(self.rssm.rnn.hidden_size, observation_shape)
+        self.encoder = Encoder(observation_shape, self.rssm.fc.out_features)
+        self.decoder = Decoder(self.rssm.fc.out_features, observation_shape)
 
     def imagine(self, h_t, z_t, actions):
         """
@@ -54,6 +54,8 @@ class WorldModel:
         - Decoding latent state to observation
         - predicting actions and value #TODO
         """
+        # convert observation to tensor
+        x = observation_to_tensor(observation=x, concatenate_all=True)
         # TODO: sequentialCTCE?
         z_t = self.encoder(x)
         h_t, z_hat_t = self.rssm(h_t, z_t, a_t)
@@ -75,12 +77,11 @@ class Encoder(nn.Module):
         self.fc1 = nn.Linear(obs_shape[0], hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, latent_dim)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Receives observations x -> which is list of dictionaries.
         First transform the observations to a tensor, then pass through the MLP.
         """
-        x = observation_to_tensor(x)
         x = F.relu(self.fc1(x))
         z_t = self.fc2(x)
         return z_t
@@ -97,7 +98,11 @@ class Decoder(nn.Module):
         self.fc1 = nn.Linear(latent_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, obs_shape[0])
 
-    def forward(self, z_t):
+    def forward(self, z_t: torch.Tensor) -> torch.Tensor:
+        """
+        Receives latent state z_t -> which is a tensor.
+        Passes through the MLP to predict the next observation.
+        """
         x = F.relu(self.fc1(z_t))
         x_hat_t = self.fc2(x)
         return x_hat_t

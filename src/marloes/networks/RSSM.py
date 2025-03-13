@@ -20,6 +20,8 @@ class RSSM(BaseNetwork):
         # own validation: hidden should have "recurrent": {}
         if "recurrent" not in details["hidden"]:
             raise ValueError("RSSM network requires a recurrent hidden layer.")
+        if "dense" not in details["hidden"]:
+            raise ValueError("RSSM network requires a dense hidden layer.")
         # should have explicit details
         required_keys = [
             "input_size",
@@ -36,13 +38,17 @@ class RSSM(BaseNetwork):
                 raise ValueError(
                     f"Missing key '{key}' in recurrent hidden layer details."
                 )
+        required_keys = ["out_features"]  # TODO: add custom dense layer details
+        for key in required_keys:
+            if key not in details["hidden"]["dense"]:
+                raise ValueError(f"Missing key '{key}' in dense hidden layer details.")
 
     def initialize_network(self, params, details, hyperparams):
         """
         Overrides the base class initialization.
         """
         self._validate_rssm(details)
-        # Initialize the hidden layers, using GRU for now
+        # Initialize the hidden layers, using GRU for now #TODO: add "type" option to details - pop it and select rnn based on this
         self.rnn = nn.GRU(**details["hidden"]["recurrent"])
         self.fc = nn.Linear(
             details["hidden"]["recurrent"]["hidden_size"],
