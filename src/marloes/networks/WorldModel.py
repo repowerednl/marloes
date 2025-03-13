@@ -49,7 +49,7 @@ class WorldModel:
     def forward(self, x, h_t, a_t):
         """
         Forward pass through the networks:
-        - Encoding observation to latent state
+        - Encoding observation (x) to latent state
         - Predict next state through RSSM
         - Decoding latent state to observation
         - predicting actions and value #TODO
@@ -78,7 +78,7 @@ class Encoder(nn.Module):
     def forward(self, x):
         """
         Receives observations x -> which is list of dictionaries.
-        First transform the observations to
+        First transform the observations to a tensor, then pass through the MLP.
         """
         x = observation_to_tensor(x)
         x = F.relu(self.fc1(x))
