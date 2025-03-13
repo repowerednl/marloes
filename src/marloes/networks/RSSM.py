@@ -19,9 +19,9 @@ class RSSM(BaseNetwork):
     @staticmethod
     def _validate_rssm(details: LayerDetails):
         # own validation: hidden should have "recurrent": {}
-        if "recurrent" not in details["hidden"]:
+        if "recurrent" not in details.hidden:
             raise ValueError("RSSM network requires a recurrent hidden layer.")
-        if "dense" not in details["hidden"]:
+        if "dense" not in details.hidden:
             raise ValueError("RSSM network requires a dense hidden layer.")
         # should have explicit details
         required_keys = [
@@ -34,13 +34,13 @@ class RSSM(BaseNetwork):
             "bidirectional",
         ]
         for key in required_keys:
-            if key not in details["hidden"]["recurrent"]:
+            if key not in details.hidden["recurrent"]:
                 raise ValueError(
                     f"Missing key '{key}' in recurrent hidden layer details."
                 )
         required_keys = ["out_features"]  # TODO: add custom dense layer details
         for key in required_keys:
-            if key not in details["hidden"]["dense"]:
+            if key not in details.hidden["dense"]:
                 raise ValueError(f"Missing key '{key}' in dense hidden layer details.")
 
     def initialize_network(self, params, details: LayerDetails):
@@ -51,11 +51,11 @@ class RSSM(BaseNetwork):
         self._validate_rssm(details)
         # Initialize the RNN
         self.rnn = nn.GRU(
-            **details["hidden"]["recurrent"]
+            **details.hidden["recurrent"]
         )  # Recurrent states produces h_t
         self.fc = nn.Linear(
-            details["hidden"]["recurrent"]["hidden_size"],
-            details["hidden"]["dense"]["hidden_size"],
+            details.hidden["recurrent"]["hidden_size"],
+            details.hidden["dense"]["out_features"],
         )  # Dense layer to predict z_hat_t
 
         if params:
