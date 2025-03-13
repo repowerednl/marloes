@@ -84,7 +84,6 @@ class LayerDetails:
                     "input_size",
                     "hidden_size",
                     "num_layers",
-                    "nonlinearity",
                     "bias",
                     "batch_first",
                     "dropout",
@@ -94,8 +93,6 @@ class LayerDetails:
                     raise ValueError(
                         "Recurrent layer details must have input_size, hidden_size, num_layers, nonlinearity, bias, batch_first, dropout, and bidirectional."
                     )
-                if layer["details"]["nonlinearity"] not in ["tanh", "relu"]:
-                    raise ValueError("Nonlinearity must be either 'tanh' or 'relu'.")
                 if not isinstance(layer["details"]["bias"], bool):
                     raise ValueError("Bias must be a boolean.")
                 if not isinstance(layer["details"]["batch_first"], bool):

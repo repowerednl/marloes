@@ -28,7 +28,6 @@ class RSSM(BaseNetwork):
             "input_size",
             "hidden_size",
             "num_layers",
-            "nonlinearity",
             "bias",
             "batch_first",
             "dropout",
