@@ -14,9 +14,12 @@ class WorldModel:
     - action shape (for dynamic model)
     """
 
-    def __init__(self, observation_shape, action_shape, params, hyper_params):
+    def __init__(
+        self, observation_shape: tuple, action_shape: tuple, params, hyper_params
+    ):
         """
         Initializes the World Model: Encoder (x->z_t) -> RSSM -> Decoder (z_t->x_hat_t)
+        TODO: observation_shape is implemented as a tuple, might be better to do conversion from observation (dict) to tensor here.
         """
         self.rssm = RSSM(
             params=params,
@@ -77,7 +80,7 @@ class Encoder(nn.Module):
         Receives observations x -> which is list of dictionaries.
         First transform the observations to
         """
-
+        x = observation_to_tensor(x)
         x = F.relu(self.fc1(x))
         z_t = self.fc2(x)
         return z_t
