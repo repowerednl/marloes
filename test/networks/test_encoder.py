@@ -16,7 +16,7 @@ class EncoderTestCase(TestCase):
         state = {"nom": 1, "test": 2}
         state_2 = {"nom": 3, "test": 4, "extra": 5}
         observations = {"agent1": state, "agent2": state_2}
-        tensor = observation_to_tensor(observations, concatenate_all=True)
+        tensor = observation_to_tensor(observations)
         cls.encoder = Encoder(tensor.shape, latent_dim=3)
 
     def test_encoder_creation(self):
