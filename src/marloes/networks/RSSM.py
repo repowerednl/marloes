@@ -2,17 +2,18 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .base import BaseNetwork, LayerDetails
+from .base import BaseNetwork, LayerDetails, HyperParams
 from .details import RSSM_LD
 
 
 class RSSM(BaseNetwork):
-    def __init__(self, params=None, hyper_params=None, observation_shape: int = None):
-        """
-        A Recurrent State Space Model (RSSM) network, based on DreamerV3 architecture.
-        layer_details are fixed for this network.
-        # TODO: Overrides base network right now, would be nice to use that as a proper base class.
-        """
+    """
+    A Recurrent State Space Model (RSSM) network, based on DreamerV3 architecture.
+    layer_details are fixed for this network.
+    Overrides a lot of the base class methods.
+    """
+
+    def __init__(self, params=None, hyper_params=None):
         super().__init__(params, RSSM_LD, hyper_params)
 
     @staticmethod
@@ -43,12 +44,13 @@ class RSSM(BaseNetwork):
             if key not in details["hidden"]["dense"]:
                 raise ValueError(f"Missing key '{key}' in dense hidden layer details.")
 
-    def initialize_network(self, params, details, hyperparams):
+    def initialize_network(self, params, details: LayerDetails):
         """
         Overrides the base class initialization.
+        #TODO: add "type" option to details (recurrent and dense), requires changes in validation
         """
         self._validate_rssm(details)
-        # Initialize the hidden layers, using GRU for now #TODO: add "type" option to details - pop it and select rnn based on this
+        # Initialize the RNN
         self.rnn = nn.GRU(
             **details["hidden"]["recurrent"]
         )  # Recurrent states produces h_t
@@ -57,11 +59,19 @@ class RSSM(BaseNetwork):
             details["hidden"]["dense"]["hidden_size"],
         )  # Dense layer to predict z_hat_t
 
-    def forward(self, h_t, z_t, a_t):
+        if params:
+            self._load_from_params(params)
+        elif details.random_init:
+            self._initialize_random_params()
+
+    def forward(self, h_t: torch.Tensor, z_t: torch.Tensor, a_t: torch.Tensor):
         """
         Forward pass through the network, overriding the base class.
         Predicts the next latent state given the previous state and action.
         """
+        assert (
+            torch.cat([h_t, z_t, a_t], dim=-1).shape[-1] == self.rnn.input_size
+        ), "RSSM_LD is not configured correctly. Combined input size does not match the RNN input size."
         h_t = self.rnn(torch.cat([h_t, z_t, a_t], dim=-1))
-        z_hat_t = self.fc(h_t)
+        z_hat_t = self.fc(h_t)  # Predicts the next latent state (deterministic)
         return h_t, z_hat_t

@@ -24,9 +24,9 @@ class WorldModel:
         self.rssm = RSSM(
             params=params,
             hyper_params=hyper_params,
-            observation_shape=observation_shape,
         )
         self.encoder = Encoder(observation_shape, self.rssm.fc.out_features)
+        # RSSM in between, is created first to ensure the link between encoder and decoder
         self.decoder = Decoder(self.rssm.fc.out_features, observation_shape)
 
     def imagine(self, h_t, z_t, actions):
