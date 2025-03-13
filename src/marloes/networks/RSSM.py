@@ -49,11 +49,13 @@ class RSSM(BaseNetwork):
         """
         self._validate_rssm(details)
         # Initialize the hidden layers, using GRU for now #TODO: add "type" option to details - pop it and select rnn based on this
-        self.rnn = nn.GRU(**details["hidden"]["recurrent"])
+        self.rnn = nn.GRU(
+            **details["hidden"]["recurrent"]
+        )  # Recurrent states produces h_t
         self.fc = nn.Linear(
             details["hidden"]["recurrent"]["hidden_size"],
             details["hidden"]["dense"]["hidden_size"],
-        )
+        )  # Dense layer to predict z_hat_t
 
     def forward(self, h_t, z_t, a_t):
         """
