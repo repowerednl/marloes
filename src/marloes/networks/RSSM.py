@@ -43,15 +43,17 @@ class RSSM(BaseNetwork):
         """
         self._validate_rssm(details)
         # Initialize the hidden layers, using GRU for now
-        self.rssm = nn.GRU(**details["hidden"]["recurrent"])
+        self.rnn = nn.GRU(**details["hidden"]["recurrent"])
         self.fc = nn.Linear(
             details["hidden"]["recurrent"]["hidden_size"],
             details["hidden"]["dense"]["hidden_size"],
         )
 
-    def forward(self, x):
+    def forward(self, h_t, z_t, a_t):
         """
         Forward pass through the network, overriding the base class.
+        Predicts the next latent state given the previous state and action.
         """
-        # TODO: implement forward pass
-        pass
+        h_t = self.rnn(torch.cat([h_t, z_t, a_t], dim=-1))
+        z_hat_t = self.fc(h_t)
+        return h_t, z_hat_t

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .util import observation_to_tensor
 from .RSSM import RSSM
 
 
@@ -72,6 +73,11 @@ class Encoder(nn.Module):
         self.fc2 = nn.Linear(hidden_dim, latent_dim)
 
     def forward(self, x):
+        """
+        Receives observations x -> which is list of dictionaries.
+        First transform the observations to
+        """
+
         x = F.relu(self.fc1(x))
         z_t = self.fc2(x)
         return z_t
