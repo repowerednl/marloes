@@ -71,6 +71,9 @@ class RSSM(BaseNetwork):
         assert (
             torch.cat([h_t, z_t, a_t], dim=-1).shape[-1] == self.rnn.input_size
         ), "RSSM_LD is not configured correctly. Combined input size does not match the RNN input size."
-        h_t = self.rnn(torch.cat([h_t, z_t, a_t], dim=-1))
+        output, hn = self.rnn(torch.cat([h_t, z_t, a_t], dim=-1))
+        # output is of shape (seq_len, batch, num_directions * hidden_size)
+        # hn is of shape (num_layers * num_directions, batch, hidden_size)
+        h_t = output[:, -1, :].unsqueeze(0)
         z_hat_t = self.fc(h_t)  # Predicts the next latent state (deterministic)
         return h_t, z_hat_t

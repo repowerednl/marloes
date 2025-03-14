@@ -70,3 +70,36 @@ class RSSMTestCase(TestCase):
             self.assertIsInstance(rssm.loss, torch.nn.MSELoss)
             # make sure _load_from_params is called
             mock_load.assert_called_once_with(self.loaded_params)
+
+    def test_forward(self):
+        """
+        Test if the forward pass goes through the RSSM network without problems.
+        """
+        rssm = RSSM()
+        # input should be of size RSSM_LD.hidden["recurrent"]["input_size"] (256 + 64 + 6 right now) = torch.cat(h_t, z_t, a_t)
+        a_t = torch.randn(1, 1, 6)  # 6 agents
+        h_t = torch.randn(1, 1, 256)
+        z_t = torch.randn(1, 1, 64)
+
+        # forward pass
+        h_t, z_hat_t = rssm(h_t, z_t, a_t)
+        # check output shapes
+        self.assertEqual(h_t.shape, (1, 1, 256))
+        self.assertEqual(z_hat_t.shape, (1, 1, 64))
+
+    def test_forward_wrong_input(self):
+        """
+        Test if the forward pass raises an assertion error with incorrect input sizes.
+        """
+        rssm = RSSM()
+        a_t = torch.randn(1, 1, 5)  # Incorrect size for a_t
+        h_t = torch.randn(1, 1, 256)
+        z_t = torch.randn(1, 1, 64)
+
+        with self.assertRaises(AssertionError) as context:
+            rssm(h_t, z_t, a_t)
+
+        self.assertIn(
+            "Combined input size does not match the RNN input size",
+            str(context.exception),
+        )
