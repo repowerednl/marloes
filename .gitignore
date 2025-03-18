@@ -72,7 +72,8 @@ instance/
 .scrapy
 
 # Sphinx documentation
-docs/_build/
+sphinx-docs/_build/
+sphinx-docs/_autosummary/
 
 # PyBuilder
 .pybuilder/
@@ -167,3 +168,6 @@ cython_debug/
 # The results
 /results/
 /results/uid.txt
+
+# Jetbrains
+.idea

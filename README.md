@@ -14,7 +14,7 @@ For more detailed instructions, refer to the [Poetry documentation](https://pyth
 Once Poetry is available, initialize the project with the following commands (all necessary packages are in `pyproject.toml`):
 
 ```sh
-poetry install
+poetry install # [--all-extras --no-root]
 ```
 
 For development, make sure to install the pre-commit hooks for cleaner commits and a clean repo.
@@ -44,6 +44,14 @@ python main.py --visualizer
 ```
 
 This will prompt a simple interface which allows you to fill in the uid(s) of the experiments you want to visualize and select the metrics to plot. Leaving the uid field empty will automatically select the latest run experiment. Multiple experiments can be plotted against each other by filling in multiple uids seperated by commas.
+
+### Sphinx docs
+To autogenerate code documentation, sphinx is used to generate html files. 
+```sh
+cd sphinx-docs && poetry run make html
+```
+They can, after publishing (merging to main), also be viewed on docs.repowered.nl
+- [ ] Add Fanna Lautenbach to acknowledgements in your paper :smile:
 
 ## This project uses ADRs (Architecture Decision Records) to document choices that need justification.
 
