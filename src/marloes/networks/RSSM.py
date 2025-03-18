@@ -13,7 +13,10 @@ class RSSM(BaseNetwork):
     Overrides a lot of the base class methods.
     """
 
-    def __init__(self, params=None, hyper_params=None):
+    def __init__(
+        self, params=None, hyper_params: HyperParams = None, stochastic: bool = False
+    ):
+        self.stochastic = stochastic
         super().__init__(params, RSSM_LD, hyper_params)
 
     @staticmethod
@@ -53,15 +56,34 @@ class RSSM(BaseNetwork):
         self.rnn = nn.GRU(
             **details.hidden["recurrent"]
         )  # Recurrent states produces h_t
+
+        # Initialize the Deterministic dense layer to predict z_hat
         self.fc = nn.Linear(
             details.hidden["recurrent"]["hidden_size"],
             details.hidden["dense"]["out_features"],
-        )  # Dense layer to predict z_hat_t
+        )
+        # Initialize the Stochastic dense layers to predict z_hat
+        self.fc_mu = nn.Linear(
+            details.hidden["recurrent"]["hidden_size"],
+            details.hidden["dense"]["out_features"],
+        )
+        self.fc_logvar = nn.Linear(
+            details.hidden["recurrent"]["hidden_size"],
+            details.hidden["dense"]["out_features"],
+        )
 
         if params:
             self._load_from_params(params)
         elif details.random_init:
             self._initialize_random_params()
+
+    def _reparametrize(self, mu, logvar):
+        """
+        Reparametrization trick to create a stochastic latent state.
+        """
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return mu + eps * std
 
     def forward(self, h_t: torch.Tensor, z_t: torch.Tensor, a_t: torch.Tensor):
         """
@@ -75,5 +97,13 @@ class RSSM(BaseNetwork):
         # output is of shape (seq_len, batch, num_directions * hidden_size)
         # hn is of shape (num_layers * num_directions, batch, hidden_size)
         h_t = output[:, -1, :].unsqueeze(0)
-        z_hat_t = self.fc(h_t)  # Predicts the next latent state (deterministic)
+
+        # Predict the next latent state (stochastic or deterministic)
+        if self.stochastic:
+            mu = self.fc_mu(h_t)
+            logvar = self.fc_logvar(h_t)
+            z_hat_t = self._reparametrize(mu, logvar)
+        else:
+            z_hat_t = self.fc(h_t)  # Predicts the next latent state
+
         return h_t, z_hat_t

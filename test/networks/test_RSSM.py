@@ -103,3 +103,40 @@ class RSSMTestCase(TestCase):
             "Combined input size does not match the RNN input size",
             str(context.exception),
         )
+
+    def test_stochastic_latent_space(self):
+        """
+        RSSM has a stochastic option to predict a stochastic latent state instead of deterministic.
+        """
+        rssm = RSSM(stochastic=True)
+        # it also has fc_mu and fc_logvar, make sure these dimensions are correct
+        self.assertIsInstance(rssm.fc_mu, torch.nn.Linear)
+        self.assertIsInstance(rssm.fc_logvar, torch.nn.Linear)
+        self.assertEqual(
+            rssm.fc_mu.out_features, RSSM_LD.hidden["dense"]["out_features"]
+        )
+        self.assertEqual(
+            rssm.fc_logvar.out_features, RSSM_LD.hidden["dense"]["out_features"]
+        )
+        # input should be of size RSSM_LD.hidden["recurrent"]["input_size"] (256 + 64 + 6 right now) = torch.cat(h_t, z_t, a_t)
+        a_t = torch.randn(1, 1, 6)
+        h_t = torch.randn(1, 1, 256)
+        z_t = torch.randn(1, 1, 64)
+
+        # forward pass should have called reparametrize now, and fc_mu and fc_logvar, but not fc
+        with mock.patch.object(
+            rssm, "_reparametrize", wraps=rssm._reparametrize
+        ) as mock_reparametrize, mock.patch.object(
+            rssm.fc_mu, "forward", wraps=rssm.fc_mu.forward
+        ) as mock_fc_mu_forward, mock.patch.object(
+            rssm.fc_logvar, "forward", wraps=rssm.fc_logvar.forward
+        ) as mock_fc_logvar_forward, mock.patch.object(
+            rssm.fc, "forward", wraps=rssm.fc
+        ) as mock_fc_forward:
+            h_t, z_hat_t = rssm(h_t, z_t, a_t)
+            mock_reparametrize.assert_called_once()
+            mock_fc_mu_forward.assert_called_once()
+            mock_fc_logvar_forward.assert_called_once()
+            mock_fc_forward.assert_not_called()
+            self.assertIsInstance(z_hat_t, torch.Tensor)
+            self.assertEqual(z_hat_t.shape, (1, 1, 64))
