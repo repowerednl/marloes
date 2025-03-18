@@ -28,6 +28,12 @@ class WorldModel:
         self.encoder = Encoder(observation_shape, self.rssm.fc.out_features)
         # RSSM in between, is created first to ensure the link between encoder and decoder
         self.decoder = Decoder(self.rssm.fc.out_features, observation_shape)
+        self.reward_predictor = RewardPredictor(
+            self.rssm.rnn.hidden_size, self.rssm.fc.out_features
+        )
+        self.continue_predictor = ContinuePredictor(
+            self.rssm.rnn.hidden_size, self.rssm.fc.out_features
+        )
 
     def imagine(self, h_t, z_t, actions):
         """
@@ -61,8 +67,9 @@ class WorldModel:
         h_t, z_hat_t = self.rssm(h_t, z_t, a_t)
         x_hat_t = self.decoder(z_hat_t)
         # step 4
+        r_t = self.reward_predictor(h_t, z_hat_t)
 
-        return x_hat_t, z_hat_t, h_t
+        return x_hat_t, z_hat_t, h_t, r_t
 
 
 class Encoder(nn.Module):
@@ -79,8 +86,7 @@ class Encoder(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Receives observations x -> which is list of dictionaries.
-        First transform the observations to a tensor, then pass through the MLP.
+        Passes observations (x) through the MLP to predict latent state.
         """
         x = F.relu(self.fc1(x))
         z_t = self.fc2(x)
@@ -111,17 +117,40 @@ class Decoder(nn.Module):
 class RewardPredictor(nn.Module):
     """
     Class that predicts the reward from the latent state.
+    forward pass: (h_t, z_t) -> r_t
     """
 
-    def __init__(self, latent_dim: int, hidden_dim: int = 256):
-        pass
+    def __init__(self, hidden_dim: int, latent_dim: int):
+        super(RewardPredictor, self).__init__()
+        # simple MLP
+        self.fc = nn.Linear(hidden_dim + latent_dim, 1)
+        # activation function may be added, using unrestricted output for now
+
+    def forward(self, h_t: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
+        """
+        Concatenates h_t (size hidden_dim) and z_t (size latent_dim) and predicts the reward.
+        """
+        x = torch.cat([h_t, z_t], dim=-1)
+        r_t = self.fc(x)
+        return r_t
 
 
 class ContinuePredictor(nn.Module):
     """
     Class that predicts whether to continue from the latent state.
-    A binary classification task on h_t and z_t.
+    A binary classification task; (h_t, z_t) -> c_t = [0,1].
     """
 
-    def __init__(self, latent_dim: int, hidden_dim: int = 256):
-        pass
+    def __init__(self, hidden_dim: int, latent_dim: int):
+        super(ContinuePredictor, self).__init__()
+        # simple MLP with sigmoid activation function
+        self.fc = nn.Linear(hidden_dim + latent_dim, 1)
+        self.classify = nn.Sigmoid()
+
+    def forward(self, h_t: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
+        """
+        Concatenates h_t (size hidden_dim) and z_t (size latent_dim) and predicts whether to continue.
+        """
+        x = torch.cat([h_t, z_t], dim=-1)
+        c_t = self.fc(x)
+        return self.classify(c_t)
