@@ -35,6 +35,14 @@ class WorldModel:
             self.rssm.rnn.hidden_size, self.rssm.fc.out_features
         )
 
+        self.modules = [
+            self.rssm,
+            self.encoder,
+            self.decoder,
+            self.reward_predictor,
+            self.continue_predictor,
+        ]
+
     def imagine(self, h_t, z_t, actions):
         """
         Imagine the next states through rollout given a state and a set of actions.
@@ -66,10 +74,12 @@ class WorldModel:
         z_t = self.encoder(x)
         h_t, z_hat_t = self.rssm(h_t, z_t, a_t)
         x_hat_t = self.decoder(z_hat_t)
-        # step 4
+        # predictor
         r_t = self.reward_predictor(h_t, z_hat_t)
+        c_t = self.continue_predictor(h_t, z_hat_t)
 
-        return x_hat_t, z_hat_t, h_t, r_t
+        # return all outputs of the world model
+        return x_hat_t, z_hat_t, h_t, r_t, c_t
 
 
 class Encoder(nn.Module):

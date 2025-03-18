@@ -221,23 +221,27 @@ class BaseNetwork(Module):
                 "LayerDetails must be provided to initialize the network, needed for saving and loading."
             )
         super(BaseNetwork, self).__init__()
-        self.initialize_network(params, layer_details)
+        self.initialize_network(params, layer_details, hyper_params)
+
+    def initialize_network(
+        self, params: dict, layer_details: LayerDetails, hyper_params: HyperParams
+    ):
+        """
+        Method to initialize the network. Should be implemented by the child class.
+        """
+        layer_details.validate()
+        self._initialize_layers(layer_details)
+
         # make standard HyperParams if not given
         if not hyper_params:
             hyper_params = HyperParams()
-        self.optimizer = Adam(
+        self.network_optimizer = Adam(
             self.parameters(),
             lr=hyper_params.lr,
             weight_decay=hyper_params.weight_decay,
         )
         self.loss = hyper_params.loss_fn
 
-    def initialize_network(self, params: dict, layer_details: LayerDetails):
-        """
-        Method to initialize the network. Should be implemented by the child class.
-        """
-        layer_details.validate()
-        self._initialize_layers(layer_details)
         if params:
             self._load_from_params(params)
         elif layer_details.random_init:

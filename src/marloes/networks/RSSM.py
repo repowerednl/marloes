@@ -14,7 +14,10 @@ class RSSM(BaseNetwork):
     """
 
     def __init__(
-        self, params=None, hyper_params: HyperParams = None, stochastic: bool = False
+        self,
+        params: dict = None,
+        hyper_params: HyperParams = None,
+        stochastic: bool = False,
     ):
         self.stochastic = stochastic
         super().__init__(params, RSSM_LD, hyper_params)
@@ -46,7 +49,7 @@ class RSSM(BaseNetwork):
             if key not in details.hidden["dense"]:
                 raise ValueError(f"Missing key '{key}' in dense hidden layer details.")
 
-    def initialize_network(self, params, details: LayerDetails):
+    def initialize_network(self, params: dict, details: LayerDetails):
         """
         Overrides the base class initialization.
         #TODO: add "type" option to details (recurrent and dense), requires changes in validation
