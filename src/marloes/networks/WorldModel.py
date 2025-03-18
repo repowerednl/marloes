@@ -31,6 +31,9 @@ class WorldModel:
         self.reward_predictor = RewardPredictor(
             self.rssm.rnn.hidden_size, self.rssm.fc.out_features
         )
+        self.continue_predictor = ContinuePredictor(
+            self.rssm.rnn.hidden_size, self.rssm.fc.out_features
+        )
 
     def imagine(self, h_t, z_t, actions):
         """
@@ -135,8 +138,19 @@ class RewardPredictor(nn.Module):
 class ContinuePredictor(nn.Module):
     """
     Class that predicts whether to continue from the latent state.
-    A binary classification task on h_t and z_t.
+    A binary classification task; (h_t, z_t) -> c_t = [0,1].
     """
 
-    def __init__(self, latent_dim: int, hidden_dim: int = 256):
-        pass
+    def __init__(self, hidden_dim: int, latent_dim: int):
+        super(ContinuePredictor, self).__init__()
+        # simple MLP with sigmoid activation function
+        self.fc = nn.Linear(hidden_dim + latent_dim, 1)
+        self.classify = nn.Sigmoid()
+
+    def forward(self, h_t: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
+        """
+        Concatenates h_t (size hidden_dim) and z_t (size latent_dim) and predicts whether to continue.
+        """
+        x = torch.cat([h_t, z_t], dim=-1)
+        c_t = self.fc(x)
+        return self.classify(c_t)
