@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from .util import observation_to_tensor
 from .RSSM import RSSM
+from .base import BaseNetwork
 
 
 class WorldModel:
@@ -82,7 +83,7 @@ class WorldModel:
         return x_hat_t, z_hat_t, h_t, r_t, c_t
 
 
-class Encoder(nn.Module):
+class Encoder(BaseNetwork):
     """
     Class that encodes the observations to the latent state for the RSSM network.
     Since we have no images (CNN) in this case, we can use a simple MLP.
@@ -103,7 +104,7 @@ class Encoder(nn.Module):
         return z_t
 
 
-class Decoder(nn.Module):
+class Decoder(BaseNetwork):
     """
     Class that decodes the latent state to the observations for the RSSM network.
     Since we have no images (CNN) in this case, we can use a simple MLP.
@@ -124,7 +125,7 @@ class Decoder(nn.Module):
         return x_hat_t
 
 
-class RewardPredictor(nn.Module):
+class RewardPredictor(BaseNetwork):
     """
     Class that predicts the reward from the latent state.
     forward pass: (h_t, z_t) -> r_t
@@ -145,7 +146,7 @@ class RewardPredictor(nn.Module):
         return r_t
 
 
-class ContinuePredictor(nn.Module):
+class ContinuePredictor(BaseNetwork):
     """
     Class that predicts whether to continue from the latent state.
     A binary classification task; (h_t, z_t) -> c_t = [0,1].
