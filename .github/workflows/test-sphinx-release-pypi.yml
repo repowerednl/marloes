@@ -37,7 +37,8 @@ jobs:
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
   deploy-sphinx-documentation:
-    if: ${{ github.head_ref || github.ref_name }} == 'main'
+    needs: pytest-simple-with-coverage
+    if: contains('main', github.head_ref) || contains('main', github.ref_name)
     uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
     with:
       python_version: "3.11.2"
@@ -55,7 +56,8 @@ jobs:
       docs_ssh_private_key: ${{ secrets.DOCS_SSH_PRIVATE_KEY }}
 
   release:
-    if: ${{ github.head_ref || github.ref_name }} == 'main'
+    needs: pytest-simple-with-coverage
+    if: contains('main', github.head_ref) || contains('main', github.ref_name)
     uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
     with:
       python_version: "3.11.2"
