@@ -1,0 +1,74 @@
+name: Pytest, Sphinx Docs and Release
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest-simple-with-coverage:
+    uses: repowerednl/.github/.github/workflows/python-test-coverage-simple.yml@main
+    permissions:
+      pull-requests: write
+      contents: write
+      actions: read
+    strategy:
+      matrix:
+        # Make sure that the configured python versions are available here.
+        # These versions are cached on the runner; otherwise setting up python is too slow for the CI
+        # https://github.com/actions/runner-images/blob/main/images/ubuntu/toolsets/toolset-2004.json#L4
+        python_version: [ "3.11.2" ]
+        poetry_version: [ "1.8.4" ]
+    with:
+      python_version: ${{ matrix.python_version }}
+      poetry_version: ${{ matrix.poetry_version }}
+      # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
+      # when configuring a working directory, make sure the cached paths are also up-to-date
+      file_paths_to_cache: |
+        .venv
+        /home/runner/.local/
+      # working_directory: # Optional, defaults to '.'
+    secrets:
+      private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
+      private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
+      private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+
+  deploy-sphinx-documentation:
+    needs: pytest-simple-with-coverage
+    if: contains('main', github.head_ref) || contains('main', github.ref_name)
+    uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
+    with:
+      python_version: "3.11.2"
+      poetry_version: "1.8.4"
+      # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
+      # when configuring a working directory, make sure the cached paths are also up-to-date
+      file_paths_to_cache: |
+        .venv
+        /home/runner/.local/
+      docs_target: /home/repowered/docs/marloes
+    secrets:
+      private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
+      private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
+      private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+      docs_ssh_private_key: ${{ secrets.DOCS_SSH_PRIVATE_KEY }}
+
+  release:
+    needs: pytest-simple-with-coverage
+    if: contains('main', github.head_ref) || contains('main', github.ref_name)
+    uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
+    with:
+      python_version: "3.11.2"
+      poetry_version: "1.8.4"
+      # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
+      # when configuring a working directory, make sure the cached paths are also up-to-date
+      file_paths_to_cache: |
+        .venv
+        /home/runner/.local/
+    secrets:
+      private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
+      private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
+      private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+      publish_pypi_url: ${{ secrets.PRIVATE_PYPI_PUBLISH_URL}}

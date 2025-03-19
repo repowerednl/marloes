@@ -73,6 +73,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/_autosummary/
 
 # PyBuilder
 .pybuilder/
@@ -167,3 +168,6 @@ cython_debug/
 # The results
 /results/
 /results/uid.txt
+
+# Jetbrains
+.idea
