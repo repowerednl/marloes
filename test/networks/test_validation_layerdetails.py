@@ -35,7 +35,6 @@ class TestLayerDetailsValidation(TestCase):
                     "input_size": 10,
                     "hidden_size": 30,
                     "num_layers": 1,
-                    "nonlinearity": "tanh",
                     "bias": True,
                     "batch_first": False,
                     "dropout": 0.0,
@@ -234,11 +233,10 @@ class TestLayerDetailsValidation(TestCase):
                     "input_size": 10,
                     "hidden_size": 20,
                     "num_layers": 1,
-                    "nonlinearity": "invalid_nonlinearity",  # Invalid nonlinearity
                     "bias": True,
                     "batch_first": False,
                     "dropout": 0.0,
-                    "bidirectional": False,
+                    "bidirectional": "string",  # should be a boolean
                 }
             }
         }
@@ -275,5 +273,5 @@ class TestLayerDetailsValidation(TestCase):
         self.assertIsInstance(network.input, torch.nn.Sequential)
         self.assertIsInstance(network.hidden, torch.nn.ModuleList)
         # hidden should contain the recurrent layer
-        self.assertIsInstance(network.hidden[0], torch.nn.RNN)
+        self.assertIsInstance(network.hidden[0], torch.nn.GRU)
         self.assertIsInstance(network.output, torch.nn.Sequential)
