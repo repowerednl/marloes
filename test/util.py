@@ -40,7 +40,9 @@ def get_valid_basenetwork():
     """
     Returns a valid BaseNetwork object.
     """
-    return BaseNetwork(layer_details=get_valid_layerdetails())
+    base = BaseNetwork()
+    base._initialize_layers_from_layer_details(get_valid_layerdetails())
+    return base
 
 
 def get_accurate_observation(algorithm):

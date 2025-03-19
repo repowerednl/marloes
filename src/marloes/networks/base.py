@@ -210,44 +210,10 @@ class BaseNetwork(Module):
     Base class for all networks.
     """
 
-    def __init__(
-        self,
-        params: dict = None,
-        layer_details: LayerDetails = None,
-        hyper_params: HyperParams = None,
-    ):
-        if not layer_details:
-            raise ValueError(
-                "LayerDetails must be provided to initialize the network, needed for saving and loading."
-            )
-        super(BaseNetwork, self).__init__()
-        self.initialize_network(params, layer_details, hyper_params)
+    def __init__(self):
+        super().__init__()
 
-    def initialize_network(
-        self, params: dict, layer_details: LayerDetails, hyper_params: HyperParams
-    ):
-        """
-        Method to initialize the network. Should be implemented by the child class.
-        """
-        layer_details.validate()
-        self._initialize_layers(layer_details)
-
-        # make standard HyperParams if not given
-        if not hyper_params:
-            hyper_params = HyperParams()
-        self.network_optimizer = Adam(
-            self.parameters(),
-            lr=hyper_params.lr,
-            weight_decay=hyper_params.weight_decay,
-        )
-        self.loss = hyper_params.loss_fn
-
-        if params:
-            self._load_from_params(params)
-        elif layer_details.random_init:
-            self._initialize_random_params()
-
-    def _initialize_layers(self, layer_details: LayerDetails):
+    def _initialize_layers_from_layer_details(self, layer_details: LayerDetails):
         """
         Method to initialize the layers of the network.
         """
@@ -292,30 +258,6 @@ class BaseNetwork(Module):
             return torch.nn.Softmax(dim=1)
         else:
             raise ValueError("Activation function not supported")
-
-    @staticmethod
-    def _recurrent_layer(details):
-        """
-        Method to select the recurrent layer.
-        # TODO: pop the type from details and select the wanted layer, might be different with parameters, would require changes to validation
-        """
-        return torch.nn.GRU(**details)
-
-    def forward(self, x):
-        """
-        Forward pass of the network.
-        """
-        x = self.input(x)
-        for layer in self.hidden:
-            x = layer(x)
-        x = self.output(x)
-        return x
-
-    def backward(self):
-        """
-        Backward pass of the network.
-        """
-        raise NotImplementedError("Backward method not implemented.")
 
     def _load_from_params(self, params):
         """
