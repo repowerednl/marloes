@@ -34,9 +34,6 @@ class RSSMTestCase(TestCase):
         self.assertEqual(
             self.existing_rssm.fc.out_features, RSSM_LD.hidden["dense"]["out_features"]
         )
-        # test parameters
-        self.assertEqual(self.existing_rssm.optimizer.param_groups[0]["lr"], 0.001)
-        self.assertIsInstance(self.existing_rssm.loss, torch.nn.MSELoss)
 
     def test_new_rssm_creation_with_hyperparams(self):
         """
@@ -47,9 +44,6 @@ class RSSMTestCase(TestCase):
         self.assertIsInstance(rssm.fc, torch.nn.Linear)
         self.assertEqual(rssm.rnn.hidden_size, rssm.fc.in_features)
         self.assertEqual(rssm.fc.out_features, RSSM_LD.hidden["dense"]["out_features"])
-        # test parameters
-        self.assertEqual(rssm.optimizer.param_groups[0]["lr"], self.hyper_params.lr)
-        self.assertIsInstance(rssm.loss, torch.nn.MSELoss)
 
     def test_creation_from_params(self):
         """
@@ -65,9 +59,6 @@ class RSSMTestCase(TestCase):
             self.assertEqual(
                 rssm.fc.out_features, RSSM_LD.hidden["dense"]["out_features"]
             )
-            # test parameters
-            self.assertEqual(rssm.optimizer.param_groups[0]["lr"], 0.001)
-            self.assertIsInstance(rssm.loss, torch.nn.MSELoss)
             # make sure _load_from_params is called
             mock_load.assert_called_once_with(self.loaded_params)
 

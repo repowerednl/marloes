@@ -259,6 +259,14 @@ class BaseNetwork(Module):
         else:
             raise ValueError("Activation function not supported")
 
+    @staticmethod
+    def _recurrent_layer(details):
+        """
+        Method to select the recurrent layer.
+        # TODO: pop the type from details and select the wanted layer, might be different with parameters, would require changes to validation
+        """
+        return torch.nn.GRU(**details)
+
     def _load_from_params(self, params):
         """
         Method to load the network parameters.

@@ -20,7 +20,8 @@ class RSSM(BaseNetwork):
         stochastic: bool = False,
     ):
         self.stochastic = stochastic
-        super().__init__(params, RSSM_LD, hyper_params)
+        super().__init__()
+        self.initialize_network(params, RSSM_LD)
 
     @staticmethod
     def _validate_rssm(details: LayerDetails):
