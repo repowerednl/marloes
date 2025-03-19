@@ -44,22 +44,11 @@ class WorldModel:
             self.continue_predictor,
         ]
 
-    def imagine(self, h_t, z_t, actions):
+    def imagine(self, x, actor):
         """
-        Imagine the next states through rollout given a state and a set of actions.
+        Imagine function for rollouts from the initial state, using the actor to sample actions (from current policy).
         """
-        recurrent_states = []
-        preds = []
-        # TODO: sequentialCTCE?
-        for (
-            a_t
-        ) in (
-            actions
-        ):  # TODO: a_t are a set of actions, rssm should be able to handle this
-            h_t, z_t = self.rssm(h_t, z_t, a_t)
-            recurrent_states.append(h_t)
-            preds.append(z_t)
-        return torch.stack(preds)
+        pass
 
     def forward(self, x, h_t, a_t):
         """
