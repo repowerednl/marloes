@@ -82,7 +82,7 @@ class RSSM(BaseNetwork):
 
     def _reparametrize(self, mu, logvar):
         """
-        Reparametrization trick to create a stochastic latent state.
+        Reparametrization trick to create a stochastic latent state, using mu and logvar for the distribution.
         """
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
