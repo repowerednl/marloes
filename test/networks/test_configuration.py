@@ -51,7 +51,7 @@ class TestNetworkConfig(unittest.TestCase):
         Testing load function, to be extended with correct layer details.
         """
         with self.assertRaises(ValueError):
-            self.config.load(self.test_uid, None)
+            self.config.load(self.test_uid)
 
     def test_save(self):
         """
