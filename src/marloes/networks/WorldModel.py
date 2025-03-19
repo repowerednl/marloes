@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from .util import observation_to_tensor
 from .RSSM import RSSM
+from .base import BaseNetwork
 
 
 class WorldModel:
@@ -24,27 +25,30 @@ class WorldModel:
         self.rssm = RSSM(
             params=params,
             hyper_params=hyper_params,
-            observation_shape=observation_shape,
         )
         self.encoder = Encoder(observation_shape, self.rssm.fc.out_features)
+        # RSSM in between, is created first to ensure the link between encoder and decoder
         self.decoder = Decoder(self.rssm.fc.out_features, observation_shape)
+        self.reward_predictor = RewardPredictor(
+            self.rssm.rnn.hidden_size, self.rssm.fc.out_features
+        )
+        self.continue_predictor = ContinuePredictor(
+            self.rssm.rnn.hidden_size, self.rssm.fc.out_features
+        )
 
-    def imagine(self, h_t, z_t, actions):
+        self.modules = [
+            self.rssm,
+            self.encoder,
+            self.decoder,
+            self.reward_predictor,
+            self.continue_predictor,
+        ]
+
+    def imagine(self, x, actor):
         """
-        Imagine the next states through rollout given a state and a set of actions.
+        Imagine function for rollouts from the initial state, using the actor to sample actions (from current policy).
         """
-        recurrent_states = []
-        preds = []
-        # TODO: sequentialCTCE?
-        for (
-            a_t
-        ) in (
-            actions
-        ):  # TODO: a_t are a set of actions, rssm should be able to handle this
-            h_t, z_t = self.rssm(h_t, z_t, a_t)
-            recurrent_states.append(h_t)
-            preds.append(z_t)
-        return torch.stack(preds)
+        pass
 
     def forward(self, x, h_t, a_t):
         """
@@ -60,12 +64,15 @@ class WorldModel:
         z_t = self.encoder(x)
         h_t, z_hat_t = self.rssm(h_t, z_t, a_t)
         x_hat_t = self.decoder(z_hat_t)
-        # step 4
+        # predictor
+        r_t = self.reward_predictor(h_t, z_hat_t)
+        c_t = self.continue_predictor(h_t, z_hat_t)
 
-        return x_hat_t, z_hat_t, h_t
+        # return all outputs of the world model
+        return x_hat_t, z_hat_t, h_t, r_t, c_t
 
 
-class Encoder(nn.Module):
+class Encoder(BaseNetwork):
     """
     Class that encodes the observations to the latent state for the RSSM network.
     Since we have no images (CNN) in this case, we can use a simple MLP.
@@ -79,15 +86,14 @@ class Encoder(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Receives observations x -> which is list of dictionaries.
-        First transform the observations to a tensor, then pass through the MLP.
+        Passes observations (x) through the MLP to predict latent state.
         """
         x = F.relu(self.fc1(x))
         z_t = self.fc2(x)
         return z_t
 
 
-class Decoder(nn.Module):
+class Decoder(BaseNetwork):
     """
     Class that decodes the latent state to the observations for the RSSM network.
     Since we have no images (CNN) in this case, we can use a simple MLP.
@@ -108,20 +114,43 @@ class Decoder(nn.Module):
         return x_hat_t
 
 
-class RewardPredictor(nn.Module):
+class RewardPredictor(BaseNetwork):
     """
     Class that predicts the reward from the latent state.
+    forward pass: (h_t, z_t) -> r_t
     """
 
-    def __init__(self, latent_dim: int, hidden_dim: int = 256):
-        pass
+    def __init__(self, hidden_dim: int, latent_dim: int):
+        super(RewardPredictor, self).__init__()
+        # simple MLP
+        self.fc = nn.Linear(hidden_dim + latent_dim, 1)
+        # activation function may be added, using unrestricted output for now
+
+    def forward(self, h_t: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
+        """
+        Concatenates h_t (size hidden_dim) and z_t (size latent_dim) and predicts the reward.
+        """
+        x = torch.cat([h_t, z_t], dim=-1)
+        r_t = self.fc(x)
+        return r_t
 
 
-class ContinuePredictor(nn.Module):
+class ContinuePredictor(BaseNetwork):
     """
     Class that predicts whether to continue from the latent state.
-    A binary classification task on h_t and z_t.
+    A binary classification task; (h_t, z_t) -> c_t = [0,1].
     """
 
-    def __init__(self, latent_dim: int, hidden_dim: int = 256):
-        pass
+    def __init__(self, hidden_dim: int, latent_dim: int):
+        super(ContinuePredictor, self).__init__()
+        # simple MLP with sigmoid activation function
+        self.fc = nn.Linear(hidden_dim + latent_dim, 1)
+        self.classify = nn.Sigmoid()
+
+    def forward(self, h_t: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
+        """
+        Concatenates h_t (size hidden_dim) and z_t (size latent_dim) and predicts whether to continue.
+        """
+        x = torch.cat([h_t, z_t], dim=-1)
+        c_t = self.fc(x)
+        return self.classify(c_t)
