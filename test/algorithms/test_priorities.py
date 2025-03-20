@@ -43,7 +43,9 @@ class TestPriorities(unittest.TestCase):
     def setUp(self, *mocks) -> None:
         with patch("marloes.results.saver.Saver._save_config_to_yaml"), patch(
             "marloes.results.saver.Saver._update_simulation_number", return_value=0
-        ), patch("marloes.results.saver.Saver._validate_folder"):
+        ), patch("marloes.results.saver.Saver._validate_folder"), patch(
+            "marloes.valley.env._get_full_observation", return_value={}
+        ):
             Agent._id_counters = {}
             self.alg = Priorities(config=get_new_config())
 
