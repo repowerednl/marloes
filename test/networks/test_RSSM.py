@@ -73,10 +73,11 @@ class RSSMTestCase(TestCase):
         z_t = torch.randn(1, 1, 64)
 
         # forward pass
-        h_t, z_hat_t = rssm(h_t, z_t, a_t)
+        h_t, z_hat_t, details = rssm(h_t, z_t, a_t)
         # check output shapes
         self.assertEqual(h_t.shape, (1, 1, 256))
         self.assertEqual(z_hat_t.shape, (1, 1, 64))
+        self.assertIsInstance(details, dict)
 
     def test_forward_wrong_input(self):
         """
