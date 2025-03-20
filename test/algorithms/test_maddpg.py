@@ -3,7 +3,7 @@ from unittest.mock import mock_open, patch
 
 import pandas as pd
 
-from marloes.algorithms.maddpg import MADDPG
+from marloes.algorithms.dummy import Dummy
 
 
 def get_new_config():  # function to return a new configuration, pop caused issues
