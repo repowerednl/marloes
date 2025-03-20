@@ -42,10 +42,11 @@ class BaseAlgorithm(ABC):
             if epoch % 1000 == 0:
                 logging.info(f"Reached epoch {epoch}/{self.epochs}...")
 
+            # Fill ReplayBuffer
             actions = self.get_actions(observations)
             observations, rewards, dones, infos = self.environment.step(actions)
 
-            # Placeholder for training logic specific to subclasses
+            # For x timesteps, perform the training step
             self._train_step(observations, rewards, dones, infos)
 
             # After chunk is "full", it should be saved
@@ -81,6 +82,7 @@ class BaseAlgorithm(ABC):
     def load(self, uid: str) -> None:
         """
         Loads a parameter configuration from a file.
+        TODO: Implement loading of model parameters.
         """
         pass
 

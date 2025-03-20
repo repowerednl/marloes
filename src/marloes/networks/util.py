@@ -1,7 +1,7 @@
 import torch
 
 
-def observation_to_tensor(
+def obs_to_tens(
     observation: dict, concatenate_all: bool = True
 ) -> torch.Tensor | list[torch.Tensor]:
     """

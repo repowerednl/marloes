@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .util import observation_to_tensor
 from .RSSM import RSSM
 from .base import BaseNetwork
 
@@ -58,8 +57,6 @@ class WorldModel:
         - Decoding latent state to observation
         - predicting actions and value #TODO
         """
-        # convert observation to tensor
-        x = observation_to_tensor(observation=x, concatenate_all=True)
         # TODO: sequentialCTCE?
         z_t = self.encoder(x)
         h_t, z_hat_t = self.rssm(h_t, z_t, a_t)

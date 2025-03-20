@@ -4,7 +4,7 @@ import torch
 
 from marloes.networks.WorldModel import Encoder, Decoder, RewardPredictor
 from marloes.networks.details import RSSM_LD
-from marloes.networks.util import observation_to_tensor
+from marloes.networks.util import obs_to_tens
 
 
 class EncoderDecoderTestCase(TestCase):
@@ -17,7 +17,7 @@ class EncoderDecoderTestCase(TestCase):
         state = {"nom": 1, "test": 2}
         state_2 = {"nom": 3, "test": 4, "extra": 5}
         cls.observation = {"agent1": state, "agent2": state_2}
-        cls.tensor = observation_to_tensor(cls.observation)
+        cls.tensor = obs_to_tens(cls.observation)
         cls.z_t_size = RSSM_LD.hidden["dense"]["out_features"]
         cls.encoder = Encoder(cls.tensor.shape, latent_dim=cls.z_t_size)
         cls.z_t = torch.randn(cls.z_t_size)

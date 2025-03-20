@@ -4,7 +4,7 @@ import torch
 
 from marloes.networks.base import HyperParams
 from marloes.networks.RSSM import RSSM
-from marloes.networks.util import observation_to_tensor
+from marloes.networks.util import obs_to_tens
 from marloes.networks.details import RSSM_LD
 
 

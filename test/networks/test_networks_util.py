@@ -1,7 +1,7 @@
 from unittest import TestCase
 import torch
 
-from marloes.networks.util import observation_to_tensor
+from marloes.networks.util import obs_to_tens
 
 
 class TestUtil(TestCase):
@@ -19,9 +19,7 @@ class TestUtil(TestCase):
         """
         Test if the observation is converted to tensor correctly.
         """
-        tensor = observation_to_tensor(
-            observation=self.observation, concatenate_all=True
-        )
+        tensor = obs_to_tens(observation=self.observation, concatenate_all=True)
         # should be a tensor object
         self.assertIsInstance(tensor, torch.Tensor)
         # should have shape (5,)
@@ -33,9 +31,7 @@ class TestUtil(TestCase):
         """
         Test the observation to tensor function with concatenate_all=False which should return a list of tensorts.
         """
-        tensor = observation_to_tensor(
-            observation=self.observation, concatenate_all=False
-        )
+        tensor = obs_to_tens(observation=self.observation, concatenate_all=False)
         # should be a tensor object
         self.assertIsInstance(tensor, list)
         # first element should have shape (2,)
