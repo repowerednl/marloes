@@ -1,6 +1,15 @@
 import torch
 
 
+def dist(mu, logvar):
+    """
+    Reparametrization trick to create a stochastic latent state, using mu and logvar for the distribution.
+    """
+    std = torch.exp(0.5 * logvar)
+    eps = torch.randn_like(std)
+    return mu + eps * std
+
+
 def obs_to_tens(
     observation: dict, concatenate_all: bool = True
 ) -> torch.Tensor | list[torch.Tensor]:

@@ -3,7 +3,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .RSSM import RSSM
-from .base import BaseNetwork
+from .base import BaseNetwork, HyperParams
+from .util import dist
+
+
+def symlog_squared_loss(x, y):
+    """
+    Symlog squared loss function for Prediction loss in the World Model.
+    """
+
+    def symlog(x):
+        return torch.sign(x) * torch.log1p(torch.abs(x))
+
+    return F.mse_loss(symlog(x), symlog(y))
 
 
 class WorldModel:
@@ -11,11 +23,18 @@ class WorldModel:
     World model using simple MLP Encoder and Decoder for an RSSM network, based on the DreamerV3 architecture.
     Requires:
     - observation shape
-    - action shape (for dynamic model)
+    - action shape
+    Optional:
+    - params: dictionary with network parameters
+    - hyper_params: HyperParams object with network hyperparameters
     """
 
     def __init__(
-        self, observation_shape: tuple, action_shape: tuple, params, hyper_params
+        self,
+        observation_shape: tuple,
+        action_shape: tuple,
+        params,
+        hyper_params: HyperParams,
     ):
         """
         Initializes the World Model: Encoder (x->z_t) -> RSSM -> Decoder (z_hat_t->x_hat_t)
@@ -24,9 +43,9 @@ class WorldModel:
             params=params,
             hyper_params=hyper_params,
         )
-        self.encoder = Encoder(observation_shape, self.rssm.fc.out_features)
+        self.encoder = Encoder(observation_shape[0], self.rssm.fc.out_features)
         # RSSM in between, is created first to ensure the link between encoder and decoder
-        self.decoder = Decoder(self.rssm.fc.out_features, observation_shape)
+        self.decoder = Decoder(self.rssm.fc.out_features, observation_shape[0])
         self.reward_predictor = RewardPredictor(
             self.rssm.rnn.hidden_size, self.rssm.fc.out_features
         )
@@ -41,6 +60,12 @@ class WorldModel:
             self.reward_predictor,
             self.continue_predictor,
         ]
+        # Optimizer
+        self.optim = torch.optim.Adam(
+            params=[param for mod in self.modules for param in mod.parameters()],
+            lr=0.001,
+            weight_decay=1e-4,
+        )
 
     def imagine(self, x, actor):
         """
@@ -67,26 +92,53 @@ class WorldModel:
         # return all outputs of the world model
         return x_hat_t, z_hat_t, h_t, r_t, c_t
 
+    def learn(self, obs, act, rew, dones):
+        """
+        Learning step takes a batch? of observations, actions and rewards and dones
+        """
+        # z_t, z_details = self.encoder(obs)
+        # (recurrent_states, z_hat_t, z_hat_details) = self.rssm.rollout(
+        #     z_t, act, dones, horizon=10
+        # )
+        # First loss function, the dynamics loss trains the sequence model to predict the next representation as follows:
+        # KL-divergence between the predicted latent state and the true latent state (with stop-gradient operator)
+        # L_dyn = max(1,KL[sg(z_t) || z_hat_t]) #### stop gradient can be implemented with detach() on mu and log_var ####
+
+        # Second loss function, the representation loss trains the representations to be more predictable
+        # KL-divergence between the predicted latent state and the true latent state
+        # L_rep = max(1,KL[z_t || sg(z_hat_t)]) #### stop gradient can be implemented with detach() on mu and log_var ####
+
+        # Third loss function, the prediction loss is end-to-end training of the model
+        # trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression
+        # L_pred = - symlog_squared_loss(x_hat_t, x) - symlog_squared_loss(r_t, r) - symlog_squared_loss(c_t, c)
+
+        # total_loss = (beta_dyn)*L_dyn + (beta_rep)*L_rep + (beta)*L_pred
+        pass
+
 
 class Encoder(BaseNetwork):
     """
     Class that encodes the observations to the latent state for the RSSM network.
     Since we have no images (CNN) in this case, we can use a simple MLP.
-    # TODO: maybe move to RSSM
     """
 
-    def __init__(self, obs_shape: tuple, latent_dim: int, hidden_dim: int = 256):
+    def __init__(self, input: int, latent_dim: int, hidden_dim: int = 256):
         super(Encoder, self).__init__()
-        self.fc1 = nn.Linear(obs_shape[0], hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, latent_dim)
+        self.fc1 = nn.Linear(input, hidden_dim)
+        self.fc_mu = nn.Linear(hidden_dim, latent_dim)
+        self.fc_logvar = nn.Linear(hidden_dim, latent_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Passes observations (x) through the MLP to predict latent state.
         """
         x = F.relu(self.fc1(x))
-        z_t = self.fc2(x)
-        return z_t
+        mu = self.fc_mu(x)
+        logvar = self.fc_logvar(x)
+        return dist(mu, logvar), {
+            "mean": mu,
+            "logvar": logvar,
+        }
 
 
 class Decoder(BaseNetwork):
@@ -95,10 +147,10 @@ class Decoder(BaseNetwork):
     Since we have no images (CNN) in this case, we can use a simple MLP.
     """
 
-    def __init__(self, latent_dim: int, obs_shape: tuple, hidden_dim: int = 256):
+    def __init__(self, latent_dim: int, output: int, hidden_dim: int = 256):
         super(Decoder, self).__init__()
         self.fc1 = nn.Linear(latent_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, obs_shape[0])
+        self.fc2 = nn.Linear(hidden_dim, output)
 
     def forward(self, z_t: torch.Tensor) -> torch.Tensor:
         """

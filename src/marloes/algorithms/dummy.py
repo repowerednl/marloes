@@ -3,7 +3,7 @@ from marloes.networks import WorldModel
 from marloes.networks.util import obs_to_tens
 import random
 from torch.optim import Adam
-import torch.nn as nn
+import torch
 
 
 class Dummy(BaseAlgorithm):
@@ -17,16 +17,6 @@ class Dummy(BaseAlgorithm):
         # initialize the world model
         self._initialize_world_model()
         self._initialize_actor_critic()
-        # World Model optimizer
-        self.world_optimizer = Adam(
-            params=[
-                param for mod in self.world_model.modules for param in mod.parameters()
-            ],
-            lr=0.001,
-            weight_decay=1e-4,
-        )
-
-        self.mse_loss = nn.MSELoss()
 
     def _initialize_world_model(self):
         """
@@ -34,9 +24,9 @@ class Dummy(BaseAlgorithm):
         TODO: loading is not implemented yet. Only creates new WorldModel.
         """
         obs_shape = self.environment.observation_space
-        action_shape = self.environment.action_space
+        act_shape = self.environment.action_space
         self.world_model = WorldModel(
-            obs_shape, action_shape
+            obs_shape, act_shape
         )  # also configurable with HyperParams, using defaults for now
 
     def _initialize_actor_critic(self):
@@ -60,20 +50,17 @@ class Dummy(BaseAlgorithm):
         """
         Dummy training step, simulating training process...
         """
-        # 1. World Model Loss
+        # 1. World Model Loss (Batch?)
         # Step 1: Encode observations to latent state to z_t, get the initial hidden state h_t
-        # Step 3: Sequence model predicts the sequence given past actions
-        # Step 4:
 
         # 2. Actor Loss
 
         # 3. Critic Loss
 
-        # ADDITIONAL INFO:
-        # WorldModel optimized with: Prediction loss, Dynamics Loss and Representation Loss
-        # where Prediction loss trains Decoder and RewardPredictor via the symlog squared
-        # and the ContinuePredictor via logistic regression
-        # Dynamics Loss trains the sequence model to predict the next representation by minimizing KL-divergence
-        # between the predictor and the next stochastic representation.
+        pass
 
+    def _train_world_model(self):
+        """
+        Training the world model with data from the ReplayBuffer.
+        """
         pass

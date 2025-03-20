@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from .base import BaseNetwork, LayerDetails, HyperParams
 from .details import RSSM_LD
+from .util import dist
 
 
 class RSSM(BaseNetwork):
@@ -81,18 +82,11 @@ class RSSM(BaseNetwork):
         elif details.random_init:
             self._initialize_random_params()
 
-    def _reparametrize(self, mu, logvar):
-        """
-        Reparametrization trick to create a stochastic latent state, using mu and logvar for the distribution.
-        """
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-        return mu + eps * std
-
     def forward(self, h_t: torch.Tensor, z_t: torch.Tensor, a_t: torch.Tensor):
         """
         Forward pass through the network, overriding the base class.
         Predicts the next latent state given the previous state and action.
+        Used for one single step in the environment.
         """
         assert (
             torch.cat([h_t, z_t, a_t], dim=-1).shape[-1] == self.rnn.input_size
@@ -106,8 +100,30 @@ class RSSM(BaseNetwork):
         if self.stochastic:
             mu = self.fc_mu(h_t)
             logvar = self.fc_logvar(h_t)
-            z_hat_t = self._reparametrize(mu, logvar)
+            z_hat_t = dist(mu, logvar)
         else:
             z_hat_t = self.fc(h_t)  # Predicts the next latent state
 
-        return h_t, z_hat_t
+        return (
+            h_t,
+            z_hat_t,
+            {
+                "mean": mu,
+                "logvar": logvar,
+            },
+        )
+
+    def _init_state(self, batch_size: int):
+        """
+        Initializes the hidden state for the RNN.
+        """
+        return torch.zeros(self.rnn.num_layers, batch_size, self.rnn.hidden_size)
+
+    def rollout(self, observations, actions, dones, horizon):
+        """
+        Rollout predicted observations (recurrent and latent states) for a given horizon.
+        Return the real observations (recurrent, and latent states) and the reconstructed observations
+        """
+        # h_t = self._init_state(observations.shape[0])
+
+        pass
