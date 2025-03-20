@@ -189,6 +189,14 @@ class EnergyValley(MultiAgentEnv):
             self._state_cache[agent.id] = relevant_state
         return self._state_cache
 
+    def _get_additional_info(self) -> dict:
+        """Function to get additional information (market prices, etc.)"""
+        return {}
+
+    def _get_full_observation(self) -> dict:
+        """Function to get the full observation (agent state + additional information)"""
+        return self._combine_states() | self._get_additional_info()
+
     def _calculate_reward(self):
         """Function to calculate the reward"""
         reward = 0  # TODO: Implement reward calculation
@@ -229,8 +237,8 @@ class EnergyValley(MultiAgentEnv):
         for electrolyser in electrolysers:
             electrolyser._loss_discharge()
 
-        # Combine the states of all agents as observations
-        observations = self._combine_states()
+        # Get full observation
+        observations = self._get_full_observation()
 
         # Extract results and calculate next states
         self.extractor.from_model(self.model)
