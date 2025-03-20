@@ -95,7 +95,8 @@ class RSSM(BaseNetwork):
         # output is of shape (seq_len, batch, num_directions * hidden_size)
         # hn is of shape (num_layers * num_directions, batch, hidden_size)
         h_t = output[:, -1, :].unsqueeze(0)
-
+        mu = None
+        logvar = None
         # Predict the next latent state (stochastic or deterministic)
         if self.stochastic:
             mu = self.fc_mu(h_t)
