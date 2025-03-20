@@ -18,8 +18,7 @@ class WorldModel:
         self, observation_shape: tuple, action_shape: tuple, params, hyper_params
     ):
         """
-        Initializes the World Model: Encoder (x->z_t) -> RSSM -> Decoder (z_t->x_hat_t)
-        TODO: observation_shape is implemented as a tuple, might be better to do conversion from observation (dict) to tensor here.
+        Initializes the World Model: Encoder (x->z_t) -> RSSM -> Decoder (z_hat_t->x_hat_t)
         """
         self.rssm = RSSM(
             params=params,

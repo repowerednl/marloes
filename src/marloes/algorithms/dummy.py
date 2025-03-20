@@ -33,9 +33,8 @@ class Dummy(BaseAlgorithm):
         Gets observation shape, and actions shape from the environment.
         TODO: loading is not implemented yet. Only creates new WorldModel.
         """
-        obs_shape = (1, 1)  # TODO: get observation shape from environment
-        action_shape = (1, 1)  # TODO: get action shape from environment
-        # TODO: load parameters in if provided in config (if UID is passed)
+        obs_shape = self.environment.observation_space
+        action_shape = self.environment.action_space
         self.world_model = WorldModel(
             obs_shape, action_shape
         )  # also configurable with HyperParams, using defaults for now
