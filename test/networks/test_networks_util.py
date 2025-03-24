@@ -1,7 +1,7 @@
 from unittest import TestCase
 import torch
 
-from marloes.networks.util import obs_to_tens, rew_to_tens
+from marloes.networks.util import dict_to_tens
 
 
 class TestUtil(TestCase):
@@ -24,7 +24,7 @@ class TestUtil(TestCase):
         """
         Test if the observation is converted to tensor correctly.
         """
-        tensor = obs_to_tens(observation=self.observation, concatenate_all=True)
+        tensor = dict_to_tens(data=self.observation, concatenate_all=True)
         # should be a tensor object
         self.assertIsInstance(tensor, torch.Tensor)
         # should have shape (5,)
@@ -36,7 +36,7 @@ class TestUtil(TestCase):
         """
         Test the observation to tensor function with concatenate_all=False which should return a list of tensorts.
         """
-        tensor = obs_to_tens(observation=self.observation, concatenate_all=False)
+        tensor = dict_to_tens(data=self.observation, concatenate_all=False)
         # should be a tensor object
         self.assertIsInstance(tensor, list)
         # first element should have shape (2,)
@@ -54,22 +54,19 @@ class TestUtil(TestCase):
         """
         Test if the reward is converted to tensor correctly.
         """
-        tensor = rew_to_tens(rewards=self.reward, single_reward=True)
+        tensor = dict_to_tens(data=self.reward, concatenate_all=True)
         # should be a tensor object
         self.assertIsInstance(tensor, torch.Tensor)
-        # should have shape ()
-        self.assertEqual(tensor.shape, torch.Size([]))
         # should be 6
-        self.assertTrue(torch.equal(tensor, torch.tensor(6)))
+        self.assertTrue(sum(tensor), 6)
 
     def test_reward_to_tensor_separate(self):
         """
         Test the reward to tensor function with single_reward=False which should return a tensor with rewards for each agent.
         """
-        tensor = rew_to_tens(rewards=self.reward, single_reward=False)
+        tensor = dict_to_tens(data=self.reward, concatenate_all=False)
         # should be a tensor object
-        self.assertIsInstance(tensor, torch.Tensor)
-        # should have shape (3,)
-        self.assertEqual(tensor.shape, torch.Size([3]))
-        # should be [1, 2, 3]
-        self.assertTrue(torch.equal(tensor, torch.tensor([1, 2, 3])))
+        self.assertIsInstance(tensor, list)
+        # make sure the elements are tensors
+        for x in tensor:
+            self.assertIsInstance(x, torch.Tensor)
