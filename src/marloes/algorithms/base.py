@@ -49,7 +49,7 @@ class BaseAlgorithm(ABC):
             if epoch % 1000 == 0:
                 logging.info(f"Reached epoch {epoch}/{self.epochs}...")
 
-            obs = dict_to_tens(observation=observations, concatenate_all=True)
+            obs = dict_to_tens(observations, concatenate_all=True)
             # Get actions
             actions = self.get_actions(observations)
             # Step in the Environment
@@ -58,7 +58,7 @@ class BaseAlgorithm(ABC):
             acts = dict_to_tens(actions, concatenate_all=True)
             rew = dict_to_tens(rewards, concatenate_all=True)
             rew = torch.tensor([rew.sum()])
-            next_obs = dict_to_tens(observation=observations, concatenate_all=True)
+            next_obs = dict_to_tens(observations, concatenate_all=True)
             dones = dict_to_tens(dones, concatenate_all=True)
 
             RB.push(obs, acts, rew, next_obs, dones)

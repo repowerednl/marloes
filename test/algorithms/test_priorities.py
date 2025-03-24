@@ -71,7 +71,7 @@ class TestPriorities(unittest.TestCase):
     @patch("marloes.valley.env.EnergyValley.reset")
     def test_train(self, mock_reset, mock_step):
         mock_reset.return_value = {}, {}
-        mock_step.return_value = ({}, 2, 3, 4)
+        mock_step.return_value = ({}, {}, {}, {})
         self.alg.train()
         self.assertEqual(mock_reset.call_count, 1)
         self.assertEqual(mock_step.call_count, self.alg.epochs)
