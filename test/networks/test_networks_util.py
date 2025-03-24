@@ -10,7 +10,7 @@ class TestUtil(TestCase):
     """
 
     @classmethod
-    def setUp(cls):
+    def setUpClass(cls):
         cls.observation = {
             "agent1": {"nom": 1, "test": 2},
             "agent2": {"nom": 3, "test": 4, "extra": 5},
