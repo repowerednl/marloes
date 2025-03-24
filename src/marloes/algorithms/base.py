@@ -52,15 +52,16 @@ class BaseAlgorithm(ABC):
             obs = dict_to_tens(observation=observations, concatenate_all=True)
             # Get actions
             actions = self.get_actions(observations)
+            # Step in the Environment
             observations, rewards, dones, infos = self.environment.step(actions)
-            # Add to ReplayBuffer TODO: Implement ReplayBuffer MAR-141
+            # Add to ReplayBuffer
             acts = dict_to_tens(actions, concatenate_all=True)
             rew = dict_to_tens(rewards, concatenate_all=True)
             rew = torch.tensor([rew.sum()])
             next_obs = dict_to_tens(observation=observations, concatenate_all=True)
             dones = dict_to_tens(dones, concatenate_all=True)
 
-            RB.push(obs, acts, rew, next_obs)
+            RB.push(obs, acts, rew, next_obs, dones)
 
             # For x timesteps, perform the training step on a sample from the ReplayBuffer
             self._train_step(observations, rewards, dones, infos)
