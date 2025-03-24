@@ -1,6 +1,6 @@
 from unittest import TestCase
 import torch
-from marloes.algorithms.replaybuffer import ReplayBuffer, Transition
+from marloes.algorithms.replaybuffer import ReplayBuffer
 
 
 class ReplayBufferTestCase(TestCase):

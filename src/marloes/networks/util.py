@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 
 def dist(mu, logvar):
@@ -28,7 +29,10 @@ def obs_to_tens(
 
     for agent in observation:
         agent_state = observation[agent]
-        agent_tensor = torch.tensor(list(agent_state.values()), dtype=torch.float32)
+        # This is a dictionary with either scalars or numpy arrays, the result should be one dimensional tensor with all elements concatenated
+        agent_tensor = torch.tensor(
+            np.concatenate(list(agent_state.values())), dtype=torch.float32
+        )
         agent_tensors.append(agent_tensor)
 
     if concatenate_all:
