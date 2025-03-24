@@ -49,6 +49,7 @@ def get_accurate_observation(algorithm):
     """
     This function takes an algorithm, which has an environment.
     It should return an "observation" which can be used to mock the step/reset function.
+    # TODO: update to use get_full_observation() func from algorithm.environment
     """
     combined_states = algorithm.environment._combine_states()
     return combined_states
