@@ -1,6 +1,5 @@
 from .base import BaseAlgorithm
 from marloes.networks import WorldModel
-from marloes.networks.util import obs_to_tens
 import random
 from torch.optim import Adam
 import torch

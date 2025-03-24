@@ -22,7 +22,7 @@ from marloes.agents import (
     WindAgent,
 )
 from marloes.results.extractor import ExtensiveExtractor, Extractor
-from marloes.networks.util import obs_to_tens
+from marloes.networks.util import dict_to_tens
 
 
 class EnergyValley(MultiAgentEnv):
@@ -73,7 +73,7 @@ class EnergyValley(MultiAgentEnv):
         self._infos_cache = {agent.id: {} for agent in self.agents}
 
         # Add observation_shape and action_shape to the environment
-        self.observation_space = obs_to_tens(self._get_full_observation()).shape
+        self.observation_space = dict_to_tens(self._get_full_observation()).shape
         self.action_space = np.array([1 for _ in self.agents])
 
     def _initialize_agents(self, config: dict, algorithm_type: str) -> None:
