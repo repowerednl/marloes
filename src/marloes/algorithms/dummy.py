@@ -17,6 +17,7 @@ class Dummy(BaseAlgorithm):
         # initialize the world model
         self._initialize_world_model()
         self._initialize_actor_critic()
+        self.epochs = 10
 
     def _initialize_world_model(self):
         """
@@ -48,16 +49,16 @@ class Dummy(BaseAlgorithm):
 
     def _train_step(self, obs, actions, rewards, next_obs, dones):
         """
-        Dummy training step, simulating training process...
+        Dummy training step, simulating training process. next_obs are probably not used but added for now.
         """
-        # 1. World Model Loss (Batch?)
-        # Step 1: Encode observations to latent state to z_t, get the initial hidden state h_t
+        # 1. World Model Loss
+        d_loss, r_loss = self.world_model.learn(obs, actions, rewards, dones)
 
         # 2. Actor Loss
 
         # 3. Critic Loss
 
-        pass
+        return
 
     def _train_world_model(self):
         """

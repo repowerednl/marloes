@@ -42,11 +42,12 @@ class BaseAlgorithm(ABC):
             if epoch % 1000 == 0:
                 logging.info(f"Reached epoch {epoch}/{self.epochs}...")
 
-            # Fill ReplayBuffer
+            # Get actions
             actions = self.get_actions(observations)
             observations, rewards, dones, infos = self.environment.step(actions)
+            # Add to ReplayBuffer TODO: Implement ReplayBuffer
 
-            # For x timesteps, perform the training step
+            # For x timesteps, perform the training step on a sample from the ReplayBuffer
             self._train_step(observations, rewards, dones, infos)
 
             # After chunk is "full", it should be saved

@@ -73,47 +73,32 @@ class WorldModel:
         """
         pass
 
-    def forward(self, x, h_t, a_t):
-        """
-        Forward pass through the networks:
-        - Encoding observation (x) to latent state
-        - Predict next state through RSSM
-        - Decoding latent state to observation
-        - predicting actions and value #TODO
-        """
-        # TODO: sequentialCTCE?
-        z_t = self.encoder(x)
-        h_t, z_hat_t = self.rssm(h_t, z_t, a_t)
-        x_hat_t = self.decoder(z_hat_t)
-        # predictor
-        r_t = self.reward_predictor(h_t, z_hat_t)
-        c_t = self.continue_predictor(h_t, z_hat_t)
-
-        # return all outputs of the world model
-        return x_hat_t, z_hat_t, h_t, r_t, c_t
-
     def learn(self, obs, act, rew, dones):
         """
-        Learning step takes a batch? of observations, actions and rewards and dones
+        Learning step takes a batch of observations, actions and rewards and dones
         """
-        # z_t, z_details = self.encoder(obs)
-        # (recurrent_states, z_hat_t, z_hat_details) = self.rssm.rollout(
-        #     z_t, act, dones, horizon=10
-        # )
+        z_t, z_details = self.encoder(obs)
+        (h_t, z_hat_t, z_hat_details) = self.rssm.rollout(z_t, act, dones, horizon=10)
+        # z_t and z_hat_t are batches of latent states, the loss between the predicted and true latent states is calculated
+
         # First loss function, the dynamics loss trains the sequence model to predict the next representation as follows:
         # KL-divergence between the predicted latent state and the true latent state (with stop-gradient operator)
         # L_dyn = max(1,KL[sg(z_t) || z_hat_t]) #### stop gradient can be implemented with detach() on mu and log_var ####
-
+        dynamic_loss = torch.nn.functional.kl_div(
+            z_t, z_hat_t.detach(), reduction="batchmean"
+        )
         # Second loss function, the representation loss trains the representations to be more predictable
         # KL-divergence between the predicted latent state and the true latent state
         # L_rep = max(1,KL[z_t || sg(z_hat_t)]) #### stop gradient can be implemented with detach() on mu and log_var ####
-
+        representation_loss = torch.nn.functional.kl_div(
+            z_t.detach(), z_hat_t, reduction="batchmean"
+        )
         # Third loss function, the prediction loss is end-to-end training of the model
         # trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression
         # L_pred = - symlog_squared_loss(x_hat_t, x) - symlog_squared_loss(r_t, r) - symlog_squared_loss(c_t, c)
 
         # total_loss = (beta_dyn)*L_dyn + (beta_rep)*L_rep + (beta)*L_pred
-        pass
+        return dynamic_loss, representation_loss
 
 
 class Encoder(BaseNetwork):
