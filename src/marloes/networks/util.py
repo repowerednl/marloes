@@ -35,3 +35,14 @@ def obs_to_tens(
         return torch.cat(agent_tensors) if agent_tensors else torch.tensor([])
     else:
         return agent_tensors
+
+
+def rew_to_tens(rewards: dict, single_reward: bool = True) -> torch.Tensor:
+    """
+    Transforms a dictionary of rewards into a tensor.
+    Either returns a tensor with the reward for each agent (len(rewards)), or sums the rewards into a scalar tensor.
+    """
+    if single_reward:
+        return torch.tensor(sum(rewards.values()), dtype=torch.float32)
+    else:
+        return torch.tensor(list(rewards.values()), dtype=torch.float32)

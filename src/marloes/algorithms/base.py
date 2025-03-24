@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 from marloes.results.saver import Saver
 from marloes.valley.env import EnergyValley
+from marloes.networks.util import obs_to_tens
 
 
 class BaseAlgorithm(ABC):
@@ -45,7 +46,8 @@ class BaseAlgorithm(ABC):
             # Get actions
             actions = self.get_actions(observations)
             observations, rewards, dones, infos = self.environment.step(actions)
-            # Add to ReplayBuffer TODO: Implement ReplayBuffer
+            # Add to ReplayBuffer TODO: Implement ReplayBuffer MAR-141
+            # ReplayBuffer only wants tensors, so we need to convert the observations
 
             # For x timesteps, perform the training step on a sample from the ReplayBuffer
             self._train_step(observations, rewards, dones, infos)
