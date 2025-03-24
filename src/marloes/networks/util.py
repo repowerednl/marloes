@@ -73,7 +73,6 @@ def dict_to_tens(
         else:
             tensor = torch.tensor(value, dtype=torch.float32)
         tensors.append(tensor)
-    print("\n", tensors)
     if concatenate_all:
         # unsqueeze if dimension == 0
         tensors = [t.unsqueeze(0) if t.dim() == 0 else t for t in tensors]

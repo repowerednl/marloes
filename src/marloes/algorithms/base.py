@@ -1,9 +1,11 @@
 import logging
 from abc import ABC, abstractmethod
+import torch
 
 from marloes.results.saver import Saver
 from marloes.valley.env import EnergyValley
 from marloes.networks.util import dict_to_tens
+from marloes.algorithms.replaybuffer import ReplayBuffer
 
 
 class BaseAlgorithm(ABC):
@@ -38,19 +40,28 @@ class BaseAlgorithm(ABC):
         """
         logging.info("Starting training process...")
         observations, infos = self.environment.reset()
+        logging.info("Initializing ReplayBuffer...")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        capacity = 10000
+        RB = ReplayBuffer(capacity=capacity, device=device)
 
         for epoch in range(self.epochs):
             if epoch % 1000 == 0:
                 logging.info(f"Reached epoch {epoch}/{self.epochs}...")
 
-            # obs = dict_to_tens(observation=observations, concatenate_all=True)
+            obs = dict_to_tens(observation=observations, concatenate_all=True)
             # Get actions
             actions = self.get_actions(observations)
             observations, rewards, dones, infos = self.environment.step(actions)
             # Add to ReplayBuffer TODO: Implement ReplayBuffer MAR-141
-            # ReplayBuffer only wants tensors, so we need to convert the observations
-            # rew = dict_to_tens(rewards, single_reward=True)  # SUMS the rewards
-            # next_obs = dict_to_tens(observation=observations, concatenate_all=True)
+            acts = dict_to_tens(actions, concatenate_all=True)
+            rew = dict_to_tens(rewards, concatenate_all=True)
+            rew = torch.tensor([rew.sum()])
+            next_obs = dict_to_tens(observation=observations, concatenate_all=True)
+            dones = dict_to_tens(dones, concatenate_all=True)
+
+            RB.push(obs, acts, rew, next_obs)
+
             # For x timesteps, perform the training step on a sample from the ReplayBuffer
             self._train_step(observations, rewards, dones, infos)
 
