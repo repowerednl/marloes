@@ -122,17 +122,10 @@ class RSSM(BaseNetwork):
             mu = self.fc_mu(h_t)
             logvar = self.fc_logvar(h_t)
             z_t = dist(mu, logvar)
-            return z_t, {
-                "mean": mu,
-                "logvar": logvar,
-            }
+            return z_t, {"mean": mu, "logvar": logvar}
+
         z_t = self.fc(h_t)
-        mu = None
-        logvar = None
-        return z_t, {
-            "mean": mu,
-            "logvar": logvar,
-        }
+        return z_t, {"mean": None, "logvar": None}
 
     def _init_state(self, batch_size: int):
         """

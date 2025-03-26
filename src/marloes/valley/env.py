@@ -23,6 +23,7 @@ from marloes.agents import (
 )
 from marloes.results.extractor import ExtensiveExtractor, Extractor
 from marloes.networks.util import dict_to_tens
+import torch
 
 
 class EnergyValley(MultiAgentEnv):
@@ -74,7 +75,7 @@ class EnergyValley(MultiAgentEnv):
 
         # Add observation_shape and action_shape to the environment
         self.observation_space = dict_to_tens(self._get_full_observation()).shape
-        self.action_space = np.array([1 for _ in self.agents])
+        self.action_space = torch.Size([len(self.agents)])
 
     def _initialize_agents(self, config: dict, algorithm_type: str) -> None:
         """
@@ -219,7 +220,8 @@ class EnergyValley(MultiAgentEnv):
         for agent in self.agents:
             agent.asset.load_default_state(self.start_time)
         self.time_stamp = self.start_time
-        return self._combine_states(), {agent.id: {} for agent in self.agents}
+        self.i = 0
+        return self._get_full_observation(), {agent.id: {} for agent in self.agents}
 
     def step(self, actions: dict):
         """Function should return the observation, reward, done, info"""

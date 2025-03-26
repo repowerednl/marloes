@@ -32,9 +32,9 @@ class WorldModel:
     def __init__(
         self,
         observation_shape: tuple,
-        action_shape: tuple,
-        params,
-        hyper_params: HyperParams,
+        action_shape: tuple,  # Unused now, but added if we want init more dynamically.
+        params: dict = None,
+        hyper_params: HyperParams = None,
     ):
         """
         Initializes the World Model: Encoder (x->z_t) -> RSSM -> Decoder (z_hat_t->x_hat_t)
