@@ -29,7 +29,7 @@ class ReplayBufferTestCase(TestCase):
         self.RB_gpu.push(obs, action, reward, next_obs, done)
         self.assertEqual(len(self.RB_gpu), 1)
 
-    def test_sample(self):
+    def test_sample_random(self):
         obs = torch.tensor([1.0])
         action = torch.tensor([0.0])
         reward = torch.tensor([1.0])
@@ -39,12 +39,30 @@ class ReplayBufferTestCase(TestCase):
         for _ in range(self.capacity):
             self.RB_cpu.push(obs, action, reward, next_obs, done)
 
-        sample = self.RB_cpu.sample(10)
+        sample = self.RB_cpu.sample(10, True)
         self.assertEqual(len(sample["obs"]), 10)
         self.assertEqual(len(sample["action"]), 10)
         self.assertEqual(len(sample["reward"]), 10)
         self.assertEqual(len(sample["next_obs"]), 10)
         self.assertEqual(len(sample["done"]), 10)
+
+    def test_sample_sequential(self):
+        obs = torch.tensor([1.0])
+        action = torch.tensor([0.0])
+        reward = torch.tensor([0.0])
+        next_obs = torch.tensor([2.0])
+        done = torch.tensor([0.0])
+
+        for _ in range(self.capacity):
+            self.RB_cpu.push(obs, action, reward, next_obs, done)
+            reward = torch.tensor([reward.item() + 1.0])
+
+        size = 10
+
+        sample = self.RB_cpu._sequential_sample(size, True)
+        self.assertEqual(len(sample["obs"]), size)
+        # also make sure the reward value is capacity - size, as most recent transitions are sampled
+        self.assertEqual(sample["reward"][0].item(), self.capacity - size)
 
     def test_clear(self):
         self.RB_cpu.clear()
