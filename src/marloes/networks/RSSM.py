@@ -57,11 +57,12 @@ class RSSM(BaseNetwork):
         #TODO: add "type" option to details (recurrent and dense), requires changes in validation
         """
         self._validate_rssm(details)
-        # Initialize the RNN
+        # Initialize the RNN for SEQUENCE MODEL:
         self.rnn = nn.GRU(
             **details.hidden["recurrent"]
         )  # Recurrent states produces h_t
 
+        # DYNAMICS MODEL:
         # Initialize the Deterministic dense layer to predict z_hat
         self.fc = nn.Linear(
             details.hidden["recurrent"]["hidden_size"],
@@ -91,28 +92,47 @@ class RSSM(BaseNetwork):
         assert (
             torch.cat([h_t, z_t, a_t], dim=-1).shape[-1] == self.rnn.input_size
         ), "RSSM_LD is not configured correctly. Combined input size does not match the RNN input size."
-        output, hn = self.rnn(torch.cat([h_t, z_t, a_t], dim=-1))
-        # output is of shape (seq_len, batch, num_directions * hidden_size)
-        # hn is of shape (num_layers * num_directions, batch, hidden_size)
-        h_t = output[:, -1, :].unsqueeze(0)
-        mu = None
-        logvar = None
-        # Predict the next latent state (stochastic or deterministic)
-        if self.stochastic:
-            mu = self.fc_mu(h_t)
-            logvar = self.fc_logvar(h_t)
-            z_hat_t = dist(mu, logvar)
-        else:
-            z_hat_t = self.fc(h_t)  # Predicts the next latent state
+        _, hidden = self._get_recurrent_state(h_t, z_t, a_t)
+
+        # h_t should have the right shape to be passed to the next step
+        h_t = hidden[-1].unsqueeze(0)
+
+        # Predict the latent state from the hidden state
+        prior, prior_details = self._get_latent_state(h_t)
 
         return (
             h_t,
-            z_hat_t,
-            {
+            prior,
+            prior_details,
+        )
+
+    def _get_recurrent_state(
+        self, h_t: torch.Tensor, z_t: torch.Tensor, a_t: torch.Tensor
+    ):
+        """
+        Predicts the next hidden state from the previous hidden state, latent state, and action.
+        """
+        return self.rnn(torch.cat([h_t, z_t, a_t], dim=-1))
+
+    def _get_latent_state(self, h_t: torch.Tensor) -> tuple[torch.Tensor, dict]:
+        """
+        Predicts the latent state from the hidden state, method depends on stochasticity.
+        """
+        if self.stochastic:
+            mu = self.fc_mu(h_t)
+            logvar = self.fc_logvar(h_t)
+            z_t = dist(mu, logvar)
+            return z_t, {
                 "mean": mu,
                 "logvar": logvar,
-            },
-        )
+            }
+        z_t = self.fc(h_t)
+        mu = None
+        logvar = None
+        return z_t, {
+            "mean": mu,
+            "logvar": logvar,
+        }
 
     def _init_state(self, batch_size: int):
         """
@@ -120,11 +140,16 @@ class RSSM(BaseNetwork):
         """
         return torch.zeros(self.rnn.num_layers, batch_size, self.rnn.hidden_size)
 
-    def rollout(self, observations, actions, dones, horizon):
+    def rollout(self, posteriors, actions, dones) -> tuple[list, list]:
         """
-        Rollout predicted observations (recurrent and latent states) for a given horizon.
-        Return the real observations (recurrent, and latent states) and the reconstructed observations
+        Returns the predicted latent states (priors) for the entire rollout.
         """
-        # h_t = self._init_state(observations.shape[0])
-
-        pass
+        h_t = self._init_state(posteriors.shape[0])  # should be batch size
+        priors = []
+        priors_details = []
+        for z_t, a_t, d in zip(posteriors, actions, dones):
+            # Getting the predicted latent states from the network, which requires h_t, z_t and a_T
+            h_t, prior, prior_details = self.forward(h_t, z_t, a_t)
+            priors.append(prior)
+            priors_details.append(prior_details)
+        return priors, priors_details

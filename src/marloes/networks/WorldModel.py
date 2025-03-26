@@ -77,21 +77,22 @@ class WorldModel:
         """
         Learning step takes a batch of observations, actions and rewards and dones
         """
-        z_t, z_details = self.encoder(obs)
-        (h_t, z_hat_t, z_hat_details) = self.rssm.rollout(z_t, act, dones, horizon=10)
-        # z_t and z_hat_t are batches of latent states, the loss between the predicted and true latent states is calculated
+        # Posteriors are the latent states from the Encoder
+        z_posteriors, post_details = self.encoder(obs)
+        # Priors are the predicted latent states from the RSSM
+        z_priors, prior_details = self.rssm.rollout(z_posteriors, act, dones)
 
         # First loss function, the dynamics loss trains the sequence model to predict the next representation as follows:
         # KL-divergence between the predicted latent state and the true latent state (with stop-gradient operator)
         # L_dyn = max(1,KL[sg(z_t) || z_hat_t]) #### stop gradient can be implemented with detach() on mu and log_var ####
         dynamic_loss = torch.nn.functional.kl_div(
-            z_t, z_hat_t.detach(), reduction="batchmean"
+            z_priors, z_posteriors.detach(), reduction="batchmean"
         )
         # Second loss function, the representation loss trains the representations to be more predictable
         # KL-divergence between the predicted latent state and the true latent state
         # L_rep = max(1,KL[z_t || sg(z_hat_t)]) #### stop gradient can be implemented with detach() on mu and log_var ####
         representation_loss = torch.nn.functional.kl_div(
-            z_t.detach(), z_hat_t, reduction="batchmean"
+            z_priors.detach(), z_posteriors, reduction="batchmean"
         )
         # Third loss function, the prediction loss is end-to-end training of the model
         # trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression
@@ -113,7 +114,7 @@ class Encoder(BaseNetwork):
         self.fc_mu = nn.Linear(hidden_dim, latent_dim)
         self.fc_logvar = nn.Linear(hidden_dim, latent_dim)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
         """
         Passes observations (x) through the MLP to predict latent state.
         """
