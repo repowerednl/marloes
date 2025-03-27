@@ -42,6 +42,7 @@ class WorldModel:
         self.rssm = RSSM(
             params=params,
             hyper_params=hyper_params,
+            stochastic=True,
         )
         self.encoder = Encoder(observation_shape[0], self.rssm.fc.out_features)
         # RSSM in between, is created first to ensure the link between encoder and decoder
@@ -73,14 +74,14 @@ class WorldModel:
         """
         pass
 
-    def learn(self, obs, act, rew, dones):
+    def learn(self, obs, act, rew):
         """
         Learning step takes a batch of observations, actions and rewards and dones
         """
-        # Posteriors are the latent states from the Encoder
+        # Posteriors are the latent states from the Encoder (doing this in a batch)
         z_posteriors, post_details = self.encoder(obs)
-        # Priors are the predicted latent states from the RSSM
-        z_priors, prior_details = self.rssm.rollout(z_posteriors, act, dones)
+        # Priors are the predicted latent states from the RSSM (doing this in rollout, one by one for the recurrent state)
+        z_priors, prior_details = self.rssm.rollout(z_posteriors, act)
 
         # First loss function, the dynamics loss trains the sequence model to predict the next representation as follows:
         # KL-divergence between the predicted latent state and the true latent state (with stop-gradient operator)
@@ -118,7 +119,9 @@ class Encoder(BaseNetwork):
         """
         Passes observations (x) through the MLP to predict latent state.
         """
-        x = F.relu(self.fc1(x))
+        x = F.relu(
+            self.fc1(x.float())
+        )  # float() added to ensure compatibility with torch.tensor float32
         mu = self.fc_mu(x)
         logvar = self.fc_logvar(x)
         return dist(mu, logvar), {
@@ -143,7 +146,7 @@ class Decoder(BaseNetwork):
         Receives latent state z_t -> which is a tensor.
         Passes through the MLP to predict the next observation.
         """
-        x = F.relu(self.fc1(z_t))
+        x = F.relu(self.fc1(z_t.float()))
         x_hat_t = self.fc2(x)
         return x_hat_t
 

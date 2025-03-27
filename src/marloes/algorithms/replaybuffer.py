@@ -3,7 +3,7 @@ from collections import deque, namedtuple
 import torch
 
 # Define a transition structure
-Transition = namedtuple("Transition", ["obs", "action", "reward", "next_obs", "done"])
+Transition = namedtuple("Transition", ["obs", "action", "reward"])
 
 
 class ReplayBuffer:
@@ -21,11 +21,11 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.buffer)
 
-    def push(self, obs, action, reward, next_obs, done):
+    def push(self, obs, action, reward):
         """
         Stores a transition in the buffer.
         """
-        self.buffer.append(Transition(obs, action, reward, next_obs, done))
+        self.buffer.append(Transition(obs, action, reward))
 
     def sample(
         self, batch_size: int, random: bool = False, use_most_recent: bool = True
@@ -49,15 +49,11 @@ class ReplayBuffer:
         obs = torch.stack(batch.obs).to(self.device)
         action = torch.stack(batch.action).to(self.device)
         reward = torch.stack(batch.reward).to(self.device)
-        next_obs = torch.stack(batch.next_obs).to(self.device)
-        done = torch.stack(batch.done).to(self.device)
 
         return {
             "obs": obs,
             "action": action,
             "reward": reward,
-            "next_obs": next_obs,
-            "done": done,
         }
 
     def _sequential_sample(self, batch_size: int, use_most_recent: bool = True):
@@ -85,15 +81,11 @@ class ReplayBuffer:
         obs = torch.stack(batch.obs).to(self.device)
         action = torch.stack(batch.action).to(self.device)
         reward = torch.stack(batch.reward).to(self.device)
-        next_obs = torch.stack(batch.next_obs).to(self.device)
-        done = torch.stack(batch.done).to(self.device)
 
         return {
             "obs": obs,
             "action": action,
             "reward": reward,
-            "next_obs": next_obs,
-            "done": done,
         }
 
     def clear(self):

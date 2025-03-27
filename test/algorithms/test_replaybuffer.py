@@ -20,41 +20,33 @@ class ReplayBufferTestCase(TestCase):
         obs = torch.tensor([1.0])
         action = torch.tensor([0.0])
         reward = torch.tensor([1.0])
-        next_obs = torch.tensor([2.0])
-        done = torch.tensor([0.0])
 
-        self.RB_cpu.push(obs, action, reward, next_obs, done)
+        self.RB_cpu.push(obs, action, reward)
         self.assertEqual(len(self.RB_cpu), 1)
 
-        self.RB_gpu.push(obs, action, reward, next_obs, done)
+        self.RB_gpu.push(obs, action, reward)
         self.assertEqual(len(self.RB_gpu), 1)
 
     def test_sample_random(self):
         obs = torch.tensor([1.0])
         action = torch.tensor([0.0])
         reward = torch.tensor([1.0])
-        next_obs = torch.tensor([2.0])
-        done = torch.tensor([0.0])
 
         for _ in range(self.capacity):
-            self.RB_cpu.push(obs, action, reward, next_obs, done)
+            self.RB_cpu.push(obs, action, reward)
 
         sample = self.RB_cpu.sample(10, True)
         self.assertEqual(len(sample["obs"]), 10)
         self.assertEqual(len(sample["action"]), 10)
         self.assertEqual(len(sample["reward"]), 10)
-        self.assertEqual(len(sample["next_obs"]), 10)
-        self.assertEqual(len(sample["done"]), 10)
 
     def test_sample_sequential(self):
         obs = torch.tensor([1.0])
         action = torch.tensor([0.0])
         reward = torch.tensor([0.0])
-        next_obs = torch.tensor([2.0])
-        done = torch.tensor([0.0])
 
         for _ in range(self.capacity):
-            self.RB_cpu.push(obs, action, reward, next_obs, done)
+            self.RB_cpu.push(obs, action, reward)
             reward = torch.tensor([reward.item() + 1.0])
 
         size = 10

@@ -112,7 +112,8 @@ class RSSM(BaseNetwork):
         """
         Predicts the next hidden state from the previous hidden state, latent state, and action.
         """
-        return self.rnn(torch.cat([h_t, z_t, a_t], dim=-1))
+        x = torch.cat([h_t, z_t, a_t], dim=-1).float()
+        return self.rnn(x)
 
     def _get_latent_state(self, h_t: torch.Tensor) -> tuple[torch.Tensor, dict]:
         """
@@ -133,16 +134,23 @@ class RSSM(BaseNetwork):
         """
         return torch.zeros(self.rnn.num_layers, batch_size, self.rnn.hidden_size)
 
-    def rollout(self, posteriors, actions, dones) -> tuple[list, list]:
+    def rollout(self, posteriors, actions) -> tuple[list, list]:
         """
         Returns the predicted latent states (priors) for the entire rollout.
+        Input:
+        - Posteriors: tensor of Size([seq_length, batch_size, latent_dim])
+        - Actions: tensor of Size([seq_length, batch_size, action_dim])
         """
-        h_t = self._init_state(posteriors.shape[0])  # should be batch size
+        h_t = self._init_state(1)  # Batch size of 1: single rollout
+        h_t = h_t[-1].unsqueeze(0)  # Take the last layer and unsqueeze for batch dim
+        T = posteriors.size(0)
         priors = []
         priors_details = []
-        for z_t, a_t, d in zip(posteriors, actions, dones):
-            # Getting the predicted latent states from the network, which requires h_t, z_t and a_T
+        for t in range(T):
+            z_t = posteriors[t].unsqueeze(0).unsqueeze(0)
+            a_t = actions[t].unsqueeze(0).unsqueeze(0)
             h_t, prior, prior_details = self.forward(h_t, z_t, a_t)
             priors.append(prior)
             priors_details.append(prior_details)
-        return priors, priors_details
+        # priors is a list of tensors, convert to a single tensor
+        return torch.stack(priors, dim=1), priors_details

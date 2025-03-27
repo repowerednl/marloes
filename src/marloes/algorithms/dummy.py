@@ -3,8 +3,10 @@ from marloes.networks.WorldModel import WorldModel
 import random
 from torch.optim import Adam
 import torch
+import pytest
 
 
+@pytest.mark.slow
 class Dummy(BaseAlgorithm):
     __name__ = "Dummy"
 

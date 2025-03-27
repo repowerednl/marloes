@@ -1,5 +1,6 @@
 from unittest import TestCase
 from unittest.mock import patch
+import pytest
 
 import pandas as pd
 import numpy as np
@@ -34,6 +35,7 @@ def get_new_config() -> dict:
     }
 
 
+@pytest.mark.slow
 class DummyTestCase(TestCase):
     """
     Dummy TestCase to check creation of an actual algorithm (and WorldModel in it).
@@ -43,7 +45,10 @@ class DummyTestCase(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         Agent._id_counters = {}
-        cls.alg = Dummy(config=get_new_config())
+        with patch(
+            "marloes.results.saver.Saver._update_simulation_number", return_value=0
+        ):
+            cls.alg = Dummy(config=get_new_config())
 
     def test_init(self):
         self.assertEqual(self.alg.epochs, 10)
