@@ -7,6 +7,8 @@ import numpy as np
 
 from marloes.algorithms.dummy import Dummy
 from marloes.agents.base import Agent
+from marloes.networks.ActorCritic import ActorCritic
+from marloes.networks.WorldModel import WorldModel
 
 
 def get_new_config() -> dict:
@@ -57,3 +59,24 @@ class DummyTestCase(TestCase):
         self.assertEqual(self.alg.environment.observation_space, (2888,))
         # environment should have action_space torch.Size([3])
         self.assertEqual(self.alg.environment.action_space, (3,))
+        # there should be a WorldModel and an ActorCritic
+        self.assertIsInstance(self.alg.world_model, WorldModel)
+        self.assertIsInstance(self.alg.actor_critic, ActorCritic)
+
+    def test_get_actions(self):
+        """
+        Testing the actions (calling ActorCritic.act) and returning a dictionary.
+        """
+        pass
+
+    def test__train_step(self):
+        """
+        Testing the training step of the Dummy algorithm.
+        """
+        pass
+
+    def test_train(self):
+        """
+        Testing the training process of the Dummy algorithm.
+        """
+        pass

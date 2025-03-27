@@ -57,6 +57,8 @@ class RSSM(BaseNetwork):
         #TODO: add "type" option to details (recurrent and dense), requires changes in validation
         """
         self._validate_rssm(details)
+        self.latent_state_size = details.hidden["dense"]["out_features"]
+        self.hidden_size = details.hidden["recurrent"]["hidden_size"]
         # Initialize the RNN for SEQUENCE MODEL:
         self.rnn = nn.GRU(
             **details.hidden["recurrent"]
@@ -65,17 +67,17 @@ class RSSM(BaseNetwork):
         # DYNAMICS MODEL:
         # Initialize the Deterministic dense layer to predict z_hat
         self.fc = nn.Linear(
-            details.hidden["recurrent"]["hidden_size"],
-            details.hidden["dense"]["out_features"],
+            self.hidden_size,
+            self.latent_state_size,
         )
         # Initialize the Stochastic dense layers to predict z_hat
         self.fc_mu = nn.Linear(
-            details.hidden["recurrent"]["hidden_size"],
-            details.hidden["dense"]["out_features"],
+            self.hidden_size,
+            self.latent_state_size,
         )
         self.fc_logvar = nn.Linear(
-            details.hidden["recurrent"]["hidden_size"],
-            details.hidden["dense"]["out_features"],
+            self.hidden_size,
+            self.latent_state_size,
         )
 
         if params:
