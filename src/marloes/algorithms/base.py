@@ -27,6 +27,9 @@ class BaseAlgorithm(ABC):
         self.chunk_size = config.get("chunk_size", 10000)
         self.epochs = config.get("epochs", 100000)
         self.environment = EnergyValley(config, self.__class__.__name__)
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )  # for future ticket, make sure this can run on GPU instead of CPU
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -42,8 +45,7 @@ class BaseAlgorithm(ABC):
         observations, infos = self.environment.reset()
         capacity = 1000 * update_step
         logging.info(f"Initializing ReplayBuffer with capacity {capacity}...")
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        RB = ReplayBuffer(capacity=capacity, device=device)
+        RB = ReplayBuffer(capacity=capacity, device=self.device)
 
         for epoch in range(self.epochs):
             if epoch % 1000 == 0:
