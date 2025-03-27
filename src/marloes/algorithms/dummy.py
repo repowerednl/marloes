@@ -3,10 +3,8 @@ from marloes.networks.WorldModel import WorldModel
 import random
 from torch.optim import Adam
 import torch
-import pytest
 
 
-@pytest.mark.slow
 class Dummy(BaseAlgorithm):
     __name__ = "Dummy"
 
@@ -50,12 +48,14 @@ class Dummy(BaseAlgorithm):
         """
         return {agent_id: random.uniform(-1, 1) for agent_id in observations.keys()}
 
-    def _train_step(self, obs, actions, rewards, next_obs, dones):
+    def _train_step(self, obs, actions, rewards, dones):
         """
         Dummy training step, simulating training process. next_obs are probably not used but added for now.
         """
         # 1. World Model Loss
-        d_loss, r_loss = self.world_model.learn(obs, actions, rewards, dones)
+        d_loss, r_loss, p_loss, total_loss = self.world_model.learn(
+            obs, actions, rewards, dones
+        )
 
         # 2. Actor Loss
 

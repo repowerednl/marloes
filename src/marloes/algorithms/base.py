@@ -32,7 +32,7 @@ class BaseAlgorithm(ABC):
         super().__init_subclass__(**kwargs)
         BaseAlgorithm._registry[cls.__name__] = cls
 
-    def train(self) -> None:
+    def train(self, update_step: int = 100) -> None:
         """
         Executes the training process for the algorithm.
 
@@ -40,35 +40,37 @@ class BaseAlgorithm(ABC):
         """
         logging.info("Starting training process...")
         observations, infos = self.environment.reset()
-        # logging.info("Initializing ReplayBuffer...")
-        # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        # capacity = 10000
-        # RB = ReplayBuffer(capacity=capacity, device=device)
+        capacity = 1000 * update_step
+        logging.info(f"Initializing ReplayBuffer with capacity {capacity}...")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        RB = ReplayBuffer(capacity=capacity, device=device)
 
         for epoch in range(self.epochs):
             if epoch % 1000 == 0:
                 logging.info(f"Reached epoch {epoch}/{self.epochs}...")
 
-            # obs = dict_to_tens(observations, concatenate_all=True)
-            # Get actions
+            # Gathering experiences
+            obs = dict_to_tens(observations, concatenate_all=True)
             actions = self.get_actions(observations)
-            # Step in the Environment
             observations, rewards, dones, infos = self.environment.step(actions)
             # Add to ReplayBuffer
-            # acts = dict_to_tens(actions, concatenate_all=True)
-            # rew = dict_to_tens(rewards, concatenate_all=True)
-            # rew = torch.tensor([rew.sum()])
-            # next_obs = dict_to_tens(observations, concatenate_all=True)
-            # dones = dict_to_tens(dones, concatenate_all=True)
+            acts = dict_to_tens(actions, concatenate_all=True)
+            rew = dict_to_tens(rewards, concatenate_all=True)
+            rew = torch.tensor([rew.sum()])
+            RB.push(obs, acts, rew)
 
-            # RB.push(obs, acts, rew, next_obs, dones)
-
-            # For x timesteps, perform the training step on a sample (x) from the ReplayBuffer
-            # passing artificial dones: a tensor with all continuation (1) flags, except for the last one (0) - length x
-            sample_size = 10
-            artificial_dones = torch.ones(sample_size)
-            artificial_dones[-1] = 0
-            self._train_step(observations, rewards, dones, infos)
+            # For x timesteps, perform the training step on a sample (update_step size) from the ReplayBuffer
+            if epoch % update_step == 0 and epoch != 0:
+                logging.info("Performing training step...")
+                sample = RB.sample(update_step, True)
+                dones = torch.ones(update_step)
+                # passing artificial dones: a tensor with all continuation (1) flags, except for the last one (0) - length x
+                dones[-1] = 0
+                self._train_step(
+                    sample["obs"],
+                    sample["action"],
+                    sample["reward"],
+                )
 
             # After chunk is "full", it should be saved
             if self.chunk_size != 0 and epoch % self.chunk_size == 0 and epoch != 0:
