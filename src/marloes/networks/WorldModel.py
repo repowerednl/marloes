@@ -67,6 +67,11 @@ class WorldModel:
             lr=0.001,
             weight_decay=1e-4,
         )
+        self.beta_weights = {
+            "pred": 1.0,
+            "dyn": 1.0,
+            "rep": 0.1,
+        }
 
     def imagine(self, x, actor):
         """
@@ -74,14 +79,24 @@ class WorldModel:
         """
         pass
 
-    def learn(self, obs, act, rew):
+    def learn(self, obs, act, rew, dones):
         """
         Learning step takes a batch of observations, actions and rewards and dones
         """
+        x = obs
         # Posteriors are the latent states from the Encoder (doing this in a batch)
-        z_posteriors, post_details = self.encoder(obs)
+        z_posteriors, post_details = self.encoder(x)
         # Priors are the predicted latent states from the RSSM (doing this in rollout, one by one for the recurrent state)
-        z_priors, prior_details = self.rssm.rollout(z_posteriors, act)
+        z_priors, prior_details, h_ts = self.rssm.rollout(z_posteriors, act)
+
+        # Determine the predicted observation from the latent state
+        x_hat_t = self.decoder(z_posteriors)
+
+        h_ts = h_ts.squeeze(1).squeeze(1)
+
+        # Use the RewardPredictor and ContinuePredictor to predict the reward and continue signal
+        r_ts = self.reward_predictor(h_ts, z_posteriors)
+        c_ts = self.continue_predictor(h_ts, z_posteriors)
 
         # First loss function, the dynamics loss trains the sequence model to predict the next representation as follows:
         # KL-divergence between the predicted latent state and the true latent state (with stop-gradient operator)
@@ -95,12 +110,21 @@ class WorldModel:
         representation_loss = torch.nn.functional.kl_div(
             z_priors.detach(), z_posteriors, reduction="batchmean"
         )
+
         # Third loss function, the prediction loss is end-to-end training of the model
         # trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression
-        # L_pred = - symlog_squared_loss(x_hat_t, x) - symlog_squared_loss(r_t, r) - symlog_squared_loss(c_t, c)
+        prediction_loss = (
+            -symlog_squared_loss(x_hat_t, x)
+            - symlog_squared_loss(r_ts.squeeze(-1), rew)
+            - F.binary_cross_entropy(c_ts.squeeze(-1), dones)
+        )
 
-        # total_loss = (beta_dyn)*L_dyn + (beta_rep)*L_rep + (beta)*L_pred
-        return dynamic_loss, representation_loss
+        total_loss = (
+            self.beta_weights["dyn"] * dynamic_loss
+            + self.beta_weights["rep"] * representation_loss
+            + self.beta_weights["pred"] * prediction_loss
+        )
+        return dynamic_loss, representation_loss, prediction_loss, total_loss
 
 
 class Encoder(BaseNetwork):
@@ -154,7 +178,7 @@ class Decoder(BaseNetwork):
 class RewardPredictor(BaseNetwork):
     """
     Class that predicts the reward from the latent state.
-    forward pass: (h_t, z_t) -> r_t
+    forward pass: (h_t, z_t (posterior)) -> r_t
     """
 
     def __init__(self, hidden_dim: int, latent_dim: int):
@@ -175,7 +199,7 @@ class RewardPredictor(BaseNetwork):
 class ContinuePredictor(BaseNetwork):
     """
     Class that predicts whether to continue from the latent state.
-    A binary classification task; (h_t, z_t) -> c_t = [0,1].
+    A binary classification task; (h_t, z_t (posterior)) -> c_t = [0,1].
     """
 
     def __init__(self, hidden_dim: int, latent_dim: int):

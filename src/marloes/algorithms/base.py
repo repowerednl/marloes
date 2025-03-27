@@ -63,7 +63,11 @@ class BaseAlgorithm(ABC):
 
             # RB.push(obs, acts, rew, next_obs, dones)
 
-            # For x timesteps, perform the training step on a sample from the ReplayBuffer
+            # For x timesteps, perform the training step on a sample (x) from the ReplayBuffer
+            # passing artificial dones: a tensor with all continuation (1) flags, except for the last one (0) - length x
+            sample_size = 10
+            artificial_dones = torch.ones(sample_size)
+            artificial_dones[-1] = 0
             self._train_step(observations, rewards, dones, infos)
 
             # After chunk is "full", it should be saved

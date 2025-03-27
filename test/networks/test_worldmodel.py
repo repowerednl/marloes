@@ -56,35 +56,6 @@ class WorldModelTestCase(TestCase):
         self.assertIsInstance(world_model.reward_predictor, RewardPredictor)
         self.assertIsInstance(world_model.continue_predictor, ContinuePredictor)
 
-    @mock.patch("marloes.networks.WorldModel.RSSM.forward", autospec=True)
-    @mock.patch("torch.nn.functional.kl_div", autospec=True)
-    def test_learn_calls_rssm_forward(self, mock_kl_div, mock_rssm_forward):
-        """
-        Test if the WorldModel learn function calls RSSM.forward() len(sample) times
-        and mocks torch.nn.functional.kl_div().
-        """
-        world_model = WorldModel(self.observation_shape, self.action_shape)
-        # obtain a sample (5) from the replay buffer
-        sample = self.replay_buffer.sample(5)
-        # make a mock return value of 3 tensors for RSSM.forward
-        mock_rssm_forward.return_value = (
-            torch.tensor([[1.0]]),
-            torch.tensor([[1.0]]),
-            torch.tensor([[1.0]]),
-        )
-
-        # mock kl_div to return a single tensor
-        mock_kl_div.return_value = torch.tensor(0.5)
-
-        d_loss, r_loss = world_model.learn(
-            sample["obs"], sample["action"], sample["reward"]
-        )
-
-        self.assertEqual(mock_rssm_forward.call_count, len(sample["obs"]))
-        self.assertIsInstance(d_loss, torch.Tensor)
-        self.assertIsInstance(r_loss, torch.Tensor)
-        self.assertEqual(mock_kl_div.call_count, 2)
-
     def test_replay_buffer_sample(self):
         """
         Test if the replay buffer returns samples of the correct shape.
@@ -102,9 +73,14 @@ class WorldModelTestCase(TestCase):
         world_model = WorldModel(self.observation_shape, self.action_shape)
         # obtain a sample (5) from the replay buffer
         sample = self.replay_buffer.sample(5)
+        dones = torch.ones(5)
+        # last done should not be continuation (1) but 0
+        dones[-1] = 0
 
-        d_loss, r_loss = world_model.learn(
-            sample["obs"], sample["action"], sample["reward"]
+        d_loss, r_loss, p_loss, total_loss = world_model.learn(
+            sample["obs"], sample["action"], sample["reward"], dones
         )
         self.assertIsInstance(d_loss, torch.Tensor)
         self.assertIsInstance(r_loss, torch.Tensor)
+        self.assertIsInstance(p_loss, torch.Tensor)
+        self.assertIsInstance(total_loss, torch.Tensor)

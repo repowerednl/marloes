@@ -146,11 +146,13 @@ class RSSM(BaseNetwork):
         T = posteriors.size(0)
         priors = []
         priors_details = []
+        h_ts = []
         for t in range(T):
             z_t = posteriors[t].unsqueeze(0).unsqueeze(0)
             a_t = actions[t].unsqueeze(0).unsqueeze(0)
             h_t, prior, prior_details = self.forward(h_t, z_t, a_t)
             priors.append(prior)
             priors_details.append(prior_details)
-        # priors is a list of tensors, convert to a single tensor
-        return torch.stack(priors, dim=1), priors_details
+            h_ts.append(h_t)
+        # priors (and h_ts) is a list of tensors, convert to a single tensor
+        return torch.stack(priors, dim=0), priors_details, torch.stack(h_ts, dim=0)
