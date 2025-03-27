@@ -1,5 +1,6 @@
 from .base import BaseAlgorithm
 from marloes.networks.WorldModel import WorldModel
+from marloes.networks.ActorCritic import ActorCritic
 import random
 from torch.optim import Adam
 import torch
@@ -25,8 +26,6 @@ class Dummy(BaseAlgorithm):
         """
         obs_shape = self.environment.observation_space
         act_shape = self.environment.action_space
-        print(f"Observation Space: {obs_shape}")
-        print(f"Action Space: {act_shape}")
         self.world_model = WorldModel(
             obs_shape, act_shape
         )  # also configurable with HyperParams, using defaults for now
@@ -35,11 +34,6 @@ class Dummy(BaseAlgorithm):
         """
         Initializes the actor and critic networks.
         """
-
-        class ActorCritic:  # TODO: use actual implementation
-            def __init__(self):
-                self.modules = []
-
         self.actor_critic = ActorCritic()
 
     def get_actions(self, observations):
