@@ -13,7 +13,7 @@ class ActorCritic:
     - The Critic aims to predict the value of the current state.
     """
 
-    def __init__(self, input: int, output: int, hidden_size: int = 256):
+    def __init__(self, input: int, output: int, hidden_size: int = 64):
         """
         Initializes the ActorCritic network.
         """
