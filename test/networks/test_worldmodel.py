@@ -13,7 +13,7 @@ from marloes.networks.WorldModel import (
 from marloes.networks.ActorCritic import Actor
 from marloes.networks.RSSM import RSSM
 from marloes.networks.details import RSSM_LD
-from marloes.algorithms.replaybuffer import ReplayBuffer
+from marloes.data.replaybuffer import ReplayBuffer
 
 
 class WorldModelTestCase(TestCase):
