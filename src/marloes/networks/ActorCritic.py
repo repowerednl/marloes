@@ -115,6 +115,8 @@ class Actor(nn.Module):
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc_mean = nn.Linear(hidden_size, output_size)
         self.log_std = nn.Parameter(torch.zeros(output_size))
+        # initialize the weights of log_std with a small negative value to encourage exploration
+        nn.init.constant_(self.log_std, -0.5)
 
     def forward(self, x):
         """

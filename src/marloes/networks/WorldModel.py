@@ -67,42 +67,44 @@ class WorldModel:
         """
         Imagine function for rollouts from the initial state, using the actor to sample actions (from current policy).
         Returns the predicted observations and rewards.
+        Only used for testing and validation, not for training.
         """
-        x = initial
-        # Encode to latent space
-        z_0, _ = self.encoder(x)  # shape (batch=1, latent_dim)
+        with torch.no_grad():
+            x = initial
+            # Encode to latent space
+            z_0, _ = self.encoder(x)  # shape (batch=1, latent_dim)
 
-        # Initialize hidden state for the RSSM
-        h_0 = self.rssm._init_state(x.shape[0])
-        h_0 = h_0[
-            -1
-        ]  # take the last layer of the RNN and unsqueeze for batch dim, shape (batch=1, hidden_size)
+            # Initialize hidden state for the RSSM
+            h_0 = self.rssm._init_state(x.shape[0])
+            h_0 = h_0[
+                -1
+            ]  # take the last layer of the RNN and unsqueeze for batch dim, shape (batch=1, hidden_size)
 
-        # Initialize lists to store the actions and the imagined observations and reward
-        imagined_states = [z_0]
-        imagined_rewards = []
-        imagined_actions = []
+            # Initialize lists to store the actions and the imagined observations and reward
+            imagined_states = [z_0]
+            imagined_rewards = []
+            imagined_actions = []
 
-        for t in range(horizon):
-            # form model state
-            s = torch.cat(
-                [h_0, z_0], dim=-1
-            )  # shape (batch=1, hidden_size + latent_dim)
-            # sample action from the actor
-            a_t = actor(s).sample()  # shape (batch=1, action_dim)
-            imagined_actions.append(a_t)
-            # transition
-            h_0, z_0, _ = self.rssm.forward(h_0, z_0, a_t)
-            imagined_states.append(z_0)
-            # predict reward
-            r_t = self.reward_predictor(h_0, z_0)  # shape (batch=1, 1)
-            imagined_rewards.append(r_t)
+            for t in range(horizon):
+                # form model state
+                s = torch.cat(
+                    [h_0, z_0], dim=-1
+                )  # shape (batch=1, hidden_size + latent_dim)
+                # sample action from the actor
+                a_t = actor(s).sample()  # shape (batch=1, action_dim)
+                imagined_actions.append(a_t)
+                # transition
+                h_0, z_0, _ = self.rssm.forward(h_0, z_0, a_t)
+                imagined_states.append(z_0)
+                # predict reward
+                r_t = self.reward_predictor(h_0, z_0)  # shape (batch=1, 1)
+                imagined_rewards.append(r_t)
 
-        return {
-            "states": torch.stack(imagined_states, dim=0),
-            "rewards": torch.stack(imagined_rewards, dim=0),
-            "actions": torch.stack(imagined_actions, dim=0),
-        }
+            return {
+                "states": torch.stack(imagined_states, dim=0),
+                "rewards": torch.stack(imagined_rewards, dim=0),
+                "actions": torch.stack(imagined_actions, dim=0),
+            }
 
     def learn(self, obs, act, rew, dones):
         """
