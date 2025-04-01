@@ -82,6 +82,7 @@ class TestWindAgent(unittest.TestCase):
         wind_agent.horizon = 2
         # Mock asset state
         wind_agent.asset = MagicMock()
+        wind_agent.asset.max_power_out = 5
         wind_agent.asset.state.model_dump.return_value = {
             "time": datetime.now(),
             "power": 0.0,

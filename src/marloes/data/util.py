@@ -220,3 +220,21 @@ def convert_to_hourly_nomination(series: pd.Series) -> pd.Series:
     hourly_nomination = series.resample("h").agg("mean")
 
     return hourly_nomination
+
+
+def get_forecast_kpis(forecast: np.array, max_power_out: float) -> np.array:
+    """
+    Calculate the mean, standard deviation, average slope, and number of turning points of a forecast.
+    """
+    if max_power_out == 0:
+        return np.array([0, 0, 0, 0])
+    # Normalize the measures of the forecast
+    mean = np.mean(forecast) / max_power_out
+    std = np.std(forecast) / max_power_out
+    average_slope = np.mean(np.diff(forecast)) / max_power_out
+    diff = np.diff(forecast)
+    signs = np.sign(diff)
+    # Remove zeros from the sign array to avoid counting flat areas as turning points
+    nonzero_signs = signs[signs != 0]
+    turning_points = np.sum(np.diff(nonzero_signs) != 0) / len(forecast)
+    return np.array([mean, std, average_slope, turning_points])

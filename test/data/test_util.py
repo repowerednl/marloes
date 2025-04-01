@@ -14,6 +14,7 @@ from marloes.data.util import (
     drop_out_series,
     read_series,
     shift_series,
+    get_forecast_kpis,
 )
 
 
@@ -197,3 +198,44 @@ class TestDropOutSeries(unittest.TestCase):
                 (dropped_streaks <= max_long_drop_minutes).all(),
                 "Found a dropout longer than max_long_drop_days",
             )
+
+
+class TestForecastKPIs(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.forecast_increasing = np.array([2, 4, 6, 8, 10, 12, 14, 16, 18, 20])
+        cls.forecast_decreasing = np.array([20, 18, 16, 14, 12, 10, 8, 6, 4, 2])
+        cls.forecast_with_one_turning_point = np.array([2, 4, 6, 8, 10, 9, 8, 7, 6, 5])
+        cls.forecast_with_three_turning_points = np.array(
+            [2, 2, 4, 6, 8, 6, 4, 8, 6, 6]
+        )
+
+    def test_get_forecast_kpis(self):
+        """
+        Test the created forecasts
+        """
+        increasing_kpis = get_forecast_kpis(self.forecast_increasing, 20)
+        decreasing_kpis = get_forecast_kpis(self.forecast_decreasing, 20)
+        one_turning_point_kpis = get_forecast_kpis(
+            self.forecast_with_one_turning_point, 10
+        )
+        three_turning_points_kpis = get_forecast_kpis(
+            self.forecast_with_three_turning_points, 10
+        )
+
+        expected_increasing = np.array([11 / 20, 5.74 / 20, 2.0 / 20, 0.0])
+        expected_decreasing = np.array([11 / 20, 5.74 / 20, -2.0 / 20, 0.0])
+        expected_one_turning_point = np.array(
+            [6.5 / 10, 2.29 / 10, 0.33 / 10, 1.0 / 10]
+        )
+        expected_three_turning_points = np.array(
+            [5.2 / 10, 2.04 / 10, 0.44 / 10, 3.0 / 10]
+        )
+        np.testing.assert_array_almost_equal(increasing_kpis, expected_increasing, 3)
+        np.testing.assert_array_almost_equal(decreasing_kpis, expected_decreasing, 3)
+        np.testing.assert_array_almost_equal(
+            one_turning_point_kpis, expected_one_turning_point, 3
+        )
+        np.testing.assert_array_almost_equal(
+            three_turning_points_kpis, expected_three_turning_points, 3
+        )

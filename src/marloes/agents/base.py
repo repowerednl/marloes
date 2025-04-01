@@ -8,7 +8,7 @@ import pandas as pd
 from simon.assets.asset import Asset
 from simon.data.asset_data import AssetSetpoint
 
-from marloes.data.util import convert_to_hourly_nomination
+from marloes.data.util import convert_to_hourly_nomination, get_forecast_kpis
 
 
 class SupplyAgents(Enum):
@@ -89,15 +89,25 @@ class Agent(ABC):
         Get the current state of the agent. Can be overwritten to also include other information.
         """
         state = self.asset.state.model_dump()
-
         if self.forecast is not None:
             end_idx = start_idx + self.horizon
             end_idx = min(
                 end_idx, len(self.forecast)
             )  # Ensure we don't go out of bounds
-            state["forecast"] = self.forecast[
-                start_idx:end_idx
-            ]  # Numpy slicing is O(1)
+            forecast = np.array(
+                self.forecast[start_idx:end_idx]  # Numpy slicing is O(1)
+            )
+            if forecast.size > 0:
+                state["forecast"] = get_forecast_kpis(
+                    forecast, self.asset.max_power_out
+                )
+            else:
+                state["forecast"] = [
+                    0,
+                    0,
+                    0,
+                    0,
+                ]  # This should never happen, test files gave some warnings
 
             # Also include nomination
             hour_idx = start_idx // 60  # 60 minutes in an hour

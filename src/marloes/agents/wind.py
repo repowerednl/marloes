@@ -14,7 +14,7 @@ from .base import Agent
 class WindAgent(Agent):
     def __init__(self, config: dict, start_time: datetime):
         series, forecast = self._get_production_series(config)
-        super().__init__(Supply, config, start_time, series)
+        super().__init__(Supply, config, start_time, series, forecast)
 
     def _get_production_series(self, config: dict):
         # Read in the right 1 MWp profile from the wind data
