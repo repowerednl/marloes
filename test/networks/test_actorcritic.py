@@ -1,6 +1,7 @@
 from unittest import TestCase, mock
 import numpy as np
 import torch
+from torch.distributions import Normal
 
 from marloes.networks.ActorCritic import ActorCritic
 
@@ -31,7 +32,9 @@ class ActorCriticTestCase(TestCase):
         """
         obs = torch.tensor(np.random.rand(10)).float()
         actions = self.actor_critic.actor(obs)
-        self.assertEqual(actions.shape, (5,))
+        # actions should be a distribution
+        self.assertIsInstance(actions, Normal)
+        self.assertEqual(actions.sample().shape, (5,))
 
     def test_critics(self):
         """
@@ -53,4 +56,17 @@ class ActorCriticTestCase(TestCase):
         """
         Test the learn method of the ActorCritic network.
         """
-        pass
+        # setup expected trajectories; a dict with states, actions, rewards
+        # for 10 trajectories:
+        # states: torch.Size([10, 10])
+        # actions: torch.Size([10, 5])
+        # rewards: torch.Size([10])
+        trajectories = {
+            "states": torch.tensor(np.random.rand(10, 10)).float(),
+            "actions": torch.tensor(np.random.rand(10, 5)).float(),
+            "rewards": torch.tensor(np.random.rand(10)).float(),
+        }
+        losses = self.actor_critic.learn(trajectories)
+        self.assertTrue("actor_loss" in losses)
+        self.assertTrue("critic_loss" in losses)
+        self.assertTrue(False)

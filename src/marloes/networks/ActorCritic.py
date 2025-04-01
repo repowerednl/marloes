@@ -41,34 +41,57 @@ class ActorCritic:
         Learning step for the ActorCritic network.
         """
         # Unpack the trajectories
-        # states = trajectories["states"]
-        # actions = trajectories["actions"]
-        # rewards = trajectories["rewards"]
+        states = trajectories["states"]
+        print("\nStates shape:", states.shape)
+        actions = trajectories["actions"]
+        print("Actions shape:", actions.shape)
+        rewards = trajectories["rewards"]
+        print("Rewards shape:", rewards.shape)
 
-        # # Critic Evaluation
-        # values = self.critic(states)
+        # Critic Evaluation
+        values = self.critic(states).squeeze(-1)
+        print("Values shape:", values.shape)
 
-        # # Compute the advantages (lambda-returns)
-        # returns, advantages = self._compute_advantages(rewards, values)
+        # Compute the advantages (lambda-returns)
+        returns, advantages = self._compute_advantages(rewards, values)
+        print("Returns shape:", returns.shape)
+        print("Advantages:", advantages.shape)
 
-        # # Compute the actor and critic losses
-        pass
+        # Compute the actor and critic losses
+        actor_loss = self._compute_actor_loss(states, actions, advantages)
+        critic_loss = self._compute_critic_loss(values, returns)
+
+        # Backpropagate the losses
+        total_loss = actor_loss + critic_loss
+
+        self.actor_optim.zero_grad()
+        self.critic_optim.zero_grad()
+        total_loss.backward()
+        self.actor_optim.step()
+        self.critic_optim.step()
+
+        return {
+            "actor_loss": actor_loss,
+            "critic_loss": critic_loss,
+            "total_loss": total_loss,
+        }
 
     def _compute_actor_loss(self, states, actions, advantages):
         """
         Computes the actor loss.
         """
         dist = self.actor(states)
-        log_probs = dist.log_prob(actions)
+        log_probs = dist.log_prob(actions).sum(-1)
         entropy = dist.entropy().mean()
-        actor_loss = -(log_probs * advantages).mean()
-        return actor_loss, entropy
+        actor_loss = -(log_probs * advantages).mean() - self.entropy_coef * entropy
+        print("Actor loss:", actor_loss)
+        print("of type:", type(actor_loss))
+        return actor_loss
 
-    def _compute_critic_loss(self, states, returns):
+    def _compute_critic_loss(self, values, returns):
         """
         Computes the critic loss.
         """
-        values = self.critic(states)
         critic_loss = F.mse_loss(values, returns.detach())
         return critic_loss
 
