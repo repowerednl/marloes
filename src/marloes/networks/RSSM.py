@@ -137,7 +137,7 @@ class RSSM(BaseNetwork):
         """
         return torch.zeros(self.rnn.num_layers, batch_size, self.rnn.hidden_size)
 
-    def rollout(self, posteriors, actions) -> tuple[list, list]:
+    def rollout(self, posteriors, actions) -> tuple[torch.Tensor, dict, torch.Tensor]:
         """
         Returns the predicted latent states (priors) for the entire rollout.
         Input:
