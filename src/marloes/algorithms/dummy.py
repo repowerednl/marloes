@@ -52,12 +52,17 @@ class Dummy(BaseAlgorithm):
         """
         Dummy training step, simulating training process. next_obs are probably not used but added for now.
         """
-        # 1. World Model Loss
+        # 1. WorldModel Loss
         d_loss, r_loss, p_loss, total_loss = self.world_model.learn(
             obs, actions, rewards, dones
         )
 
-        # 2. Actor & Critic Loss
-        # loss = self.actor_critic.learn()
+        # 2. ActorCritic Loss
+        # get the first element of the obs-tensor as the initial state
+        # initial = obs[0].unsqueeze(0)  # should have shape (1, obs_shape)
+        # trajectories = self.world_model.imagine(
+        #     initial=initial, actor=self.actor_critic.actor
+        # )
+        # actor_loss = self.actor_critic.learn(trajectories)
 
         return

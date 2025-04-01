@@ -94,6 +94,7 @@ class RSSM(BaseNetwork):
         assert (
             torch.cat([h_t, z_t, a_t], dim=-1).shape[-1] == self.rnn.input_size
         ), "RSSM_LD is not configured correctly. Combined input size does not match the RNN input size."
+
         _, hidden = self._get_recurrent_state(h_t, z_t, a_t)
 
         # h_t should have the right shape to be passed to the next step
@@ -140,18 +141,18 @@ class RSSM(BaseNetwork):
         """
         Returns the predicted latent states (priors) for the entire rollout.
         Input:
-        - Posteriors: tensor of Size([seq_length, batch_size, latent_dim])
-        - Actions: tensor of Size([seq_length, batch_size, action_dim])
+        - Posteriors: tensor (batch, latent_size)
+        - Actions: tensor (batch, action_size)
         """
         h_t = self._init_state(1)  # Batch size of 1: single rollout
-        h_t = h_t[-1].unsqueeze(0)  # Take the last layer and unsqueeze for batch dim
+        h_t = h_t[-1]  # Take the last layer and unsqueeze for batch dim
         T = posteriors.size(0)
         priors = []
         priors_details = []
         h_ts = []
         for t in range(T):
-            z_t = posteriors[t].unsqueeze(0).unsqueeze(0)
-            a_t = actions[t].unsqueeze(0).unsqueeze(0)
+            z_t = posteriors[t].unsqueeze(0)
+            a_t = actions[t].unsqueeze(0)
             h_t, prior, prior_details = self.forward(h_t, z_t, a_t)
             priors.append(prior)
             priors_details.append(prior_details)

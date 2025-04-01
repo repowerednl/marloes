@@ -46,3 +46,45 @@ def dict_to_tens(
         tensors = torch.cat(tensors) if tensors else torch.tensor([])
 
     return tensors
+
+
+def symlog_squared_loss(x, y):
+    """
+    Symlog squared loss function for Prediction loss in the World Model.
+    """
+
+    def symlog(x):
+        return torch.sign(x) * torch.log1p(torch.abs(x))
+
+    return torch.nn.functional.mse_loss(symlog(x), symlog(y))
+
+
+def compute_lambda_returns(
+    rewards: torch.Tensor,
+    values: torch.Tensor,
+    gamma: float = 0.997,
+    lambda_: float = 0.95,
+) -> torch.Tensor:
+    """
+    Compute λ-returns (bootstrapped n-step returns) from rewards and value estimates.
+
+    Args:
+        rewards: Tensor of shape (T, B) with rewards at each time step.
+        values: Tensor of shape (T, B) with critic value estimates.
+        gamma: Discount factor.
+        lambda_: Mixing parameter for multi-step bootstrapping.
+
+    Returns:
+        Tensor of shape (T, B) with computed λ-returns.
+    """
+    T = rewards.size(0)
+    returns = torch.zeros_like(rewards)
+    # Bootstrap from the final value.
+    returns[-1] = values[-1]
+    # Compute returns recursively from the end of the trajectory.
+    for t in reversed(range(T - 1)):
+        # The lambda-return is: r_t + gamma * [(1 - lambda_) * v_{t+1} + lambda_ * R_{t+1}]
+        returns[t] = rewards[t] + gamma * (
+            (1 - lambda_) * values[t + 1] + lambda_ * returns[t + 1]
+        )
+    return returns

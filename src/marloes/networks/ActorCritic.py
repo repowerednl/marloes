@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
 
+from marloes.networks.util import compute_lambda_returns
+
 
 class ActorCritic:
     """
@@ -22,24 +24,67 @@ class ActorCritic:
 
         self.actor_optim = Adam(self.actor.parameters(), lr=1e-4)
         self.critic_optim = Adam(self.critic.parameters(), lr=1e-3)
+
+        self.gamma = 0.997
+        self.lmbda = 0.95
+        self.entropy_coef = 0.005
         self.beta_weights = {"val": 1.0, "repval": 0.3}
 
-    def act(self, obs: torch.Tensor):
+    def act(self, obs: torch.Tensor) -> torch.Tensor:
         """
         Returns the actions predicted by the Actor network.
         """
-        return self.actor(obs)
+        return self.actor(obs).sample()
 
-    def learn(self):
+    def learn(self, trajectories: dict):
         """
         Learning step for the ActorCritic network.
         """
+        # Unpack the trajectories
+        # states = trajectories["states"]
+        # actions = trajectories["actions"]
+        # rewards = trajectories["rewards"]
+
+        # # Critic Evaluation
+        # values = self.critic(states)
+
+        # # Compute the advantages (lambda-returns)
+        # returns, advantages = self._compute_advantages(rewards, values)
+
+        # # Compute the actor and critic losses
         pass
+
+    def _compute_actor_loss(self, states, actions, advantages):
+        """
+        Computes the actor loss.
+        """
+        dist = self.actor(states)
+        log_probs = dist.log_prob(actions)
+        entropy = dist.entropy().mean()
+        actor_loss = -(log_probs * advantages).mean()
+        return actor_loss, entropy
+
+    def _compute_critic_loss(self, states, returns):
+        """
+        Computes the critic loss.
+        """
+        values = self.critic(states)
+        critic_loss = F.mse_loss(values, returns.detach())
+        return critic_loss
+
+    def _compute_advantages(self, rewards, values):
+        """
+        Uses the lambda-returns to compute the advantages.
+        """
+        returns = compute_lambda_returns(rewards, values, self.gamma, self.lmbda)
+        advantages = returns - values.detach()
+        return returns, advantages
 
 
 class Actor(nn.Module):
     """
     Actor class, MLP network with hidden layers, predicts the 'continuous' actions per agent. TODO: Discrete actions.
+    Produces Gaussian policy over continuous actions.
     """
 
     def __init__(self, input_size: int, output_size: int, hidden_size: int = 256):
@@ -49,7 +94,8 @@ class Actor(nn.Module):
         super(Actor, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, output_size)
+        self.fc_mean = nn.Linear(hidden_size, output_size)
+        self.log_std = nn.Parameter(torch.zeros(output_size))
 
     def forward(self, x):
         """
@@ -57,8 +103,10 @@ class Actor(nn.Module):
         """
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = torch.tanh(self.fc3(x))
-        return x
+        # Apply tanh bound to keep actions in [-1, 1]
+        mu = torch.tanh(self.fc_mean(x))
+        std = torch.exp(self.log_std)
+        return torch.distributions.Normal(mu, std)
 
 
 class Critic(nn.Module):
@@ -73,7 +121,7 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, 1)
+        self.fc_value = nn.Linear(hidden_size, 1)
 
     def forward(self, x):
         """
@@ -81,5 +129,4 @@ class Critic(nn.Module):
         """
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
+        return self.fc_value(x)
