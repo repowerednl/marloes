@@ -36,26 +36,20 @@ class ActorCritic:
         """
         return self.actor(obs).sample()
 
-    def learn(self, trajectories: dict):
+    def learn(self, trajectories: dict) -> dict[str, torch.Tensor]:
         """
         Learning step for the ActorCritic network.
         """
         # Unpack the trajectories
         states = trajectories["states"]
-        print("\nStates shape:", states.shape)
         actions = trajectories["actions"]
-        print("Actions shape:", actions.shape)
         rewards = trajectories["rewards"]
-        print("Rewards shape:", rewards.shape)
 
         # Critic Evaluation
         values = self.critic(states).squeeze(-1)
-        print("Values shape:", values.shape)
 
         # Compute the advantages (lambda-returns)
         returns, advantages = self._compute_advantages(rewards, values)
-        print("Returns shape:", returns.shape)
-        print("Advantages:", advantages.shape)
 
         # Compute the actor and critic losses
         actor_loss = self._compute_actor_loss(states, actions, advantages)
@@ -76,7 +70,7 @@ class ActorCritic:
             "total_loss": total_loss,
         }
 
-    def _compute_actor_loss(self, states, actions, advantages):
+    def _compute_actor_loss(self, states, actions, advantages) -> torch.Tensor:
         """
         Computes the actor loss.
         """
@@ -84,18 +78,20 @@ class ActorCritic:
         log_probs = dist.log_prob(actions).sum(-1)
         entropy = dist.entropy().mean()
         actor_loss = -(log_probs * advantages).mean() - self.entropy_coef * entropy
-        print("Actor loss:", actor_loss)
-        print("of type:", type(actor_loss))
         return actor_loss
 
-    def _compute_critic_loss(self, values, returns):
+    def _compute_critic_loss(
+        self, values: torch.Tensor, returns: torch.Tensor
+    ) -> torch.Tensor:
         """
         Computes the critic loss.
         """
         critic_loss = F.mse_loss(values, returns.detach())
         return critic_loss
 
-    def _compute_advantages(self, rewards, values):
+    def _compute_advantages(
+        self, rewards: torch.Tensor, values: torch.Tensor
+    ) -> torch.Tensor:
         """
         Uses the lambda-returns to compute the advantages.
         """

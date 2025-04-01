@@ -69,4 +69,3 @@ class ActorCriticTestCase(TestCase):
         losses = self.actor_critic.learn(trajectories)
         self.assertTrue("actor_loss" in losses)
         self.assertTrue("critic_loss" in losses)
-        self.assertTrue(False)
