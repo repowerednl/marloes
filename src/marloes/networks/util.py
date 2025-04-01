@@ -88,3 +88,30 @@ def compute_lambda_returns(
             (1 - lambda_) * values[t + 1] + lambda_ * returns[t + 1]
         )
     return returns
+
+
+def gaussian_kl_divergence(
+    mu_q: torch.Tensor,
+    logvar_q: torch.Tensor,
+    mu_p: torch.Tensor,
+    logvar_p: torch.Tensor,
+) -> torch.Tensor:
+    """
+    Computes the KL divergence between two Gaussians with parameters (mu, logvar).
+    All should be tensors of shape.
+    """
+    kl = 0.5 * (
+        logvar_p
+        - logvar_q
+        + (torch.exp(logvar_q) + (mu_q - mu_p) ** 2) / torch.exp(logvar_p)
+        - 1
+    )
+    return kl  # shape (batch, latent_dim)
+
+
+def kl_free_bits(kl: torch.Tensor, free_bits: float = 1.0) -> torch.Tensor:
+    """
+    Adjusts the kl-divergence penalizing KL values above the threshold.
+    """
+    adjusted = torch.clamp(kl - free_bits, min=0.0)
+    return adjusted.sum(dim=-1).mean()

@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from .RSSM import RSSM
 from .base import BaseNetwork, HyperParams
 from .ActorCritic import Actor
-from .util import dist, symlog_squared_loss
+from .util import dist, symlog_squared_loss, gaussian_kl_divergence, kl_free_bits
 
 
 class WorldModel:
@@ -115,11 +115,14 @@ class WorldModel:
         z_posteriors, post_details = self.encoder(x)
         # Priors are the predicted latent states from the RSSM (doing this in rollout, one by one for the recurrent state)
         z_priors, prior_details, h_ts = self.rssm.rollout(z_posteriors, act)
-
+        # shape of z_priors: (batch, latent_dim)
+        # shape of z_posteriors: (batch, latent_dim)
+        # shape of h_ts: (batch, 1, hidden_size)
         # Determine the predicted observation from the latent state
         x_hat_t = self.decoder(z_posteriors)
 
-        h_ts = h_ts.squeeze(1).squeeze(1)
+        h_ts = h_ts.squeeze(1)
+        # shape of h_ts: (batch, hidden_size)
 
         # Use the RewardPredictor and ContinuePredictor to predict the reward and continue signal
         r_ts = self.reward_predictor(h_ts, z_posteriors)
@@ -131,12 +134,29 @@ class WorldModel:
         dynamic_loss = torch.nn.functional.kl_div(
             z_priors, z_posteriors.detach(), reduction="batchmean"
         )
+        # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
+        pre_kl = gaussian_kl_divergence(
+            post_details["mean"].detach(),
+            post_details["logvar"].detach(),
+            prior_details["mean"],
+            prior_details["logvar"],
+        )
+        dynamic_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
+
         # Second loss function, the representation loss trains the representations to be more predictable
         # KL-divergence between the predicted latent state and the true latent state
         # L_rep = max(1,KL[z_t || sg(z_hat_t)]) #### stop gradient can be implemented with detach() on mu and log_var ####
         representation_loss = torch.nn.functional.kl_div(
             z_priors.detach(), z_posteriors, reduction="batchmean"
         )
+        # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
+        pre_kl = gaussian_kl_divergence(
+            prior_details["mean"].detach(),
+            prior_details["logvar"].detach(),
+            post_details["mean"],
+            post_details["logvar"],
+        )
+        representation_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
 
         # Third loss function, the prediction loss is end-to-end training of the model
         # trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression

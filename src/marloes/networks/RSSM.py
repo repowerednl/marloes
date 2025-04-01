@@ -157,5 +157,14 @@ class RSSM(BaseNetwork):
             priors.append(prior)
             priors_details.append(prior_details)
             h_ts.append(h_t)
+        # details is a list of dicts with mean and logvar, this should be one dict with tensors
+        priors_details = {
+            key: torch.stack([d[key] for d in priors_details], dim=0).squeeze(1)
+            for key in priors_details[0].keys()
+        }
         # priors (and h_ts) is a list of tensors, convert to a single tensor
-        return torch.stack(priors, dim=0), priors_details, torch.stack(h_ts, dim=0)
+        return (
+            torch.stack(priors, dim=0).squeeze(1),
+            priors_details,
+            torch.stack(h_ts, dim=0),
+        )
