@@ -78,7 +78,7 @@ class WorldModel:
             h_0 = self.rssm._init_state(x.shape[0])
             h_0 = h_0[
                 -1
-            ]  # take the last layer of the RNN and unsqueeze for batch dim, shape (batch=1, hidden_size)
+            ]  # take the last layer of the GRU, shape (batch=1, hidden_size)
 
             # Initialize lists to store the actions and the imagined observations and reward
             imagined_states = [z_0]
