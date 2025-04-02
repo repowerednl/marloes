@@ -70,12 +70,10 @@ class DummyTestCase(TestCase):
         Testing the actions (calling ActorCritic.act) and returning a dictionary.
         """
         obs, _ = self.alg.environment.reset()
-        print(obs)
         obs = dict_to_tens(obs, concatenate_all=True)
         actions = self.alg.get_actions(
             obs
         )  # Calls actor(model_state).sample() which returns shape: (#agents,)
-        print(actions)
         self.assertIsInstance(actions, dict)
         # one action for each agent
         self.assertEqual(len(actions), 3)
@@ -84,4 +82,11 @@ class DummyTestCase(TestCase):
         """
         Testing the training step of the Dummy algorithm.
         """
-        pass
+        obs, _ = self.alg.environment.reset()
+        obs = dict_to_tens(obs, concatenate_all=True)
+        actions = self.alg.get_actions(obs)
+        obs, rewards, dones, _ = self.alg.environment.step(actions)
+        obs = dict_to_tens(obs, concatenate_all=True)
+        actions = dict_to_tens(actions, concatenate_all=True)
+        rewards = dict_to_tens(rewards, concatenate_all=True)
+        self.alg._train_step(obs, actions, rewards, dones)

@@ -1,9 +1,13 @@
 from .base import BaseAlgorithm
 from marloes.networks.WorldModel import WorldModel
 from marloes.networks.ActorCritic import ActorCritic
+from marloes.data.replaybuffer import ReplayBuffer
+from marloes.networks.util import dict_to_tens
+
 import random
 from torch.optim import Adam
 import torch
+import logging
 
 
 class Dummy(BaseAlgorithm):
@@ -58,10 +62,67 @@ class Dummy(BaseAlgorithm):
             for i, agent_id in enumerate(self.environment.agent_dict.keys())
         }
 
+    def train(self, update_step: int = 100) -> None:
+        """
+        Executes the training process for the algorithm.
+
+        This method can be overridden by subclasses for algorithm-specific behavior.
+        """
+        logging.info("Starting training process...")
+        observations, infos = self.environment.reset()
+        capacity = 1000 * update_step
+        logging.info(f"Initializing ReplayBuffer with capacity {capacity}...")
+        RB = ReplayBuffer(capacity=capacity, device=self.device)
+
+        for epoch in range(self.epochs):
+            if epoch % 1000 == 0:
+                logging.info(f"Reached epoch {epoch}/{self.epochs}...")
+
+            # Gathering experiences
+            obs = dict_to_tens(observations, concatenate_all=True)
+            actions = self.get_actions(observations)
+            observations, rewards, dones, infos = self.environment.step(actions)
+            # Add to ReplayBuffer
+            acts = dict_to_tens(actions, concatenate_all=True)
+            rew = dict_to_tens(rewards, concatenate_all=True)
+            rew = torch.tensor([rew.sum()])
+            RB.push(obs, acts, rew)
+
+            # For x timesteps, perform the training step on a sample (update_step size) from the ReplayBuffer
+            if epoch % update_step == 0 and epoch != 0:
+                logging.info("Performing training step...")
+                sample = RB.sample(update_step, True)
+                dones = torch.ones(update_step)
+                # passing artificial dones: a tensor with all continuation (1) flags, except for the last one (0) - length x
+                dones[-1] = 0
+                self._train_step(
+                    sample["obs"],
+                    sample["action"],
+                    sample["reward"],
+                )
+
+            # After chunk is "full", it should be saved
+            if self.chunk_size != 0 and epoch % self.chunk_size == 0 and epoch != 0:
+                logging.info("Saving intermediate results and resetting extractor...")
+                self.saver.save(extractor=self.environment.extractor)
+                # clear the extractor
+                self.environment.extractor.clear()
+
+        # Save the final results and TODO: model
+        logging.info("Training finished. Saving results...")
+        self.saver.final_save(self.environment.extractor)
+
+        logging.info("Training process completed.")
+
     def _train_step(self, obs, actions, rewards, dones):
         """
         Dummy training step, simulating training process. next_obs are probably not used but added for now.
         """
+        print("Training step...")
+        print(obs.shape)
+        print(actions.shape)
+        print(rewards.shape)
+        print(dones.shape)
         # 1. WorldModel Loss
         world_losses = self.world_model.learn(obs, actions, rewards, dones)
         print(world_losses)

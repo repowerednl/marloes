@@ -1,11 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
-import torch
 
 from marloes.results.saver import Saver
 from marloes.valley.env import EnergyValley
-from marloes.networks.util import dict_to_tens
-from marloes.data.replaybuffer import ReplayBuffer
 
 
 class BaseAlgorithm(ABC):
@@ -27,15 +24,12 @@ class BaseAlgorithm(ABC):
         self.chunk_size = config.get("chunk_size", 10000)
         self.epochs = config.get("epochs", 100000)
         self.environment = EnergyValley(config, self.__class__.__name__)
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )  # for future ticket, make sure this can run on GPU instead of CPU
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         BaseAlgorithm._registry[cls.__name__] = cls
 
-    def train(self, update_step: int = 100) -> None:
+    def train(self) -> None:
         """
         Executes the training process for the algorithm.
 
@@ -43,36 +37,16 @@ class BaseAlgorithm(ABC):
         """
         logging.info("Starting training process...")
         observations, infos = self.environment.reset()
-        capacity = 1000 * update_step
-        logging.info(f"Initializing ReplayBuffer with capacity {capacity}...")
-        RB = ReplayBuffer(capacity=capacity, device=self.device)
 
         for epoch in range(self.epochs):
             if epoch % 1000 == 0:
                 logging.info(f"Reached epoch {epoch}/{self.epochs}...")
 
-            # Gathering experiences
-            obs = dict_to_tens(observations, concatenate_all=True)
             actions = self.get_actions(observations)
             observations, rewards, dones, infos = self.environment.step(actions)
-            # Add to ReplayBuffer
-            acts = dict_to_tens(actions, concatenate_all=True)
-            rew = dict_to_tens(rewards, concatenate_all=True)
-            rew = torch.tensor([rew.sum()])
-            RB.push(obs, acts, rew)
 
-            # For x timesteps, perform the training step on a sample (update_step size) from the ReplayBuffer
-            if epoch % update_step == 0 and epoch != 0:
-                logging.info("Performing training step...")
-                sample = RB.sample(update_step, True)
-                dones = torch.ones(update_step)
-                # passing artificial dones: a tensor with all continuation (1) flags, except for the last one (0) - length x
-                dones[-1] = 0
-                self._train_step(
-                    sample["obs"],
-                    sample["action"],
-                    sample["reward"],
-                )
+            # Placeholder for training logic specific to subclasses
+            self._train_step(observations, rewards, dones, infos)
 
             # After chunk is "full", it should be saved
             if self.chunk_size != 0 and epoch % self.chunk_size == 0 and epoch != 0:
@@ -107,7 +81,6 @@ class BaseAlgorithm(ABC):
     def load(self, uid: str) -> None:
         """
         Loads a parameter configuration from a file.
-        TODO: Implement loading of model parameters.
         """
         pass
 
