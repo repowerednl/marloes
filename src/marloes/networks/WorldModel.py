@@ -4,18 +4,8 @@ import torch.nn.functional as F
 
 from .RSSM import RSSM
 from .base import BaseNetwork, HyperParams
-from .util import dist
-
-
-def symlog_squared_loss(x, y):
-    """
-    Symlog squared loss function for Prediction loss in the World Model.
-    """
-
-    def symlog(x):
-        return torch.sign(x) * torch.log1p(torch.abs(x))
-
-    return F.mse_loss(symlog(x), symlog(y))
+from .ActorCritic import Actor
+from .util import dist, symlog_squared_loss, gaussian_kl_divergence, kl_free_bits
 
 
 class WorldModel:
@@ -73,11 +63,48 @@ class WorldModel:
             "rep": 0.1,
         }
 
-    def imagine(self, x, actor):
+    def imagine(self, initial, actor: Actor, horizon: int = 16):
         """
         Imagine function for rollouts from the initial state, using the actor to sample actions (from current policy).
+        Returns the predicted observations and rewards.
+        Only used for testing and validation, not for training.
         """
-        pass
+        with torch.no_grad():
+            x = initial
+            # Encode to latent space
+            z_0, _ = self.encoder(x)  # shape (batch=1, latent_dim)
+
+            # Initialize hidden state for the RSSM
+            h_0 = self.rssm._init_state(x.shape[0])
+            h_0 = h_0[
+                -1
+            ]  # take the last layer of the GRU, shape (batch=1, hidden_size)
+
+            # Initialize lists to store the actions and the imagined observations and reward
+            imagined_states = [z_0]
+            imagined_rewards = []
+            imagined_actions = []
+
+            for t in range(horizon):
+                # form model state
+                s = torch.cat(
+                    [h_0, z_0], dim=-1
+                )  # shape (batch=1, hidden_size + latent_dim)
+                # sample action from the actor
+                a_t = actor(s).sample()  # shape (batch=1, action_dim)
+                imagined_actions.append(a_t)
+                # transition
+                h_0, z_0, _ = self.rssm.forward(h_0, z_0, a_t)
+                imagined_states.append(z_0)
+                # predict reward
+                r_t = self.reward_predictor(h_0, z_0)  # shape (batch=1, 1)
+                imagined_rewards.append(r_t)
+
+            return {
+                "states": torch.stack(imagined_states, dim=0),
+                "rewards": torch.stack(imagined_rewards, dim=0),
+                "actions": torch.stack(imagined_actions, dim=0),
+            }
 
     def learn(self, obs, act, rew, dones):
         """
@@ -88,11 +115,14 @@ class WorldModel:
         z_posteriors, post_details = self.encoder(x)
         # Priors are the predicted latent states from the RSSM (doing this in rollout, one by one for the recurrent state)
         z_priors, prior_details, h_ts = self.rssm.rollout(z_posteriors, act)
-
+        # shape of z_priors: (batch, latent_dim)
+        # shape of z_posteriors: (batch, latent_dim)
+        # shape of h_ts: (batch, 1, hidden_size)
         # Determine the predicted observation from the latent state
         x_hat_t = self.decoder(z_posteriors)
 
-        h_ts = h_ts.squeeze(1).squeeze(1)
+        h_ts = h_ts.squeeze(1)
+        # shape of h_ts: (batch, hidden_size)
 
         # Use the RewardPredictor and ContinuePredictor to predict the reward and continue signal
         r_ts = self.reward_predictor(h_ts, z_posteriors)
@@ -104,12 +134,29 @@ class WorldModel:
         dynamic_loss = torch.nn.functional.kl_div(
             z_priors, z_posteriors.detach(), reduction="batchmean"
         )
+        # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
+        pre_kl = gaussian_kl_divergence(
+            post_details["mean"].detach(),
+            post_details["logvar"].detach(),
+            prior_details["mean"],
+            prior_details["logvar"],
+        )
+        dynamic_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
+
         # Second loss function, the representation loss trains the representations to be more predictable
         # KL-divergence between the predicted latent state and the true latent state
         # L_rep = max(1,KL[z_t || sg(z_hat_t)]) #### stop gradient can be implemented with detach() on mu and log_var ####
         representation_loss = torch.nn.functional.kl_div(
             z_priors.detach(), z_posteriors, reduction="batchmean"
         )
+        # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
+        pre_kl = gaussian_kl_divergence(
+            prior_details["mean"].detach(),
+            prior_details["logvar"].detach(),
+            post_details["mean"],
+            post_details["logvar"],
+        )
+        representation_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
 
         # Third loss function, the prediction loss is end-to-end training of the model
         # trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression

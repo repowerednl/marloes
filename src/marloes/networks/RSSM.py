@@ -57,6 +57,8 @@ class RSSM(BaseNetwork):
         #TODO: add "type" option to details (recurrent and dense), requires changes in validation
         """
         self._validate_rssm(details)
+        self.latent_state_size = details.hidden["dense"]["out_features"]
+        self.hidden_size = details.hidden["recurrent"]["hidden_size"]
         # Initialize the RNN for SEQUENCE MODEL:
         self.rnn = nn.GRU(
             **details.hidden["recurrent"]
@@ -65,17 +67,17 @@ class RSSM(BaseNetwork):
         # DYNAMICS MODEL:
         # Initialize the Deterministic dense layer to predict z_hat
         self.fc = nn.Linear(
-            details.hidden["recurrent"]["hidden_size"],
-            details.hidden["dense"]["out_features"],
+            self.hidden_size,
+            self.latent_state_size,
         )
         # Initialize the Stochastic dense layers to predict z_hat
         self.fc_mu = nn.Linear(
-            details.hidden["recurrent"]["hidden_size"],
-            details.hidden["dense"]["out_features"],
+            self.hidden_size,
+            self.latent_state_size,
         )
         self.fc_logvar = nn.Linear(
-            details.hidden["recurrent"]["hidden_size"],
-            details.hidden["dense"]["out_features"],
+            self.hidden_size,
+            self.latent_state_size,
         )
 
         if params:
@@ -92,6 +94,7 @@ class RSSM(BaseNetwork):
         assert (
             torch.cat([h_t, z_t, a_t], dim=-1).shape[-1] == self.rnn.input_size
         ), "RSSM_LD is not configured correctly. Combined input size does not match the RNN input size."
+
         _, hidden = self._get_recurrent_state(h_t, z_t, a_t)
 
         # h_t should have the right shape to be passed to the next step
@@ -134,25 +137,34 @@ class RSSM(BaseNetwork):
         """
         return torch.zeros(self.rnn.num_layers, batch_size, self.rnn.hidden_size)
 
-    def rollout(self, posteriors, actions) -> tuple[list, list]:
+    def rollout(self, posteriors, actions) -> tuple[torch.Tensor, dict, torch.Tensor]:
         """
         Returns the predicted latent states (priors) for the entire rollout.
         Input:
-        - Posteriors: tensor of Size([seq_length, batch_size, latent_dim])
-        - Actions: tensor of Size([seq_length, batch_size, action_dim])
+        - Posteriors: tensor (batch, latent_size)
+        - Actions: tensor (batch, action_size)
         """
         h_t = self._init_state(1)  # Batch size of 1: single rollout
-        h_t = h_t[-1].unsqueeze(0)  # Take the last layer and unsqueeze for batch dim
+        h_t = h_t[-1]  # Take the last layer and unsqueeze for batch dim
         T = posteriors.size(0)
         priors = []
         priors_details = []
         h_ts = []
         for t in range(T):
-            z_t = posteriors[t].unsqueeze(0).unsqueeze(0)
-            a_t = actions[t].unsqueeze(0).unsqueeze(0)
+            z_t = posteriors[t].unsqueeze(0)
+            a_t = actions[t].unsqueeze(0)
             h_t, prior, prior_details = self.forward(h_t, z_t, a_t)
             priors.append(prior)
             priors_details.append(prior_details)
             h_ts.append(h_t)
+        # details is a list of dicts with mean and logvar, this should be one dict with tensors
+        priors_details = {
+            key: torch.stack([d[key] for d in priors_details], dim=0).squeeze(1)
+            for key in priors_details[0].keys()
+        }
         # priors (and h_ts) is a list of tensors, convert to a single tensor
-        return torch.stack(priors, dim=0), priors_details, torch.stack(h_ts, dim=0)
+        return (
+            torch.stack(priors, dim=0).squeeze(1),
+            priors_details,
+            torch.stack(h_ts, dim=0),
+        )

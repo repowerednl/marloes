@@ -1,5 +1,6 @@
 from .base import BaseAlgorithm
 from marloes.networks.WorldModel import WorldModel
+from marloes.networks.ActorCritic import ActorCritic
 import random
 from torch.optim import Adam
 import torch
@@ -23,48 +24,45 @@ class Dummy(BaseAlgorithm):
         Gets observation shape, and actions shape from the environment.
         TODO: loading is not implemented yet. Only creates new WorldModel.
         """
-        obs_shape = self.environment.observation_space
-        act_shape = self.environment.action_space
-        print(f"Observation Space: {obs_shape}")
-        print(f"Action Space: {act_shape}")
         self.world_model = WorldModel(
-            obs_shape, act_shape
+            observation_shape=self.environment.observation_space,
+            action_shape=self.environment.action_space,
         )  # also configurable with HyperParams, using defaults for now
 
     def _initialize_actor_critic(self):
         """
         Initializes the actor and critic networks.
         """
-
-        class ActorCritic:  # TODO: use actual implementation
-            def __init__(self):
-                self.modules = []
-
-        self.actor_critic = ActorCritic()
+        input = (
+            self.world_model.rssm.hidden_size + self.world_model.rssm.latent_state_size
+        )  # h_t + z_t
+        self.actor_critic = ActorCritic(
+            input=input, output=self.environment.action_space[0]
+        )
 
     def get_actions(self, observations):
         """
         Random actions for each agent in the environment.
         """
+        # actions = self.actor_critic.act(observations)
+        # return the actions for each agent in a dictionary
         return {agent_id: random.uniform(-1, 1) for agent_id in observations.keys()}
 
     def _train_step(self, obs, actions, rewards, dones):
         """
         Dummy training step, simulating training process. next_obs are probably not used but added for now.
         """
-        # 1. World Model Loss
+        # 1. WorldModel Loss
         d_loss, r_loss, p_loss, total_loss = self.world_model.learn(
             obs, actions, rewards, dones
         )
 
-        # 2. Actor Loss
-
-        # 3. Critic Loss
+        # 2. ActorCritic Loss
+        # get the first element of the obs-tensor as the initial state
+        # initial = obs[0].unsqueeze(0)  # should have shape (1, obs_shape)
+        # trajectories = self.world_model.imagine(
+        #     initial=initial, actor=self.actor_critic.actor
+        # )
+        # actor_loss = self.actor_critic.learn(trajectories)
 
         return
-
-    def _train_world_model(self):
-        """
-        Training the world model with data from the ReplayBuffer.
-        """
-        pass

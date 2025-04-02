@@ -5,7 +5,7 @@ import torch
 from marloes.results.saver import Saver
 from marloes.valley.env import EnergyValley
 from marloes.networks.util import dict_to_tens
-from marloes.algorithms.replaybuffer import ReplayBuffer
+from marloes.data.replaybuffer import ReplayBuffer
 
 
 class BaseAlgorithm(ABC):

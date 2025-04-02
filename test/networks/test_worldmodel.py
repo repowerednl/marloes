@@ -1,6 +1,7 @@
 from unittest import TestCase, mock
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 from marloes.networks.WorldModel import (
     WorldModel,
@@ -9,9 +10,10 @@ from marloes.networks.WorldModel import (
     RewardPredictor,
     ContinuePredictor,
 )
+from marloes.networks.ActorCritic import Actor
 from marloes.networks.RSSM import RSSM
 from marloes.networks.details import RSSM_LD
-from marloes.algorithms.replaybuffer import ReplayBuffer
+from marloes.data.replaybuffer import ReplayBuffer
 
 
 class WorldModelTestCase(TestCase):
@@ -65,6 +67,25 @@ class WorldModelTestCase(TestCase):
         self.assertEqual(sample["obs"].shape[0], sample_size)
         self.assertEqual(sample["action"].shape[0], sample_size)
         self.assertEqual(sample["reward"].shape[0], sample_size)
+
+    def test_imagine_end_to_end(self):
+        """
+        The imagine() function takes an Actor and returns predicted observations and rewards for a given horizon.
+        initial: torch.Tensor with shape (batch, obs_size)
+        """
+        world_model = WorldModel(self.observation_shape, self.action_shape)
+        initial = torch.tensor(np.ones((1, self.observation_shape[0])))
+        # Actor input size is h_t + z_t (RSSM hidden state + latent state)
+        input_size = world_model.rssm.hidden_size + world_model.rssm.latent_state_size
+        actor = Actor(input_size, self.action_shape[0])
+        horizon = 16  # from Dreamer
+        imagined = world_model.imagine(initial, actor, horizon)
+        self.assertIsInstance(imagined["states"], torch.Tensor)
+        self.assertIsInstance(imagined["rewards"], torch.Tensor)
+        self.assertIsInstance(imagined["actions"], torch.Tensor)
+        self.assertEqual(imagined["states"].shape[0], horizon + 1)  # also initial state
+        self.assertEqual(imagined["rewards"].shape[0], horizon)
+        self.assertEqual(imagined["actions"].shape[0], horizon)
 
     def test_learn_end_to_end(self):
         """
