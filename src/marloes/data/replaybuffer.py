@@ -58,29 +58,26 @@ class ReplayBuffer:
 
     def _sequential_sample(self, batch_size: int, use_most_recent: bool = True):
         """
-        Retrieves consecutive transitions.
+        Retrieves consecutive transitions more efficiently.
         """
         if len(self.buffer) < batch_size:
             raise ValueError(
                 f"Not enough transitions to sample a sequential batch of length {batch_size}"
             )
 
-        if use_most_recent:
-            start_idx = len(self.buffer) - batch_size
-        else:
-            # Pick a random start index where a consecutive sequence of length batch_size can be retrieved.
-            start_idx = random.randint(0, len(self.buffer) - batch_size)
+        start_idx = (
+            len(self.buffer) - batch_size
+            if use_most_recent
+            else random.randint(0, len(self.buffer) - batch_size)
+        )
 
-        # Retrieve consecutive transitions
-        sequence = [self.buffer[i] for i in range(start_idx, start_idx + batch_size)]
+        # Use slicing to retrieve consecutive transitions
+        sequence = list(self.buffer)[start_idx : start_idx + batch_size]
 
-        # Transpose the sequence of transitions into a Transition of lists.
-        batch = Transition(*zip(*sequence))
-
-        # Convert each component into a tensor and move to the proper device.
-        obs = torch.stack(batch.obs).to(self.device)
-        action = torch.stack(batch.action).to(self.device)
-        reward = torch.stack(batch.reward).to(self.device)
+        # Transpose and convert to tensors in one step
+        obs, action, reward = map(
+            lambda x: torch.stack(x).to(self.device), zip(*sequence)
+        )
 
         return {
             "obs": obs,
