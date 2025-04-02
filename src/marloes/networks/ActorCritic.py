@@ -30,11 +30,11 @@ class ActorCritic:
         self.entropy_coef = 0.005
         self.beta_weights = {"val": 1.0, "repval": 0.3}
 
-    def act(self, obs: torch.Tensor) -> torch.Tensor:
+    def act(self, model_state: torch.Tensor) -> torch.Tensor:
         """
         Returns the actions predicted by the Actor network.
         """
-        return self.actor(obs).sample()
+        return self.actor(model_state).sample()
 
     def learn(self, trajectories: dict) -> dict[str, torch.Tensor]:
         """

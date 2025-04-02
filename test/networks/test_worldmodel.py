@@ -98,10 +98,10 @@ class WorldModelTestCase(TestCase):
         # last done should not be continuation (1) but 0
         dones[-1] = 0
 
-        d_loss, r_loss, p_loss, total_loss = world_model.learn(
+        losses = world_model.learn(
             sample["obs"], sample["action"], sample["reward"], dones
         )
-        self.assertIsInstance(d_loss, torch.Tensor)
-        self.assertIsInstance(r_loss, torch.Tensor)
-        self.assertIsInstance(p_loss, torch.Tensor)
-        self.assertIsInstance(total_loss, torch.Tensor)
+        self.assertIsInstance(losses["dynamics_loss"], torch.Tensor)
+        self.assertIsInstance(losses["representation_loss"], torch.Tensor)
+        self.assertIsInstance(losses["prediction_loss"], torch.Tensor)
+        self.assertIsInstance(losses["total_loss"], torch.Tensor)

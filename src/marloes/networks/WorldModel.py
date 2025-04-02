@@ -171,7 +171,12 @@ class WorldModel:
             + self.beta_weights["rep"] * representation_loss
             + self.beta_weights["pred"] * prediction_loss
         )
-        return dynamic_loss, representation_loss, prediction_loss, total_loss
+        return {
+            "dynamics_loss": dynamic_loss,
+            "representation_loss": representation_loss,
+            "prediction_loss": prediction_loss,
+            "total_loss": total_loss,
+        }
 
 
 class Encoder(BaseNetwork):

@@ -4,11 +4,13 @@ import pytest
 
 import pandas as pd
 import numpy as np
+import torch
 
 from marloes.algorithms.dummy import Dummy
 from marloes.agents.base import Agent
 from marloes.networks.ActorCritic import ActorCritic
 from marloes.networks.WorldModel import WorldModel
+from marloes.networks.util import dict_to_tens
 
 
 def get_new_config() -> dict:
@@ -67,16 +69,19 @@ class DummyTestCase(TestCase):
         """
         Testing the actions (calling ActorCritic.act) and returning a dictionary.
         """
-        pass
+        obs, _ = self.alg.environment.reset()
+        print(obs)
+        obs = dict_to_tens(obs, concatenate_all=True)
+        actions = self.alg.get_actions(
+            obs
+        )  # Calls actor(model_state).sample() which returns shape: (#agents,)
+        print(actions)
+        self.assertIsInstance(actions, dict)
+        # one action for each agent
+        self.assertEqual(len(actions), 3)
 
     def test__train_step(self):
         """
         Testing the training step of the Dummy algorithm.
-        """
-        pass
-
-    def test_train(self):
-        """
-        Testing the training process of the Dummy algorithm.
         """
         pass

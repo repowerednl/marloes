@@ -99,7 +99,6 @@ class RSSM(BaseNetwork):
 
         # h_t should have the right shape to be passed to the next step
         h_t = hidden[-1].unsqueeze(0)
-
         # Predict the latent state from the hidden state
         prior, prior_details = self._get_latent_state(h_t)
 

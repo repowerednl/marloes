@@ -42,27 +42,38 @@ class Dummy(BaseAlgorithm):
 
     def get_actions(self, observations):
         """
-        Random actions for each agent in the environment.
+        Actions sampled from DreamerV3 ActorCritic need s_t = {h_t, z_t}.
         """
-        # actions = self.actor_critic.act(observations)
-        # return the actions for each agent in a dictionary
-        return {agent_id: random.uniform(-1, 1) for agent_id in observations.keys()}
+        z_t, _ = self.world_model.encoder(observations)
+        h_t = self.world_model.rssm._init_state(
+            1
+        )  # TODO: this is not correct - how to maintain the recurrent state
+        # last layer
+        h_t = h_t[-1].squeeze(0).squeeze(0)  # Feels wrong
+        s = torch.cat([h_t, z_t], dim=-1)
+        actions = self.actor_critic.act(s)
+        # return a dict with actions (agent_id: action)
+        return {
+            agent_id: actions[i]
+            for i, agent_id in enumerate(self.environment.agent_dict.keys())
+        }
 
     def _train_step(self, obs, actions, rewards, dones):
         """
         Dummy training step, simulating training process. next_obs are probably not used but added for now.
         """
         # 1. WorldModel Loss
-        d_loss, r_loss, p_loss, total_loss = self.world_model.learn(
-            obs, actions, rewards, dones
-        )
+        world_losses = self.world_model.learn(obs, actions, rewards, dones)
+        print(world_losses)
 
         # 2. ActorCritic Loss
         # get the first element of the obs-tensor as the initial state
-        # initial = obs[0].unsqueeze(0)  # should have shape (1, obs_shape)
-        # trajectories = self.world_model.imagine(
-        #     initial=initial, actor=self.actor_critic.actor
-        # )
-        # actor_loss = self.actor_critic.learn(trajectories)
+        initial = obs[0].unsqueeze(0)  # should have shape (1, obs_shape)
+        print(initial.shape)
+        trajectories = self.world_model.imagine(
+            initial=initial, actor=self.actor_critic.actor
+        )
+        actorcritic_losses = self.actor_critic.learn(trajectories)
+        print(actorcritic_losses)
 
         return
