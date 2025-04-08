@@ -27,14 +27,16 @@ class WorldModel:
         hyper_params: HyperParams = None,
     ):
         """
-        Initializes the World Model: Encoder (x->z_t) -> RSSM -> Decoder (z_hat_t->x_hat_t)
+        Initializes the World Model: Encoder (h_t,x->z_t) -> RSSM -> Decoder (z_hat_t->x_hat_t)
         """
         self.rssm = RSSM(
             params=params,
             hyper_params=hyper_params,
             stochastic=True,
         )
-        self.encoder = Encoder(observation_shape[0], self.rssm.fc.out_features)
+        self.encoder = Encoder(
+            observation_shape[0] + self.rssm.rnn.hidden_size, self.rssm.fc.out_features
+        )
         # RSSM in between, is created first to ensure the link between encoder and decoder
         self.decoder = Decoder(self.rssm.fc.out_features, observation_shape[0])
         self.reward_predictor = RewardPredictor(

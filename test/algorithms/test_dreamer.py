@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import torch
 
-from marloes.algorithms.dummy import Dummy
+from marloes.algorithms.dreamer import Dreamer
 from marloes.agents.base import Agent
 from marloes.networks.ActorCritic import ActorCritic
 from marloes.networks.WorldModel import WorldModel
@@ -15,7 +15,7 @@ from marloes.networks.util import dict_to_tens
 
 def get_new_config() -> dict:
     return {
-        "algorithm": "dummy",
+        "algorithm": "dreamer",
         "epochs": 10,
         "agents": [
             {
@@ -40,9 +40,9 @@ def get_new_config() -> dict:
 
 
 @pytest.mark.slow
-class DummyTestCase(TestCase):
+class DreamerTestCase(TestCase):
     """
-    Dummy TestCase to check creation of an actual algorithm (and WorldModel in it).
+    Dreamer TestCase to check creation of an actual algorithm (and WorldModel in it).
     Not mocking anything to get the actual observations and actions.
     """
 
@@ -52,7 +52,7 @@ class DummyTestCase(TestCase):
         with patch(
             "marloes.results.saver.Saver._update_simulation_number", return_value=0
         ):
-            cls.alg = Dummy(config=get_new_config())
+            cls.alg = Dreamer(config=get_new_config())
 
     def test_init(self):
         self.assertEqual(self.alg.epochs, 10)
