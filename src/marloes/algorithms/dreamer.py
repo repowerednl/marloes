@@ -60,14 +60,20 @@ class Dreamer(BaseAlgorithm):
         if not self.previous:
             self._init_previous()
 
+        # Step 1: Get the recurrent state (based on previous state)  #
+        # ---------------------------------------------------------- #
         h_t, _, _ = self.world_model.rssm(
             self.previous["h_t"], self.previous["z_t"], self.previous["a_t"]
         )
         h_t = h_t[-1].squeeze(0).squeeze(0)
 
+        # Step 2: Get the latent state (based on current obs and h_t)  #
+        # ------------------------------------------------------------ #
         x = torch.cat([observations, h_t], dim=-1)
         z_t, _ = self.world_model.encoder(x)
 
+        # Step 3: Get the action (based on the model state)  #
+        # -------------------------------------------------- #
         s = torch.cat([h_t, z_t], dim=-1)
         actions = self.actor_critic.act(s)
 
@@ -90,6 +96,7 @@ class Dreamer(BaseAlgorithm):
             if epoch % 1000 == 0:
                 logging.info(f"Reached epoch {epoch}/{self.epochs}...")
 
+            ## Interacting with the environment to gather informations ##
             obs = dict_to_tens(observations, concatenate_all=True)
             actions = self.get_actions(observations)
             observations, rewards, dones, infos = self.environment.step(actions)
@@ -122,14 +129,25 @@ class Dreamer(BaseAlgorithm):
     def _train_step(self, obs, actions, rewards, dones):
         """
         Executes a single training step for the Dreamer algorithm.
+        1. The world model is updated with real observations and actions.
+        2. The actor-critic model is updated with imagined trajectories.
         """
         logging.info("Training step...")
+        # Step 1: Get a sample from the replay buffer #
+        # ------------------------------------------- #
+
+        # Step 2: Update the world model #
+        # ------------------------------ #
         world_losses = self.world_model.learn(obs, actions, rewards, dones)
         logging.info(f"WorldModel losses: {world_losses}")
 
+        # Step 3: Imagine trajectories for ActorCritic learning #
+        # ----------------------------------------------------- #
         initial = obs[0].unsqueeze(0)
         trajectories = self.world_model.imagine(
             initial=initial, actor=self.actor_critic.actor
         )
+        # Step 4: Update the actor-critic model #
+        # ------------------------------------- #
         actorcritic_losses = self.actor_critic.learn(trajectories)
         logging.info(f"ActorCritic losses: {actorcritic_losses}")

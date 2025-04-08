@@ -173,6 +173,12 @@ class WorldModel:
             + self.beta_weights["rep"] * representation_loss
             + self.beta_weights["pred"] * prediction_loss
         )
+
+        # Backpropagation
+        self.optim.zero_grad()
+        total_loss.backward()
+        self.optim.step()
+
         return {
             "dynamics_loss": dynamic_loss,
             "representation_loss": representation_loss,
