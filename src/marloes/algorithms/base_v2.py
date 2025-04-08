@@ -33,7 +33,7 @@ class BaseAlgorithmV2(ABC):
 
         # General settings
         self.chunk_size = self.config.get("chunk_size", 10000)
-        self.epochs = self.config.get("epochs", 100000)
+        self.training_steps = self.config.get("training_steps", 100000)
         self.num_initial_random_steps = self.config.get("num_initial_random_steps", 0)
         self.batch_size = self.config.get("batch_size", 128)
 
@@ -65,13 +65,13 @@ class BaseAlgorithmV2(ABC):
         state, infos = self.environment.reset()
 
         # Main training loop
-        for epoch in range(self.epochs):
-            if epoch % 1000 == 0:
-                logging.info(f"Reached epoch {epoch}/{self.epochs}...")
+        for step in range(self.training_steps):
+            if step % 1000 == 0:
+                logging.info(f"Reached step {step}/{self.training_steps}...")
 
             # 1. Collect data from environment
             # --------------------
-            if epoch < self.num_initial_random_steps:
+            if step < self.num_initial_random_steps:
                 # Initially do random actions for exploration
                 actions = self.environment.sample_actions()
             else:
@@ -87,10 +87,10 @@ class BaseAlgorithmV2(ABC):
 
             # 2. Perform algorithm-specific training steps
             # --------------------
-            self.perform_training_steps(epoch)
+            self.perform_training_steps(step)
 
             # Any time a chunk is "full", it should be saved
-            if self.chunk_size != 0 and epoch % self.chunk_size == 0 and epoch != 0:
+            if self.chunk_size != 0 and step % self.chunk_size == 0 and step != 0:
                 logging.info("Saving intermediate results and resetting extractor...")
                 self.saver.save(extractor=self.environment.extractor)
                 # clear the extractor
@@ -113,7 +113,7 @@ class BaseAlgorithmV2(ABC):
         pass
 
     @abstractmethod
-    def perform_training_steps(self, epoch: int) -> None:
+    def perform_training_steps(self, step: int) -> None:
         """
         Placeholder for a single training step. To be overridden.
         """
