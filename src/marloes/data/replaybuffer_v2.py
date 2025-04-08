@@ -70,8 +70,8 @@ class ReplayBufferV2:
 
         for tr in transitions:
             state_list.append(self.dict_to_tens(tr.state))
-            action_list.append(self.dict_to_tens(tr.action))
-            reward_list.append(self.dict_to_tens(tr.reward))
+            action_list.append(self.dict_to_tens(tr.actions))
+            reward_list.append(self.dict_to_tens(tr.rewards))
             next_state_list.append(self.dict_to_tens(tr.next_state))
 
         state = torch.stack(state_list).to(self.device)
