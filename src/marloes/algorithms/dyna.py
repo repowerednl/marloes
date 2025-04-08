@@ -1,4 +1,4 @@
-import logging
+import torch
 
 from marloes.algorithms.base_v2 import BaseAlgorithmV2
 
@@ -22,6 +22,7 @@ class Dyna(BaseAlgorithmV2):
         self.model_update_frequency = self.config.get("model_update_frequency", 100)
         self.k = self.config.get("k", 10)  # Model rollout horizon; planning steps
         self.model_updates_per_step = self.config.get("model_updates_per_step", 10)
+        self.real_sample_ratio = self.config.get("real_sample_ratio", 0.5)
 
     def get_actions(self, state: dict) -> dict:
         """
@@ -36,7 +37,10 @@ class Dyna(BaseAlgorithmV2):
 
     def perform_training_steps(self, step: int) -> None:
         """
-        Placeholder for a single training step. To be overridden if needed.
+        Performs the training steps for the Dyna algorithm, containing the following:
+        1. Update the world model with real experiences.
+        2. Generate synthetic experiences using the world model.
+        3. Update the model (SAC) with both real and synthetic experiences.
         """
         # 1. Update world model (with real experiences only)
         # --------------------
@@ -57,26 +61,30 @@ class Dyna(BaseAlgorithmV2):
             synthetic_actions = self.environment.sample_actions()
 
             # Use the world model to predict next state and reward
-            synthetic_next_state, synthetic_rewards = self.world_model.predict(
+            synthetic_next_states, synthetic_rewards = self.world_model.predict(
                 synthetic_states, synthetic_actions
             )
 
-            # Store synthetic experiences
-            # TODO: keep in mind that this will be multiple states, so might need something different
-            self.model_RB.push(
-                synthetic_states,
-                synthetic_actions,
-                synthetic_rewards,
-                synthetic_next_state,
-            )
-            synthetic_states = synthetic_next_state
+            # Store synthetic experiences, one by one
+            for i in range(self.batch_size):
+                _state = {key: val[i] for key, val in synthetic_states.items()}
+                _actions = {key: val[i] for key, val in synthetic_actions.items()}
+                _rewards = {key: val[i] for key, val in synthetic_rewards.items()}
+                _next_state = {
+                    key: val[i] for key, val in synthetic_next_states.items()
+                }
+                self.model_RB.push(_state, _actions, _rewards, _next_state)
+
+            synthetic_states = synthetic_next_states
 
         # 3. Update the model (SAC) with real and synthetic experiences
         # --------------------
         for _ in range(self.model_updates_per_step):
             # Sample from both real and synthetic experiences
-            real_batch = self.real_RB.sample(self.batch_size)
-            synthetic_batch = self.model_RB.sample(self.batch_size)
+            real_batch = self.real_RB.sample(self.batch_size * self.real_sample_ratio)
+            synthetic_batch = self.model_RB.sample(
+                self.batch_size * (1 - self.real_sample_ratio)
+            )
 
             # Combine batches
             combined_batch = self._combine_batches(real_batch, synthetic_batch)
@@ -89,4 +97,10 @@ class Dyna(BaseAlgorithmV2):
         """
         Combines real and synthetic batches for training.
         """
-        pass
+        combined_batch = {}
+        for key in real_batch.keys():
+            # Concatenate the corresponding tensors along the 0th dimension.
+            combined_batch[key] = torch.cat(
+                [real_batch[key], synthetic_batch[key]], dim=0
+            )
+        return combined_batch
