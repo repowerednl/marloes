@@ -87,7 +87,7 @@ class BaseAlgorithmV2(ABC):
 
             # 2. Perform algorithm-specific training steps
             # --------------------
-            self.perform_training_steps()
+            self.perform_training_steps(epoch)
 
             # Any time a chunk is "full", it should be saved
             if self.chunk_size != 0 and epoch % self.chunk_size == 0 and epoch != 0:
@@ -113,7 +113,7 @@ class BaseAlgorithmV2(ABC):
         pass
 
     @abstractmethod
-    def perform_training_steps(self) -> None:
+    def perform_training_steps(self, epoch: int) -> None:
         """
         Placeholder for a single training step. To be overridden.
         """
