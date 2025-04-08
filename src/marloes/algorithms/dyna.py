@@ -58,7 +58,7 @@ class Dyna(BaseAlgorithmV2):
 
         for _ in range(self.k):
             # Generate synthetic actions TODO: decide if random or policy
-            synthetic_actions = self.environment.sample_actions()
+            synthetic_actions = self.sample_actions(self.environment.agent_dict)
 
             # Use the world model to predict next state and reward
             synthetic_next_states, synthetic_rewards = self.world_model.predict(
