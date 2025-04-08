@@ -28,7 +28,7 @@ class ReplayBufferV2:
         self.buffer.append(Transition(state, actions, rewards, next_state))
 
     def sample(
-        self, batch_size: int, random: bool = False, use_most_recent: bool = True
+        self, batch_size: int, random: bool = True, use_most_recent: bool = True
     ):
         """
         Samples a random batch of transitions, uses the most recent transitions if not random, unless specified otherwise.
@@ -40,55 +40,49 @@ class ReplayBufferV2:
         )
 
     def _random_sample(self, batch_size: int):
-        """
-        Random sampling.
-        """
-        batch = random.sample(self.buffer, batch_size)
-        batch = Transition(*zip(*batch))  # Transpose batch to Transition of lists
+        if batch_size > len(self.buffer):
+            raise ValueError("Not enough elements in buffer for random sample.")
 
-        state = torch.stack(batch.state).to(self.device)
-        actions = torch.stack(batch.actions).to(self.device)
-        rewards = torch.stack(batch.rewards).to(self.device)
-        next_state = torch.stack(batch.next_state).to(self.device)
+        # Randomly sample
+        transitions = random.sample(self.buffer, batch_size)
 
-        return {
-            "state": state,
-            "actions": actions,
-            "rewards": rewards,
-            "next_state": next_state,
-        }
+        # Convert
+        return self._convert_to_tensors(transitions)
 
-    def _sequential_sample(self, batch_size: int, use_most_recent: bool = True):
-        """
-        Retrieves consecutive transitions.
-        """
-        if len(self.buffer) < batch_size:
-            raise ValueError(
-                f"Not enough transitions to sample a sequential batch of length {batch_size}"
-            )
+    def _sequential_sample(self, batch_size: int, most_recent: bool = True):
+        if batch_size > len(self.buffer):
+            raise ValueError("Not enough elements in buffer for sequential sample.")
 
-        if use_most_recent:
+        # Sequentially sample
+        if most_recent:
             start_idx = len(self.buffer) - batch_size
         else:
-            # Pick a random start index where a consecutive sequence of length batch_size can be retrieved.
             start_idx = random.randint(0, len(self.buffer) - batch_size)
 
-        # Retrieve consecutive transitions
-        sequence = [self.buffer[i] for i in range(start_idx, start_idx + batch_size)]
+        transitions = [self.buffer[i] for i in range(start_idx, start_idx + batch_size)]
+        return self._convert_to_tensors(transitions)
 
-        # Transpose the sequence of transitions into a Transition of lists.
-        batch = Transition(*zip(*sequence))
+    def _convert_to_tensors(self, transitions):
+        state_list = []
+        action_list = []
+        reward_list = []
+        next_state_list = []
 
-        # Convert each component into a tensor and move to the proper device.
-        state = torch.stack(batch.state).to(self.device)
-        actions = torch.stack(batch.actions).to(self.device)
-        rewards = torch.stack(batch.rewards).to(self.device)
-        next_state = torch.stack(batch.next_state).to(self.device)
+        for tr in transitions:
+            state_list.append(self.dict_to_tens(tr.state))
+            action_list.append(self.dict_to_tens(tr.action))
+            reward_list.append(self.dict_to_tens(tr.reward))
+            next_state_list.append(self.dict_to_tens(tr.next_state))
+
+        state = torch.stack(state_list).to(self.device)
+        action = torch.stack(action_list).to(self.device)
+        reward = torch.stack(reward_list).to(self.device)
+        next_state = torch.stack(next_state_list).to(self.device)
 
         return {
             "state": state,
-            "actions": actions,
-            "rewards": rewards,
+            "actions": action,
+            "rewards": reward,
             "next_state": next_state,
         }
 
@@ -97,3 +91,38 @@ class ReplayBufferV2:
         Clears the entire buffer.
         """
         self.buffer.clear()
+
+    @staticmethod
+    def dict_to_tens(
+        data: dict, concatenate_all: bool = True
+    ) -> torch.Tensor | list[torch.Tensor]:
+        """
+        Transforms a dictionary into a tensor.
+        If the value of the dictionary is also a dictionary, extracts the values to a tensor.
+        Either concatenates everything into a single tensor, or returns a list of tensors.
+        Args:
+            data (dict): A dictionary where keys are identifiers, and values are either dictionaries or other values.
+            concatenate_all (bool): If True, concatenates all values into a single tensor.
+                                    If False, returns a list of tensors, one per key.
+        Returns:
+            torch.Tensor or list of torch.Tensor: The transformed tensor(s).
+        """
+
+        def recursive_tensor_extraction(value):
+            """
+            Recursively extracts tensors from a dictionary.
+            """
+            if isinstance(value, dict):
+                tensors = [recursive_tensor_extraction(v) for v in value.values()]
+                tensors = [t.unsqueeze(0) if t.dim() == 0 else t for t in tensors]
+                return torch.cat(tensors) if tensors else torch.tensor([])
+            else:
+                return torch.tensor(value, dtype=torch.float32)
+
+        tensors = [recursive_tensor_extraction(value) for value in data.values()]
+
+        if concatenate_all:
+            tensors = [t.unsqueeze(0) if t.dim() == 0 else t for t in tensors]
+            tensors = torch.cat(tensors) if tensors else torch.tensor([])
+
+        return tensors
