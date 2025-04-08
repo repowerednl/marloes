@@ -1,5 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
+import random
 import torch
 
 from marloes.results.saver import Saver
@@ -73,7 +74,7 @@ class BaseAlgorithmV2(ABC):
             # --------------------
             if step < self.num_initial_random_steps:
                 # Initially do random actions for exploration
-                actions = self.environment.sample_actions()
+                actions = self.sample_actions(self.environment.agent_dict)
             else:
                 # Get actions from the algorithm
                 actions = self.get_actions(state)
@@ -136,3 +137,9 @@ class BaseAlgorithmV2(ABC):
                 f"Algorithm '{name}' is not registered as a subclass of BaseAlgorithm."
             )
         return BaseAlgorithmV2._registry[name](config)
+
+    def sample_actions(self, agent_dict: dict) -> dict:
+        """
+        Generates random actions for each agent in the environment.
+        """
+        return {agent_id: random.uniform(-1.0, 1.0) for agent_id in agent_dict.keys()}
