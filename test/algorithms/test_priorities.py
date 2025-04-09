@@ -12,7 +12,7 @@ from test.util import get_accurate_observation, get_mock_observation
 def get_new_config() -> dict:
     return {
         "algorithm": "priorities",
-        "epochs": 10,
+        "training_steps": 10,
         "agents": [
             {
                 "type": "demand",
@@ -32,6 +32,10 @@ def get_new_config() -> dict:
                 "power": 100,
             },
         ],
+        "replay_buffers": {
+            "real_capacity": 1000,
+            "model_capacity": 1000,
+        },
     }
 
 
@@ -48,7 +52,7 @@ class TestPriorities(unittest.TestCase):
             self.alg = Priorities(config=get_new_config())
 
     def test_init(self):
-        self.assertEqual(self.alg.epochs, 10)
+        self.assertEqual(self.alg.training_steps, 10)
         self.assertEqual(len(self.alg.environment.agents), 3)
 
     def test_agent_types(self):
@@ -72,7 +76,7 @@ class TestPriorities(unittest.TestCase):
         mock_step.return_value = ({}, 2, 3, 4)
         self.alg.train()
         self.assertEqual(mock_reset.call_count, 1)
-        self.assertEqual(mock_step.call_count, self.alg.epochs)
+        self.assertEqual(mock_step.call_count, self.alg.training_steps)
 
     def test__get_net_power(self):
         mock_obs = get_mock_observation(
