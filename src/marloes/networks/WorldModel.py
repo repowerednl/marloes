@@ -205,33 +205,6 @@ class WorldModel:
         }
 
 
-class Encoder(BaseNetwork):
-    """
-    Class that encodes the observations to the latent state for the RSSM network.
-    Since we have no images (CNN) in this case, we can use a simple MLP.
-    """
-
-    def __init__(self, input: int, latent_dim: int, hidden_dim: int = 256):
-        super(Encoder, self).__init__()
-        self.fc1 = nn.Linear(input, hidden_dim)
-        self.fc_mu = nn.Linear(hidden_dim, latent_dim)
-        self.fc_logvar = nn.Linear(hidden_dim, latent_dim)
-
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
-        """
-        Passes observations (x) through the MLP to predict latent state.
-        """
-        x = F.relu(
-            self.fc1(x.float())
-        )  # float() added to ensure compatibility with torch.tensor float32
-        mu = self.fc_mu(x)
-        logvar = self.fc_logvar(x)
-        return dist(mu, logvar), {
-            "mean": mu,
-            "logvar": logvar,
-        }
-
-
 class Decoder(BaseNetwork):
     """
     Class that decodes the latent state to the observations for the RSSM network.
