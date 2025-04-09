@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from marloes.networks.base import HyperParams
-from marloes.networks.RSSM import RSSM
+from marloes.networks.dreamer.RSSM import RSSM
 from marloes.networks.details import RSSM_LD
 
 

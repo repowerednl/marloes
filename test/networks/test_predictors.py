@@ -2,7 +2,7 @@ from unittest import TestCase, mock
 import torch
 import numpy as np
 
-from marloes.networks.WorldModel import RewardPredictor, ContinuePredictor
+from marloes.networks.dreamer.WorldModel import RewardPredictor, ContinuePredictor
 
 
 class PredictorsTestCase(TestCase):

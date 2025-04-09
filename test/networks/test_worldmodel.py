@@ -3,14 +3,14 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from marloes.networks.WorldModel import (
+from marloes.networks.dreamer.WorldModel import (
     WorldModel,
     Decoder,
     RewardPredictor,
     ContinuePredictor,
 )
-from marloes.networks.ActorCritic import Actor
-from marloes.networks.RSSM import RSSM, Encoder
+from marloes.networks.dreamer.ActorCritic import Actor
+from marloes.networks.dreamer.RSSM import RSSM, Encoder
 from marloes.networks.details import RSSM_LD
 from marloes.data.replaybuffer import ReplayBuffer
 

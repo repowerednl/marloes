@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch.distributions import Normal
 
-from marloes.networks.ActorCritic import ActorCritic
+from marloes.networks.dreamer.ActorCritic import ActorCritic
 
 
 class ActorCriticTestCase(TestCase):
