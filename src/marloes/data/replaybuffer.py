@@ -50,7 +50,7 @@ class ReplayBuffer:
         # Convert
         return self._convert_to_tensors(transitions)
 
-    def _sequential_sample(self, batch_size: int, horizon: int = 1):
+    def _sequential_sample(self, batch_size: int, horizon: int = 1) -> list[dict]:
         """
         Samples sequences from the buffer, returns a batch of size [batch_size] with each element being a sequence of size [horizon].
         """
