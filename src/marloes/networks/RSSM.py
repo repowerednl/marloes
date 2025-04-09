@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .base import BaseNetwork, LayerDetails, HyperParams
-from .WorldModel import Encoder
 from .details import RSSM_LD
 from .util import dist
 
@@ -173,11 +172,11 @@ class RSSM(BaseNetwork):
         h_t = h_0[-1]  # Take the last layer and unsqueeze for batch dim
 
         T = next_states.shape[0]
-        # infer the initial latent state for the first step
-        z_t = self._get_latent_state(h_t)
+        # # infer the initial latent state for the first step
+        # z_t = self._get_latent_state(h_t)
         # (alternative: Use Encoder instead, since we can use states)
-        # x = torch.cat([states[0], h_t], dim=-1).unsqueeze(0)
-        # z_t = self.encoder(x)
+        x = torch.cat([states[0], h_t], dim=-1).unsqueeze(0)
+        z_t = self.encoder(x)
 
         pred_z = []
         z = []
@@ -223,4 +222,30 @@ class RSSM(BaseNetwork):
         """
         output = self.hidden_size + self.latent_state_size
         self.encoder = Encoder(input, output)
-        self.encoder.to(self.device)
+
+
+class Encoder(BaseNetwork):
+    """
+    Class that encodes the observations to the latent state for the RSSM network.
+    Since we have no images (CNN) in this case, we can use a simple MLP.
+    """
+
+    def __init__(self, input: int, latent_dim: int, hidden_dim: int = 256):
+        super(Encoder, self).__init__()
+        self.fc1 = nn.Linear(input, hidden_dim)
+        self.fc_mu = nn.Linear(hidden_dim, latent_dim)
+        self.fc_logvar = nn.Linear(hidden_dim, latent_dim)
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
+        """
+        Passes observations (x) through the MLP to predict latent state.
+        """
+        x = F.relu(
+            self.fc1(x.float())
+        )  # float() added to ensure compatibility with torch.tensor float32
+        mu = self.fc_mu(x)
+        logvar = self.fc_logvar(x)
+        return dist(mu, logvar), {
+            "mean": mu,
+            "logvar": logvar,
+        }

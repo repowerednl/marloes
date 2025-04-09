@@ -1,4 +1,4 @@
 from src.marloes.algorithms.base import BaseAlgorithm
 from src.marloes.algorithms.simplesetpoint import SimpleSetpoint
 from src.marloes.algorithms.priorities import Priorities
-from src.marloes.algorithms.dummy import Dummy
+from src.marloes.algorithms.dreamer import Dreamer

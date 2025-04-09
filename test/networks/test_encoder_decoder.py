@@ -2,7 +2,8 @@ from unittest import TestCase, mock
 import numpy as np
 import torch
 
-from marloes.networks.WorldModel import Encoder, Decoder, RewardPredictor
+from marloes.networks.WorldModel import Decoder, RewardPredictor
+from marloes.networks.RSSM import Encoder
 from marloes.networks.details import RSSM_LD
 from marloes.networks.util import dict_to_tens
 
