@@ -6,7 +6,7 @@ import torch
 Transition = namedtuple("Transition", ["state", "actions", "rewards", "next_state"])
 
 
-class ReplayBufferV2:
+class ReplayBuffer:
     def __init__(self, capacity: int = 10000, device="cpu"):
         """
         Initializes the replay buffer.
