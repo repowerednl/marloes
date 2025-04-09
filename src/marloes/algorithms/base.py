@@ -1,8 +1,11 @@
 import logging
 from abc import ABC, abstractmethod
+import random
+import torch
 
 from marloes.results.saver import Saver
 from marloes.valley.env import EnergyValley
+from marloes.data.replaybuffer import ReplayBuffer
 
 
 class BaseAlgorithm(ABC):
@@ -20,10 +23,33 @@ class BaseAlgorithm(ABC):
         logging.info(
             f"Initializing {self.__class__.__name__} algorithm and setting up the environment..."
         )
+        self.config = config
+
+        # Initialize the Saver, environment, and device
         self.saver = Saver(config=config)
-        self.chunk_size = config.get("chunk_size", 10000)
-        self.epochs = config.get("epochs", 100000)
         self.environment = EnergyValley(config, self.__class__.__name__)
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )  # for future ticket, make sure this can run on GPU instead of CPU
+
+        # General settings
+        self.chunk_size = self.config.get("chunk_size", 10000)
+        self.training_steps = self.config.get("training_steps", 100000)
+        self.num_initial_random_steps = self.config.get("num_initial_random_steps", 0)
+        self.batch_size = self.config.get("batch_size", 128)
+
+        # Initialize ReplayBuffers
+        self.real_RB = ReplayBuffer(
+            capacity=self.config["replay_buffers"].get("real_capacity", 1000),
+            device=self.device,
+        )
+        try:
+            self.model_RB = ReplayBuffer(
+                capacity=self.config["replay_buffers"].get("model_capacity", 1000),
+                device=self.device,
+            )
+        except KeyError:
+            self.model_RB = None
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -35,21 +61,37 @@ class BaseAlgorithm(ABC):
 
         This method can be overridden by subclasses for algorithm-specific behavior.
         """
+        # Initialization
         logging.info("Starting training process...")
-        observations, infos = self.environment.reset()
+        state, infos = self.environment.reset()
 
-        for epoch in range(self.epochs):
-            if epoch % 1000 == 0:
-                logging.info(f"Reached epoch {epoch}/{self.epochs}...")
+        # Main training loop
+        for step in range(self.training_steps):
+            if step % 1000 == 0:
+                logging.info(f"Reached step {step}/{self.training_steps}...")
 
-            actions = self.get_actions(observations)
-            observations, rewards, dones, infos = self.environment.step(actions)
+            # 1. Collect data from environment
+            # --------------------
+            if step < self.num_initial_random_steps:
+                # Initially do random actions for exploration
+                actions = self.sample_actions(self.environment.agent_dict)
+            else:
+                # Get actions from the algorithm
+                actions = self.get_actions(state)
 
-            # Placeholder for training logic specific to subclasses
-            self._train_step(observations, rewards, dones, infos)
+            next_state, rewards, dones, infos = self.environment.step(actions)
 
-            # After chunk is "full", it should be saved
-            if self.chunk_size != 0 and epoch % self.chunk_size == 0 and epoch != 0:
+            # Store (real) experiences
+            self.real_RB.push(state, actions, rewards, next_state)
+
+            state = next_state
+
+            # 2. Perform algorithm-specific training steps
+            # --------------------
+            self.perform_training_steps(step)
+
+            # Any time a chunk is "full", it should be saved
+            if self.chunk_size != 0 and step % self.chunk_size == 0 and step != 0:
                 logging.info("Saving intermediate results and resetting extractor...")
                 self.saver.save(extractor=self.environment.extractor)
                 # clear the extractor
@@ -62,7 +104,7 @@ class BaseAlgorithm(ABC):
         logging.info("Training process completed.")
 
     @abstractmethod
-    def get_actions(self, observations) -> dict:
+    def get_actions(self, state) -> dict:
         """
         Generates actions based on the current observation.
 
@@ -72,15 +114,16 @@ class BaseAlgorithm(ABC):
         pass
 
     @abstractmethod
-    def _train_step(self, observations, rewards, dones, infos) -> None:
+    def perform_training_steps(self, step: int) -> None:
         """
-        Placeholder for a single training step. To be overridden if needed.
+        Placeholder for a single training step. To be overridden.
         """
         pass
 
     def load(self, uid: str) -> None:
         """
         Loads a parameter configuration from a file.
+        TODO: Implement loading of model parameters.
         """
         pass
 
@@ -94,6 +137,12 @@ class BaseAlgorithm(ABC):
                 f"Algorithm '{name}' is not registered as a subclass of BaseAlgorithm."
             )
         return BaseAlgorithm._registry[name](config)
+
+    def sample_actions(self, agent_dict: dict) -> dict:
+        """
+        Generates random actions for each agent in the environment.
+        """
+        return {agent_id: random.uniform(-1.0, 1.0) for agent_id in agent_dict.keys()}
 
     @staticmethod
     def _get_net_forecasted_power(observations: dict, period: int = 60) -> float:

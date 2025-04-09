@@ -1,9 +1,9 @@
 import torch
 
-from marloes.algorithms import SAC, BaseAlgorithmV2
+from marloes.algorithms import BaseAlgorithm, SAC
 
 
-class Dyna(BaseAlgorithmV2):
+class Dyna(BaseAlgorithm):
     """
     Dyna algorithm that combines model-based and model-free reinforcement learning.
     """

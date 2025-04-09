@@ -1,14 +1,14 @@
 import unittest
 
 import torch
-from marloes.data.replaybuffer_v2 import ReplayBufferV2
+from marloes.data.replaybuffer import ReplayBuffer
 
 
-class TestReplayBufferV2(unittest.TestCase):
+class TestReplayBuffer(unittest.TestCase):
     def setUp(self):
         self.capacity = 5
         self.device = "cpu"
-        self.buffer = ReplayBufferV2(capacity=self.capacity, device=self.device)
+        self.buffer = ReplayBuffer(capacity=self.capacity, device=self.device)
 
     def sample_transition(self, i):
         state = {"value": i}
@@ -60,7 +60,7 @@ class TestReplayBufferV2(unittest.TestCase):
     def test_dict_to_tens(self):
         # Test dict_to_tens with a simple dict
         data = {"a": 1, "b": 2}
-        tensor = ReplayBufferV2.dict_to_tens(data, concatenate_all=True)
+        tensor = ReplayBuffer.dict_to_tens(data, concatenate_all=True)
         expected = torch.tensor([1.0, 2.0])
         self.assertTrue(
             torch.equal(tensor, expected), f"Expected {expected}, got {tensor}"
