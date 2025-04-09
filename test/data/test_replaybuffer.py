@@ -30,7 +30,7 @@ class TestReplayBuffer(unittest.TestCase):
     def test_random_sample(self):
         for i in range(5):
             self.buffer.push(*self.sample_transition(i))
-        batch = self.buffer.sample(batch_size=3, random=True)
+        batch = self.buffer.sample(batch_size=3)
 
         for key in ["state", "actions", "rewards", "next_state"]:
             self.assertIn(key, batch)
@@ -43,12 +43,16 @@ class TestReplayBuffer(unittest.TestCase):
     def test_sequential_sample(self):
         for i in range(6):
             self.buffer.push(*self.sample_transition(i))
-        batch = self.buffer.sample(batch_size=4, random=False, use_most_recent=True)
-        state_tensor = batch["state"]
-        state_values = state_tensor.squeeze().tolist()
-        if not isinstance(state_values, list):
-            state_values = [state_values]
-        self.assertEqual(state_values, [2, 3, 4, 5])
+        batch = self.buffer.sample(batch_size=2, sequence=2)
+        self.assertEqual(len(batch), 2)
+        for sequence in batch:
+            # sequence is a dictionary
+            self.assertIn("state", sequence)
+            self.assertIn("actions", sequence)
+            self.assertIn("rewards", sequence)
+            self.assertIn("next_state", sequence)
+            # check that the values have 2 elements
+            self.assertEqual(sequence["state"].shape[0], 2)
 
     def test_clear_buffer(self):
         for i in range(3):

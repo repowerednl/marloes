@@ -27,17 +27,18 @@ class ReplayBuffer:
         """
         self.buffer.append(Transition(state, actions, rewards, next_state))
 
-    def sample(
-        self, batch_size: int, random: bool = True, use_most_recent: bool = True
-    ):
+    def sample(self, batch_size: int, sequence: int = 0):
         """
         Samples a random batch of transitions, uses the most recent transitions if not random, unless specified otherwise.
+        Args:
+            batch_size (int): Number of transitions to sample.
+            sequence (int): If > 0, samples a sequence of transitions.
+                            If 0, samples random transitions.
         """
-        return (
-            self._random_sample(batch_size)
-            if random
-            else self._sequential_sample(batch_size, use_most_recent)
-        )
+        if sequence:
+            # should sample [batch_size] sequences of size [sequence]
+            return self._sequential_sample(batch_size, horizon=sequence)
+        return self._random_sample(batch_size)
 
     def _random_sample(self, batch_size: int):
         if batch_size > len(self.buffer):
@@ -49,18 +50,27 @@ class ReplayBuffer:
         # Convert
         return self._convert_to_tensors(transitions)
 
-    def _sequential_sample(self, batch_size: int, most_recent: bool = True):
+    def _sequential_sample(self, batch_size: int, horizon: int = 1) -> list[dict]:
+        """
+        Samples sequences from the buffer, returns a batch of size [batch_size] with each element being a sequence of size [horizon].
+        """
         if batch_size > len(self.buffer):
             raise ValueError("Not enough elements in buffer for sequential sample.")
+        if horizon > len(self.buffer):
+            raise ValueError("Horizon is larger than buffer size.")
+        if horizon == 0:
+            raise ValueError("Horizon cannot be zero.")
+        batch = []
+        max_idx = len(self.buffer) - horizon
+        for b in range(batch_size):
+            # randomly select a starting index
+            start_idx = random.randint(0, max_idx)
 
-        # Sequentially sample
-        if most_recent:
-            start_idx = len(self.buffer) - batch_size
-        else:
-            start_idx = random.randint(0, len(self.buffer) - batch_size)
-
-        transitions = [self.buffer[i] for i in range(start_idx, start_idx + batch_size)]
-        return self._convert_to_tensors(transitions)
+            sequence = [
+                self.buffer[i] for i in range(start_idx, start_idx + batch_size)
+            ]
+            batch.append(self._convert_to_tensors(sequence))
+        return batch
 
     def _convert_to_tensors(self, transitions):
         state_list = []
