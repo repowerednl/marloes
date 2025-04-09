@@ -22,6 +22,7 @@ class Dreamer(BaseAlgorithm):
         self._initialize_actor_critic()
         self.update_interval = self.config.get("update_interval", 100)
         self.previous = None
+        self.horizon = 16
 
     def _initialize_world_model(self):
         """
@@ -100,16 +101,26 @@ class Dreamer(BaseAlgorithm):
         # | Step 1: Get a sample from the replay buffer         |#
         # |  - should be a sample of sequences (size=horizon)   |#
         # | --------------------------------------------------- |#
-        real_sample = self.real_RB.sample(self.batch_size)  # sequence = size horizon
+        real_sample = self.real_RB.sample(
+            self.batch_size, self.horizon
+        )  # sequence = size horizon
 
         # | ----------------------------------------------------- |#
         # | Step 2: Update the world model with real interactions |#
         # | ----------------------------------------------------- |#
-        self.world_model.learn(real_sample)
-
+        losses = self.world_model.learn(real_sample)
+        print(losses)
         # | ----------------------------------------------------- |#
         # | Step 3: Imagine trajectories for ActorCritic learning |#
+        # |  - Sample starting point from the replay buffer       |#
+        # |  - Pass Actor to the imagine function in WorldModel   |#
+        # |  - Should return a batch of imagined sequences        |#
         # | ----------------------------------------------------- |#
+        starting_points = self.real_RB.sample(self.batch_size)
+        imagined_sequences = self.world_model.imagine(
+            starting_points["states"], self.actor_critic, self.horizon
+        )
+        print(imagined_sequences)
 
         # | ------------------------------------- |#
         # | Step 4: Update the actor-critic model |#

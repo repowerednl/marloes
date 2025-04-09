@@ -68,48 +68,69 @@ class WorldModel:
             "rep": 0.1,
         }
 
-    def imagine(self, initial, actor: Actor, horizon: int = 16):
+    def imagine(
+        self, starting_points: torch.Tensor, actor: Actor, horizon: int = 16
+    ) -> list[dict]:
         """
         Imagine function for rollouts from the initial state, using the actor to sample actions (from current policy).
         Returns the predicted observations and rewards.
         Only used for testing and validation, not for training.
         """
         with torch.no_grad():
-            x = initial
-            # Encode to latent space
-            z_0, _ = self.encoder(x)  # shape (batch=1, latent_dim)
-
-            # Initialize hidden state for the RSSM
-            h_0 = self.rssm._init_state(x.shape[0])
-            h_0 = h_0[
-                -1
-            ]  # take the last layer of the GRU, shape (batch=1, hidden_size)
-
-            # Initialize lists to store the actions and the imagined observations and reward
-            imagined_states = [z_0]
-            imagined_rewards = []
-            imagined_actions = []
-
-            for t in range(horizon):
-                # form model state
-                s = torch.cat(
-                    [h_0, z_0], dim=-1
-                )  # shape (batch=1, hidden_size + latent_dim)
+            batch = []
+            # we have a batch of starting points
+            for x in starting_points:
+                imagined = {
+                    "states": [],
+                    "rewards": [],
+                    "actions": [],
+                }
+                x = x.unsqueeze(0)
+                # Obtain h_t
+                h_0 = self.rssm._init_state(x.shape[0])
+                h_0 = h_0[
+                    -1
+                ]  # take the last layer of the GRU, shape (batch=1, hidden_size)
+                # infer z_t
+                z_0 = self.rssm._get_latent_state(h_0)
                 # sample action from the actor
-                a_t = actor(s).sample()  # shape (batch=1, action_dim)
-                imagined_actions.append(a_t)
-                # transition
-                h_0, z_0, _ = self.rssm.forward(h_0, z_0, a_t)
-                imagined_states.append(z_0)
-                # predict reward
-                r_t = self.reward_predictor(h_0, z_0)  # shape (batch=1, 1)
-                imagined_rewards.append(r_t)
+                a_0 = actor(z_0).sample()  # shape (batch=1, action_dim)
 
-            return {
-                "states": torch.stack(imagined_states, dim=0),
-                "rewards": torch.stack(imagined_rewards, dim=0),
-                "actions": torch.stack(imagined_actions, dim=0),
-            }
+                h_t, z_hat_t, _ = self.rssm.forward(h_0, z_0, a_0)
+                # form model state
+                x = torch.cat(
+                    [x, h_t], dim=-1
+                )  # shape (batch=1, obs_dim + hidden_size)
+                z_t, _ = self.rssm.encoder(x)
+                a_t = a_0
+                imagined["states"].append(z_t)
+                imagined["actions"].append(a_t)
+                imagined["rewards"].append(self.reward_predictor(h_t, z_t))
+                """
+                At each starting point, we imagine trajectories of length horizon.
+                """
+                for t in range(horizon):
+                    # get the action from th
+                    a_t = actor(z_t).sample()
+
+                    # Get h_t from sequence model (transition)
+                    h_t, z_t, z_details = self.rssm.forward(h_t, z_t, a_t)
+
+                    # Predict the reward
+                    r_t = self.reward_predictor(h_t, z_t)
+
+                    # Store the imagined states, actions and rewards
+                    imagined["states"].append(z_t)
+                    imagined["actions"].append(a_t)
+                    imagined["rewards"].append(r_t)
+                # Stack the imagined states, actions and rewards
+                imagined["states"] = torch.stack(imagined["states"], dim=0)
+                imagined["actions"] = torch.stack(imagined["actions"], dim=0)
+                imagined["rewards"] = torch.stack(imagined["rewards"], dim=0)
+                # Append the imagined sequence to the batch
+                batch.append(imagined)
+
+        return batch
 
     def learn(self, sample: list[dict]) -> dict:
         """
