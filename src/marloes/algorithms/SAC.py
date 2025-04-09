@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 
 from marloes.networks.SAC.critic import CriticNetwork
+from marloes.networks.SAC.value import ValueNetwork
 
 
 class SAC:
@@ -10,8 +11,8 @@ class SAC:
     """
 
     def __init__(self, config: dict):
-        self.value_network = None  # Parameterized by psi
-        self.target_value_network = None  # Parameterized by psi'
+        self.value_network = ValueNetwork(config)  # Parameterized by psi
+        self.target_value_network = ValueNetwork(config)  # Parameterized by psi'
         self.critic_1_network = CriticNetwork(config)
         self.critic_2_network = CriticNetwork(config)
         self.actor_network = None  # Parameterized by phi
