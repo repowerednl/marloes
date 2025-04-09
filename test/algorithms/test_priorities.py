@@ -47,7 +47,9 @@ class TestPriorities(unittest.TestCase):
     def setUp(self, *mocks) -> None:
         with patch("marloes.results.saver.Saver._save_config_to_yaml"), patch(
             "marloes.results.saver.Saver._update_simulation_number", return_value=0
-        ), patch("marloes.results.saver.Saver._validate_folder"):
+        ), patch("marloes.results.saver.Saver._validate_folder"), patch(
+            "marloes.valley.env.EnergyValley._get_full_observation", return_value={}
+        ):
             Agent._id_counters = {}
             self.alg = Priorities(config=get_new_config())
 
@@ -73,7 +75,7 @@ class TestPriorities(unittest.TestCase):
     @patch("marloes.valley.env.EnergyValley.reset")
     def test_train(self, mock_reset, mock_step):
         mock_reset.return_value = {}, {}
-        mock_step.return_value = ({}, 2, 3, 4)
+        mock_step.return_value = ({}, {}, {}, {})
         self.alg.train()
         self.assertEqual(mock_reset.call_count, 1)
         self.assertEqual(mock_step.call_count, self.alg.training_steps)

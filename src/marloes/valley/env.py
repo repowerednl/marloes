@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 import numpy as np
+import torch
 
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from simon.solver import Model
@@ -22,6 +23,7 @@ from marloes.agents import (
     WindAgent,
 )
 from marloes.results.extractor import ExtensiveExtractor, Extractor
+from marloes.data.replaybuffer import ReplayBuffer
 
 
 class EnergyValley(MultiAgentEnv):
@@ -70,6 +72,12 @@ class EnergyValley(MultiAgentEnv):
         # is the hub ever done? Is life ever done? Is life a simulation?
         self._dones_cache = {agent.id: False for agent in self.agents}
         self._infos_cache = {agent.id: {} for agent in self.agents}
+
+        # Add observation_shape and action_shape to the environment
+        self.observation_space = ReplayBuffer.dict_to_tens(
+            self._get_full_observation()
+        ).shape
+        self.action_space = torch.Size([len(self.agents)])
 
     def _initialize_agents(self, config: dict, algorithm_type: str) -> None:
         """
@@ -189,6 +197,15 @@ class EnergyValley(MultiAgentEnv):
             self._state_cache[agent.id] = relevant_state
         return self._state_cache
 
+    def _get_additional_info(self) -> dict:
+        """Function to get additional information (market prices, etc.)"""
+        return {}
+
+    def _get_full_observation(self) -> dict:
+        """Function to get the full observation (agent state + additional information)"""
+        # TODO: Is the grid information added to the state?
+        return self._combine_states() | self._get_additional_info()
+
     def _calculate_reward(self):
         """Function to calculate the reward"""
         reward = 0  # TODO: Implement reward calculation
@@ -205,7 +222,7 @@ class EnergyValley(MultiAgentEnv):
         for agent in self.agents:
             agent.asset.load_default_state(self.start_time)
         self.time_stamp = self.start_time
-        return self._combine_states(), {agent.id: {} for agent in self.agents}
+        return self._get_full_observation(), {agent.id: {} for agent in self.agents}
 
     def step(self, actions: dict):
         """Function should return the observation, reward, done, info"""
@@ -229,8 +246,8 @@ class EnergyValley(MultiAgentEnv):
         for electrolyser in electrolysers:
             electrolyser._loss_discharge()
 
-        # Combine the states of all agents as observations
-        observations = self._combine_states()
+        # Get full observation
+        observations = self._get_full_observation()
 
         # Extract results and calculate next states
         self.extractor.from_model(self.model)
