@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim import Adam
 
 
 class SACBaseNetwork(nn.Module):
@@ -29,6 +30,18 @@ class SACBaseNetwork(nn.Module):
             dim = self.hidden_dim
 
         self.hidden_layers = nn.Sequential(*layers)
+
+        # TODO: Keep this the same everywhere?
+        learning_rate = config.get("learning_rate", 3e-4)
+        eps = config.get("eps", 1e-7)
+        weight_decay = config.get("weight_decay", 0.0)
+
+        self.optimizer = Adam(
+            self.parameters(),
+            lr=learning_rate,
+            eps=eps,
+            weight_decay=weight_decay,
+        )
 
     def forward(self, x):
         """
