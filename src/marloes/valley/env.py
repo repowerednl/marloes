@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 import numpy as np
+import torch
 
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from simon.solver import Model
@@ -22,8 +23,7 @@ from marloes.agents import (
     WindAgent,
 )
 from marloes.results.extractor import ExtensiveExtractor, Extractor
-from marloes.networks.util import dict_to_tens
-import torch
+from marloes.data.replaybuffer import ReplayBuffer
 
 
 class EnergyValley(MultiAgentEnv):
@@ -74,7 +74,9 @@ class EnergyValley(MultiAgentEnv):
         self._infos_cache = {agent.id: {} for agent in self.agents}
 
         # Add observation_shape and action_shape to the environment
-        self.observation_space = dict_to_tens(self._get_full_observation()).shape
+        self.observation_space = ReplayBuffer.dict_to_tens(
+            self._get_full_observation()
+        ).shape
         self.action_space = torch.Size([len(self.agents)])
 
     def _initialize_agents(self, config: dict, algorithm_type: str) -> None:
@@ -220,7 +222,6 @@ class EnergyValley(MultiAgentEnv):
         for agent in self.agents:
             agent.asset.load_default_state(self.start_time)
         self.time_stamp = self.start_time
-        self.i = 0
         return self._get_full_observation(), {agent.id: {} for agent in self.agents}
 
     def step(self, actions: dict):
