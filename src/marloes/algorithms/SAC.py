@@ -23,12 +23,14 @@ class SAC:
         self.alpha = config.get("alpha", 0.2)  # Temperature parameter for entropy
         self.tau = config.get("tau", 0.005)  # Target network update rate
 
-    def act(self):
+    def act(self, state):
         """
         Selects an action based on the current state using the actor network.
         """
-        # Placeholder for action selection logic
-        pass
+        self.actor_network.eval()  # Set to evaluation mode
+        with torch.no_grad():  # Disable gradient calculation
+            action, _ = self.actor_network.sample(state)
+        return action
 
     def update(self, batch):
         """
