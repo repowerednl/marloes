@@ -16,7 +16,7 @@ class SACBaseNetwork(nn.Module):
         super(SACBaseNetwork, self).__init__()
 
         # Get the parameters from the config
-        hidden_dim = config.get("hidden_dim", 256)
+        self.hidden_dim = config.get("hidden_dim", 256)
         num_layers = config.get("num_layers", 2)
 
         # Build the layers
@@ -24,9 +24,9 @@ class SACBaseNetwork(nn.Module):
         dim = input_dim
 
         for _ in range(num_layers):
-            layers.append(nn.Linear(dim, hidden_dim))
+            layers.append(nn.Linear(dim, self.hidden_dim))
             layers.append(activation)
-            dim = hidden_dim
+            dim = self.hidden_dim
 
         self.hidden_layers = nn.Sequential(*layers)
 
