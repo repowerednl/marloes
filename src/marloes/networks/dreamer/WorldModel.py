@@ -1,0 +1,268 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from .RSSM import RSSM
+from .base import BaseNetwork, HyperParams
+from .ActorCritic import Actor
+from .util import dist, symlog_squared_loss, gaussian_kl_divergence, kl_free_bits
+
+
+class WorldModel:
+    """
+    World model using simple MLP Encoder and Decoder for an RSSM network, based on the DreamerV3 architecture.
+    Requires:
+    - observation shape
+    - action shape
+    Optional:
+    - params: dictionary with network parameters
+    - hyper_params: HyperParams object with network hyperparameters
+    """
+
+    def __init__(
+        self,
+        observation_shape: tuple,
+        action_shape: tuple,  # Unused now, but added if we want init more dynamically.
+        params: dict = None,
+        hyper_params: HyperParams = None,
+    ):
+        """
+        Initializes the World Model
+        """
+        self.rssm = RSSM(
+            params=params,
+            hyper_params=hyper_params,
+            stochastic=True,
+        )
+        self.rssm.add_encoder(input=observation_shape[0])
+        # RSSM in between, is created first to ensure the link between encoder and decoder
+        self.decoder = Decoder(self.rssm.fc.out_features, observation_shape[0])
+        self.reward_predictor = RewardPredictor(
+            self.rssm.rnn.hidden_size, self.rssm.fc.out_features
+        )
+        self.continue_predictor = ContinuePredictor(
+            self.rssm.rnn.hidden_size, self.rssm.fc.out_features
+        )
+
+        self.modules = [
+            self.rssm,
+            self.rssm.encoder,
+            self.decoder,
+            self.reward_predictor,
+            self.continue_predictor,
+        ]
+        # Optimizer
+        self.optim = torch.optim.Adam(
+            params=[param for mod in self.modules for param in mod.parameters()],
+            lr=0.001,
+            weight_decay=1e-4,
+        )
+        self.beta_weights = {
+            "pred": 1.0,
+            "dyn": 1.0,
+            "rep": 0.1,
+        }
+
+    def imagine(self, initial, actor: Actor, horizon: int = 16):
+        """
+        Imagine function for rollouts from the initial state, using the actor to sample actions (from current policy).
+        Returns the predicted observations and rewards.
+        Only used for testing and validation, not for training.
+        """
+        with torch.no_grad():
+            x = initial
+            # Encode to latent space
+            z_0, _ = self.encoder(x)  # shape (batch=1, latent_dim)
+
+            # Initialize hidden state for the RSSM
+            h_0 = self.rssm._init_state(x.shape[0])
+            h_0 = h_0[
+                -1
+            ]  # take the last layer of the GRU, shape (batch=1, hidden_size)
+
+            # Initialize lists to store the actions and the imagined observations and reward
+            imagined_states = [z_0]
+            imagined_rewards = []
+            imagined_actions = []
+
+            for t in range(horizon):
+                # form model state
+                s = torch.cat(
+                    [h_0, z_0], dim=-1
+                )  # shape (batch=1, hidden_size + latent_dim)
+                # sample action from the actor
+                a_t = actor(s).sample()  # shape (batch=1, action_dim)
+                imagined_actions.append(a_t)
+                # transition
+                h_0, z_0, _ = self.rssm.forward(h_0, z_0, a_t)
+                imagined_states.append(z_0)
+                # predict reward
+                r_t = self.reward_predictor(h_0, z_0)  # shape (batch=1, 1)
+                imagined_rewards.append(r_t)
+
+            return {
+                "states": torch.stack(imagined_states, dim=0),
+                "rewards": torch.stack(imagined_rewards, dim=0),
+                "actions": torch.stack(imagined_actions, dim=0),
+            }
+
+    def learn(self, sample: list[dict]) -> dict:
+        """
+        Learning step takes a batch of sequences of a certain length (horizon).
+        """
+        # extract the to be predicted states (next_states) as tensors into x
+        x = torch.stack([sequence["states"] for sequence in sample], dim=0)
+        # extract the rewards and done signals as tensors into rew
+        rew = torch.stack([sequence["rewards"] for sequence in sample], dim=0)
+
+        # | -----------------------------------------------------------------------------|#
+        # | Step 1: Perform rollout in RSSM                                              |#
+        # |  - Obtain predicted latent states [h_t-1, z_t-1, a_t-1] -> h_t -> z_hat_t    |#
+        # |  - And actual latent states [h_t, x_t] -> z_t                                |#
+        # | ---------------------------------------------------------------------------- |#
+        z_hat, z, h, z_hat_details, z_details = self.rssm.rollout(sample)
+
+        # | -----------------------------------------------------------------------------|#
+        # | Step 2: Predict Reward (and Continue signal)                                 |#
+        # |  - Obtain predicted reward [h_t,z_t] -> r_t                                  |#
+        # |  - Obtain Continue signal [h_t,z_t] -> c_t    #TODO                          |#
+        # | ---------------------------------------------------------------------------- |#
+        r_ts = self.reward_predictor(h, z)
+
+        # | -----------------------------------------------------------------------------|#
+        # | Step 3: Decode the predicted latent state to the observations                |#
+        # |  - Obtain predicted observations [z] -> x_hat_t                              |#
+        # | ---------------------------------------------------------------------------- |#
+        x_hat_t = self.decoder(z)
+
+        # | -----------------------------------------------------------------------------|#
+        # | Step 4: Compute the loss functions                                           |#
+        # |  - L_dyn: KL-divergence between predicted and true latent state              |#
+        # |  - L_rep: KL-divergence between predicted and true latent state              |#
+        # |  - L_pred: prediction loss (symlog squared loss)                             |#
+        # | ---------------------------------------------------------------------------- |#
+
+        """
+        First loss function, the dynamics loss trains the sequence model to predict the next representation:
+        KL-divergence between the predicted latent state and the true latent state (with stop-gradient operator)
+                L_dyn = max(1,KL[sg(z_t) || z_hat_t])
+        [stop gradient (sg) can be implemented with detach()]
+        """
+        dynamic_loss = torch.nn.functional.kl_div(
+            z_hat, z.detach(), reduction="batchmean"
+        )
+        # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
+        pre_kl = gaussian_kl_divergence(
+            z_details["mean"].detach(),
+            z_details["logvar"].detach(),
+            z_hat_details["mean"],
+            z_hat_details["logvar"],
+        )
+        dynamic_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
+
+        """
+        Second loss function, the representation loss trains the representations to be more predictable
+        KL-divergence between the predicted latent state and the true latent state
+                L_rep = max(1,KL[z_t || sg(z_hat_t)])
+        [stop gradient can be implemented with detach()]
+        """
+        representation_loss = torch.nn.functional.kl_div(
+            z_hat.detach(), z, reduction="batchmean"
+        )
+        # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
+        pre_kl = gaussian_kl_divergence(
+            z_hat_details["mean"].detach(),
+            z_hat_details["logvar"].detach(),
+            z_details["mean"],
+            z_details["logvar"],
+        )
+        representation_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
+
+        """
+        Third loss function, the prediction loss is end-to-end training of the model
+        trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression (not implemented)
+        """
+        prediction_loss = -symlog_squared_loss(x_hat_t, x) - symlog_squared_loss(
+            r_ts, rew
+        )
+
+        total_loss = (
+            self.beta_weights["dyn"] * dynamic_loss
+            + self.beta_weights["rep"] * representation_loss
+            + self.beta_weights["pred"] * prediction_loss
+        )
+
+        # Backpropagate the total loss
+        self.optim.zero_grad()
+        total_loss.backward()
+        self.optim.step()
+
+        return {
+            "dynamics_loss": dynamic_loss,
+            "representation_loss": representation_loss,
+            "prediction_loss": prediction_loss,
+            "total_loss": total_loss,
+        }
+
+
+class Decoder(BaseNetwork):
+    """
+    Class that decodes the latent state to the observations for the RSSM network.
+    Since we have no images (CNN) in this case, we can use a simple MLP.
+    """
+
+    def __init__(self, latent_dim: int, output: int, hidden_dim: int = 256):
+        super(Decoder, self).__init__()
+        self.fc1 = nn.Linear(latent_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, output)
+
+    def forward(self, z_t: torch.Tensor) -> torch.Tensor:
+        """
+        Receives latent state z_t -> which is a tensor.
+        Passes through the MLP to predict the next observation.
+        """
+        x = F.relu(self.fc1(z_t.float()))
+        x_hat_t = self.fc2(x)
+        return x_hat_t
+
+
+class RewardPredictor(BaseNetwork):
+    """
+    Class that predicts the reward from the latent state.
+    forward pass: (h_t, z_t (posterior)) -> r_t
+    """
+
+    def __init__(self, hidden_dim: int, latent_dim: int):
+        super(RewardPredictor, self).__init__()
+        # simple MLP
+        self.fc = nn.Linear(hidden_dim + latent_dim, 1)
+        # activation function may be added, using unrestricted output for now
+
+    def forward(self, h_t: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
+        """
+        Concatenates h_t (size hidden_dim) and z_t (size latent_dim) and predicts the reward.
+        """
+        x = torch.cat([h_t, z_t], dim=-1)
+        r_t = self.fc(x)
+        return r_t
+
+
+class ContinuePredictor(BaseNetwork):
+    """
+    Class that predicts whether to continue from the latent state.
+    A binary classification task; (h_t, z_t (posterior)) -> c_t = [0,1].
+    """
+
+    def __init__(self, hidden_dim: int, latent_dim: int):
+        super(ContinuePredictor, self).__init__()
+        # simple MLP with sigmoid activation function
+        self.fc = nn.Linear(hidden_dim + latent_dim, 1)
+        self.classify = nn.Sigmoid()
+
+    def forward(self, h_t: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
+        """
+        Concatenates h_t (size hidden_dim) and z_t (size latent_dim) and predicts whether to continue.
+        """
+        x = torch.cat([h_t, z_t], dim=-1)
+        c_t = self.fc(x)
+        return self.classify(c_t)
