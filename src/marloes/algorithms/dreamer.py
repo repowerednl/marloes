@@ -90,15 +90,17 @@ class Dreamer(BaseAlgorithm):
         """
         if step % self.update_interval != 0:
             return
-        # | ------------------------------------------- |#
-        # | Step 1: Get a sample from the replay buffer |#
-        # | ------------------------------------------- |#
+        # | --------------------------------------------------- |#
+        # | Step 1: Get a sample from the replay buffer         |#
+        # |  - should be a sample of sequences (size=horizon)   |#
+        # | --------------------------------------------------- |#
         real_sample = self.real_RB.sample(self.batch_size)
 
-        # | ------------------------------ |#
-        # | Step 2: Update the world model |#
-        # | ------------------------------ |#
+        # | ----------------------------------------------------- |#
+        # | Step 2: Update the world model with real interactions |#
+        # | ----------------------------------------------------- |#
         self.world_model.learn(real_sample)
+
         # | ----------------------------------------------------- |#
         # | Step 3: Imagine trajectories for ActorCritic learning |#
         # | ----------------------------------------------------- |#
@@ -106,4 +108,4 @@ class Dreamer(BaseAlgorithm):
         # | ------------------------------------- |#
         # | Step 4: Update the actor-critic model |#
         # | ------------------------------------- |#
-        # Update the world model with real and imagined trajectories
+        # Update the critic model with real and imagined trajectories
