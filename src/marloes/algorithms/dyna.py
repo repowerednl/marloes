@@ -1,6 +1,6 @@
 import torch
 
-from marloes.algorithms.base_v2 import BaseAlgorithmV2
+from marloes.algorithms import SAC, BaseAlgorithmV2
 
 
 class Dyna(BaseAlgorithmV2):
@@ -16,7 +16,7 @@ class Dyna(BaseAlgorithmV2):
         """
         super().__init__(config)
         self.world_model = None  # Placeholder for the world model
-        self.SAC = None  # Placeholder for the SAC agent
+        self.SAC = SAC(config)
 
         # Dyna specific parameters
         self.model_update_frequency = self.config.get("model_update_frequency", 100)
@@ -32,7 +32,7 @@ class Dyna(BaseAlgorithmV2):
         # TODO: Implement state conversion to tensor if needed
 
         # Get actions from the SAC agent
-        actions = self.SAC.get_actions(state)
+        actions = self.SAC.act(state)
         return actions
 
     def perform_training_steps(self, step: int) -> None:
