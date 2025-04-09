@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 
+from marloes.networks.SAC.actor import ActorNetwork
 from marloes.networks.SAC.critic import CriticNetwork
 from marloes.networks.SAC.value import ValueNetwork
 
@@ -15,12 +16,13 @@ class SAC:
         self.target_value_network = ValueNetwork(config)  # Parameterized by psi'
         self.critic_1_network = CriticNetwork(config)
         self.critic_2_network = CriticNetwork(config)
-        self.actor_network = None  # Parameterized by phi
+        self.actor_network = ActorNetwork(config)  # Parameterized by phi
 
-        self.loss_values = []  # List to store value losses
-        self.loss_critic_1 = []  # List to store critic 1 losses
-        self.loss_critic_2 = []  # List to store critic 2 losses
-        self.loss_actor = []  # List to store actor losses
+        # Store losses
+        self.loss_values = []
+        self.loss_critic_1 = []
+        self.loss_critic_2 = []
+        self.loss_actor = []
 
         self.gamma = config.get("gamma", 0.99)  # Discount factor
         self.alpha = config.get("alpha", 0.2)  # Temperature parameter for entropy
