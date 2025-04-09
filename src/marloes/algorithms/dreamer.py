@@ -94,7 +94,7 @@ class Dreamer(BaseAlgorithm):
         # | Step 1: Get a sample from the replay buffer         |#
         # |  - should be a sample of sequences (size=horizon)   |#
         # | --------------------------------------------------- |#
-        real_sample = self.real_RB.sample(self.batch_size)
+        real_sample = self.real_RB.sample(self.batch_size)  # sequence of size horizon
 
         # | ----------------------------------------------------- |#
         # | Step 2: Update the world model with real interactions |#

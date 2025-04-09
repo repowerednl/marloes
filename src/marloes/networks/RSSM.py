@@ -138,40 +138,83 @@ class RSSM(BaseNetwork):
         return torch.zeros(self.rnn.num_layers, batch_size, self.rnn.hidden_size)
 
     def rollout(
+        self, sample: list[dict]
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Performs a rollout for each sequence in the batch/sample.
+        """
+        pred_z = []
+        z = []
+        h = []
+        for sequence in sample:
+            states = sequence["states"]
+            actions = sequence["actions"]
+            next_states = sequence["next_states"]
+
+            # Get the predicted and actual latent states
+            predicted, actual, h_ts = self._single_rollout(states, actions, next_states)
+            pred_z.append(predicted)
+            z.append(actual)
+            h.append(h_ts)
+
+        # Return the predicted and actual latent states, and the recurrent states as tensors
+        return torch.stack(pred_z, dim=0), torch.stack(z, dim=0), torch.stack(h, dim=0)
+
+    def _single_rollout(
         self,
         states: torch.Tensor,
         actions: torch.Tensor,
-        rewards: torch.Tensor,
         next_states: torch.Tensor,
     ):
         """
-        Performs a rollout through the RSSM network.
+        Single rollout for a single sequence in the batch obtaining the predicted and actual latent states.
         """
         h_0 = self._init_state(1)  # Batch size of 1: single rollout
         h_t = h_0[-1]  # Take the last layer and unsqueeze for batch dim
-        # infer latent state given h_t
-        posteriors = []
-        T = posteriors.size(0)
-        priors = []
-        priors_details = []
+
+        T = next_states.shape[0]
+        # infer the initial latent state for the first step
+        z_t = self._get_latent_state(h_t)
+        # (alternative: Use Encoder instead, since we can use states)
+        # x = torch.cat([states[0], h_t], dim=-1).unsqueeze(0)
+        # z_t = self.encoder(x)
+
+        pred_z = []
+        z = []
+        pred_z_details = []
+        z_details = []
         h_ts = []
         for t in range(T):
-            z_t = posteriors[t].unsqueeze(0)
             a_t = actions[t].unsqueeze(0)
+            # ------- STEP 1: Pass through RNN to get h_t and predicted latent state ---------#
             h_t, prior, prior_details = self.forward(h_t, z_t, a_t)
-            priors.append(prior)
-            priors_details.append(prior_details)
             h_ts.append(h_t)
-        # details is a list of dicts with mean and logvar, this should be one dict with tensors
-        priors_details = {
-            key: torch.stack([d[key] for d in priors_details], dim=0).squeeze(1)
-            for key in priors_details[0].keys()
+            # ------- STEP 2: Use h_t and state information for (actual) latent state through Encoder ---------#
+            x = torch.cat([next_states[t], h_t], dim=-1).unsqueeze(0)
+            posterior, posterior_detials = self.encoder(x)
+            z_t = posterior
+            # ------- STEP 3: Save information ---------#
+            pred_z.append(prior)
+            z.append(posterior)
+            pred_z_details.append(prior_details)
+            z_details.append(posterior_detials)
+        # the details are lists of dictionaries with mean and logvar, return as one dictionary with tensors
+        pred_z_details = {
+            key: torch.stack([d[key] for d in pred_z_details], dim=0).squeeze(1)
+            for key in pred_z_details[0].keys()
         }
-        # priors (and h_ts) is a list of tensors, convert to a single tensor
+        z_details = {
+            key: torch.stack([d[key] for d in z_details], dim=0).squeeze(1)
+            for key in z_details[0].keys()
+        }
+
+        # Return the predicted and actual latent states, and the recurrent states (needed for reward prediction)
         return (
-            torch.stack(priors, dim=0).squeeze(1),
-            priors_details,
-            torch.stack(h_ts, dim=0),
+            torch.stack(pred_z, dim=0).squeeze(1),
+            torch.stack(z, dim=0).squeeze(1),
+            torch.stack(h_ts, dim=0).squeeze(1),
+            pred_z_details,
+            z_details,
         )
 
     def add_encoder(self, input: int):
