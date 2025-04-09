@@ -61,7 +61,7 @@ class Priorities(BaseAlgorithm):
             self._get_batteries(observations),
         )
 
-    def _train_step(self, observations, rewards, dones, infos) -> None:
+    def perform_training_steps(self, step: int) -> None:
         """
         Overrides the training step. No learning is required for the priority-based algorithm.
         """
