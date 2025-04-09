@@ -8,8 +8,8 @@ import torch
 
 from marloes.algorithms.dreamer import Dreamer
 from marloes.agents.base import Agent
-from marloes.networks.ActorCritic import ActorCritic
-from marloes.networks.WorldModel import WorldModel
+from marloes.networks.dreamer.ActorCritic import ActorCritic
+from marloes.networks.dreamer.WorldModel import WorldModel
 from marloes.networks.util import dict_to_tens
 
 

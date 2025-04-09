@@ -3,9 +3,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .RSSM import RSSM
-from .base import BaseNetwork, HyperParams
+from marloes.networks.base import BaseNetwork, HyperParams
 from .ActorCritic import Actor
-from .util import dist, symlog_squared_loss, gaussian_kl_divergence, kl_free_bits
+from marloes.networks.util import (
+    dist,
+    symlog_squared_loss,
+    gaussian_kl_divergence,
+    kl_free_bits,
+)
 
 
 class WorldModel:

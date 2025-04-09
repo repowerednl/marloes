@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .base import BaseNetwork, LayerDetails, HyperParams
-from .details import RSSM_LD
-from .util import dist
+from marloes.networks.base import BaseNetwork, LayerDetails, HyperParams
+from marloes.networks.details import RSSM_LD
+from marloes.networks.util import dist
 
 
 class RSSM(BaseNetwork):
