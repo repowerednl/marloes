@@ -27,16 +27,14 @@ class WorldModel:
         hyper_params: HyperParams = None,
     ):
         """
-        Initializes the World Model: Encoder (h_t,x->z_t) -> RSSM -> Decoder (z_hat_t->x_hat_t)
+        Initializes the World Model
         """
         self.rssm = RSSM(
             params=params,
             hyper_params=hyper_params,
             stochastic=True,
         )
-        self.encoder = Encoder(
-            observation_shape[0] + self.rssm.rnn.hidden_size, self.rssm.fc.out_features
-        )
+        self.rssm.add_encoder(input=observation_shape[0])
         # RSSM in between, is created first to ensure the link between encoder and decoder
         self.decoder = Decoder(self.rssm.fc.out_features, observation_shape[0])
         self.reward_predictor = RewardPredictor(
@@ -48,7 +46,7 @@ class WorldModel:
 
         self.modules = [
             self.rssm,
-            self.encoder,
+            self.rssm.encoder,
             self.decoder,
             self.reward_predictor,
             self.continue_predictor,
@@ -108,83 +106,81 @@ class WorldModel:
                 "actions": torch.stack(imagined_actions, dim=0),
             }
 
-    def learn(self, obs, act, rew, dones):
+    def learn(self, sample: dict) -> dict:
         """
         Learning step takes a batch of observations, actions and rewards and dones
         """
-        x = obs
-        # Posteriors are the latent states from the Encoder (doing this in a batch)
-        z_posteriors, post_details = self.encoder(x)
-        # Priors are the predicted latent states from the RSSM (doing this in rollout, one by one for the recurrent state)
-        z_priors, prior_details, h_ts = self.rssm.rollout(z_posteriors, act)
-        # shape of z_priors: (batch, latent_dim)
-        # shape of z_posteriors: (batch, latent_dim)
-        # shape of h_ts: (batch, 1, hidden_size)
-        # Determine the predicted observation from the latent state
-        x_hat_t = self.decoder(z_posteriors)
+        # Unpack the sample into states, actions, rewards and next_states
+        # states = sample["states"]
+        # actions = sample["actions"]
+        # rewards = sample["rewards"]
+        # next_states = sample["next_states"]
 
-        h_ts = h_ts.squeeze(1)
-        # shape of h_ts: (batch, hidden_size)
+        # | -----------------------------------------------------------------------------|#
+        # | Step 1: Perform rollout in RSSM                                              |#
+        # |  - Obtain predicted latent states [h_t-1, z_t-1, a_t-1] -> h_t -> z_hat_t    |#
+        # |  - And actual latent states [h_t, x_t] -> z_t                                |#
+        # | ---------------------------------------------------------------------------- |#
 
-        # Use the RewardPredictor and ContinuePredictor to predict the reward and continue signal
-        r_ts = self.reward_predictor(h_ts, z_posteriors)
-        c_ts = self.continue_predictor(h_ts, z_posteriors)
+        # # Use the RewardPredictor and ContinuePredictor to predict the reward and continue signal
+        # r_ts = self.reward_predictor(h_ts, z_posteriors)
+        # c_ts = self.continue_predictor(h_ts, z_posteriors)
 
-        # First loss function, the dynamics loss trains the sequence model to predict the next representation as follows:
-        # KL-divergence between the predicted latent state and the true latent state (with stop-gradient operator)
-        # L_dyn = max(1,KL[sg(z_t) || z_hat_t]) #### stop gradient can be implemented with detach() on mu and log_var ####
-        dynamic_loss = torch.nn.functional.kl_div(
-            z_priors, z_posteriors.detach(), reduction="batchmean"
-        )
-        # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
-        pre_kl = gaussian_kl_divergence(
-            post_details["mean"].detach(),
-            post_details["logvar"].detach(),
-            prior_details["mean"],
-            prior_details["logvar"],
-        )
-        dynamic_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
+        # # First loss function, the dynamics loss trains the sequence model to predict the next representation as follows:
+        # # KL-divergence between the predicted latent state and the true latent state (with stop-gradient operator)
+        # # L_dyn = max(1,KL[sg(z_t) || z_hat_t]) #### stop gradient can be implemented with detach() on mu and log_var ####
+        # dynamic_loss = torch.nn.functional.kl_div(
+        #     z_priors, z_posteriors.detach(), reduction="batchmean"
+        # )
+        # # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
+        # pre_kl = gaussian_kl_divergence(
+        #     post_details["mean"].detach(),
+        #     post_details["logvar"].detach(),
+        #     prior_details["mean"],
+        #     prior_details["logvar"],
+        # )
+        # dynamic_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
 
-        # Second loss function, the representation loss trains the representations to be more predictable
-        # KL-divergence between the predicted latent state and the true latent state
-        # L_rep = max(1,KL[z_t || sg(z_hat_t)]) #### stop gradient can be implemented with detach() on mu and log_var ####
-        representation_loss = torch.nn.functional.kl_div(
-            z_priors.detach(), z_posteriors, reduction="batchmean"
-        )
-        # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
-        pre_kl = gaussian_kl_divergence(
-            prior_details["mean"].detach(),
-            prior_details["logvar"].detach(),
-            post_details["mean"],
-            post_details["logvar"],
-        )
-        representation_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
+        # # Second loss function, the representation loss trains the representations to be more predictable
+        # # KL-divergence between the predicted latent state and the true latent state
+        # # L_rep = max(1,KL[z_t || sg(z_hat_t)]) #### stop gradient can be implemented with detach() on mu and log_var ####
+        # representation_loss = torch.nn.functional.kl_div(
+        #     z_priors.detach(), z_posteriors, reduction="batchmean"
+        # )
+        # # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
+        # pre_kl = gaussian_kl_divergence(
+        #     prior_details["mean"].detach(),
+        #     prior_details["logvar"].detach(),
+        #     post_details["mean"],
+        #     post_details["logvar"],
+        # )
+        # representation_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
 
-        # Third loss function, the prediction loss is end-to-end training of the model
-        # trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression
-        prediction_loss = (
-            -symlog_squared_loss(x_hat_t, x)
-            - symlog_squared_loss(r_ts.squeeze(-1), rew)
-            - F.binary_cross_entropy(c_ts.squeeze(-1), dones)
-        )
+        # # Third loss function, the prediction loss is end-to-end training of the model
+        # # trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression
+        # prediction_loss = (
+        #     -symlog_squared_loss(x_hat_t, x)
+        #     - symlog_squared_loss(r_ts.squeeze(-1), rew)
+        #     - F.binary_cross_entropy(c_ts.squeeze(-1), dones)
+        # )
 
-        total_loss = (
-            self.beta_weights["dyn"] * dynamic_loss
-            + self.beta_weights["rep"] * representation_loss
-            + self.beta_weights["pred"] * prediction_loss
-        )
+        # total_loss = (
+        #     self.beta_weights["dyn"] * dynamic_loss
+        #     + self.beta_weights["rep"] * representation_loss
+        #     + self.beta_weights["pred"] * prediction_loss
+        # )
 
-        # Backpropagation
-        self.optim.zero_grad()
-        total_loss.backward()
-        self.optim.step()
+        # # Backpropagation
+        # self.optim.zero_grad()
+        # total_loss.backward()
+        # self.optim.step()
 
-        return {
-            "dynamics_loss": dynamic_loss,
-            "representation_loss": representation_loss,
-            "prediction_loss": prediction_loss,
-            "total_loss": total_loss,
-        }
+        # return {
+        #     "dynamics_loss": dynamic_loss,
+        #     "representation_loss": representation_loss,
+        #     "prediction_loss": prediction_loss,
+        #     "total_loss": total_loss,
+        # }
 
 
 class Encoder(BaseNetwork):

@@ -20,7 +20,7 @@ class Dreamer(BaseAlgorithm):
         super().__init__(config)
         self._initialize_world_model()
         self._initialize_actor_critic()
-        self.epochs = config.get("epochs", 10)
+        self.update_interval = self.config.get("update_interval", 100)
         self.previous = None
 
     def _initialize_world_model(self):
@@ -82,72 +82,28 @@ class Dreamer(BaseAlgorithm):
             for i, agent_id in enumerate(self.environment.agent_dict.keys())
         }
 
-    def train(self, update_step: int = 100) -> None:
+    def perform_training_steps(self, step: int):
         """
-        Executes the training process for the Dreamer algorithm.
-        """
-        logging.info("Starting training process...")
-        observations, infos = self.environment.reset()
-        capacity = 1000 * update_step
-        logging.info(f"Initializing ReplayBuffer with capacity {capacity}...")
-        RB = ReplayBuffer(capacity=capacity, device=self.device)
-
-        for epoch in range(self.epochs):
-            if epoch % 1000 == 0:
-                logging.info(f"Reached epoch {epoch}/{self.epochs}...")
-
-            ## Interacting with the environment to gather informations ##
-            obs = dict_to_tens(observations, concatenate_all=True)
-            actions = self.get_actions(observations)
-            observations, rewards, dones, infos = self.environment.step(actions)
-
-            acts = dict_to_tens(actions, concatenate_all=True)
-            rew = dict_to_tens(rewards, concatenate_all=True)
-            rew = torch.tensor([rew.sum()])
-            RB.push(obs, acts, rew)
-
-            if epoch % update_step == 0 and epoch != 0:
-                logging.info("Performing training step...")
-                sample = RB.sample(update_step, True)
-                dones = torch.ones(update_step)
-                dones[-1] = 0
-                self._train_step(
-                    sample["obs"],
-                    sample["action"],
-                    sample["reward"],
-                )
-
-            if self.chunk_size != 0 and epoch % self.chunk_size == 0 and epoch != 0:
-                logging.info("Saving intermediate results and resetting extractor...")
-                self.saver.save(extractor=self.environment.extractor)
-                self.environment.extractor.clear()
-
-        logging.info("Training finished. Saving results...")
-        self.saver.final_save(self.environment.extractor)
-        logging.info("Training process completed.")
-
-    def _train_step(self, obs, actions, rewards, dones):
-        """
-        Executes a single training step for the Dreamer algorithm.
+        Executes a training step for the Dreamer algorithm.
         1. The world model is updated with real observations and actions.
-        2. The actor-critic model is updated with imagined trajectories.
+        2. The actor-critic model is updated with imagined trajectories and real trajectories.
         """
-        logging.info("Training step...")
-        # Step 1: Get a sample from the replay buffer #
-        # ------------------------------------------- #
+        if step % self.update_interval != 0:
+            return
+        # | ------------------------------------------- |#
+        # | Step 1: Get a sample from the replay buffer |#
+        # | ------------------------------------------- |#
+        real_sample = self.real_RB.sample(self.batch_size)
 
-        # Step 2: Update the world model #
-        # ------------------------------ #
-        world_losses = self.world_model.learn(obs, actions, rewards, dones)
-        logging.info(f"WorldModel losses: {world_losses}")
+        # | ------------------------------ |#
+        # | Step 2: Update the world model |#
+        # | ------------------------------ |#
+        self.world_model.learn(real_sample)
+        # | ----------------------------------------------------- |#
+        # | Step 3: Imagine trajectories for ActorCritic learning |#
+        # | ----------------------------------------------------- |#
 
-        # Step 3: Imagine trajectories for ActorCritic learning #
-        # ----------------------------------------------------- #
-        initial = obs[0].unsqueeze(0)
-        trajectories = self.world_model.imagine(
-            initial=initial, actor=self.actor_critic.actor
-        )
-        # Step 4: Update the actor-critic model #
-        # ------------------------------------- #
-        actorcritic_losses = self.actor_critic.learn(trajectories)
-        logging.info(f"ActorCritic losses: {actorcritic_losses}")
+        # | ------------------------------------- |#
+        # | Step 4: Update the actor-critic model |#
+        # | ------------------------------------- |#
+        # Update the world model with real and imagined trajectories

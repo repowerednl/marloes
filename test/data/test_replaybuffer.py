@@ -1,64 +1,67 @@
-from unittest import TestCase
+import unittest
+
 import torch
 from marloes.data.replaybuffer import ReplayBuffer
 
 
-class ReplayBufferTestCase(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.capacity = 100
-        cls.RB_cpu = ReplayBuffer(capacity=cls.capacity, device="cpu")
-        cls.RB_gpu = ReplayBuffer(capacity=cls.capacity, device="cuda")
+class TestReplayBuffer(unittest.TestCase):
+    def setUp(self):
+        self.capacity = 5
+        self.device = "cpu"
+        self.buffer = ReplayBuffer(capacity=self.capacity, device=self.device)
 
-    def test_initialization(self):
-        self.assertEqual(len(self.RB_cpu), 0)
-        self.assertEqual(len(self.RB_gpu), 0)
-        self.assertEqual(self.RB_cpu.device, "cpu")
-        self.assertEqual(self.RB_gpu.device, "cuda")
+    def sample_transition(self, i):
+        state = {"value": i}
+        actions = {"value": i + 0.1}
+        rewards = {"value": i + 0.2}
+        next_state = {"value": i + 1}
+        return state, actions, rewards, next_state
 
-    def test_push_and_length(self):
-        obs = torch.tensor([1.0])
-        action = torch.tensor([0.0])
-        reward = torch.tensor([1.0])
+    def test_push(self):
+        self.assertEqual(len(self.buffer), 0)
+        # Push one
+        self.buffer.push(*self.sample_transition(0))
+        self.assertEqual(len(self.buffer), 1)
+        # Push a few more
+        for i in range(1, 4):
+            self.buffer.push(*self.sample_transition(i))
+        self.assertEqual(len(self.buffer), 4)
 
-        self.RB_cpu.push(obs, action, reward)
-        self.assertEqual(len(self.RB_cpu), 1)
+    def test_random_sample(self):
+        for i in range(5):
+            self.buffer.push(*self.sample_transition(i))
+        batch = self.buffer.sample(batch_size=3, random=True)
 
-        self.RB_gpu.push(obs, action, reward)
-        self.assertEqual(len(self.RB_gpu), 1)
+        for key in ["state", "actions", "rewards", "next_state"]:
+            self.assertIn(key, batch)
+            tensor = batch[key]
+            # Check that the batch dimension is 3
+            self.assertEqual(tensor.shape[0], 3)
+            # Verify the tensor is on the correct device
+            self.assertEqual(tensor.device.type, self.device)
 
-    def test_sample_random(self):
-        obs = torch.tensor([1.0])
-        action = torch.tensor([0.0])
-        reward = torch.tensor([1.0])
+    def test_sequential_sample(self):
+        for i in range(6):
+            self.buffer.push(*self.sample_transition(i))
+        batch = self.buffer.sample(batch_size=4, random=False, use_most_recent=True)
+        state_tensor = batch["state"]
+        state_values = state_tensor.squeeze().tolist()
+        if not isinstance(state_values, list):
+            state_values = [state_values]
+        self.assertEqual(state_values, [2, 3, 4, 5])
 
-        for _ in range(self.capacity):
-            self.RB_cpu.push(obs, action, reward)
+    def test_clear_buffer(self):
+        for i in range(3):
+            self.buffer.push(*self.sample_transition(i))
+        self.assertEqual(len(self.buffer), 3)
+        self.buffer.clear()
+        self.assertEqual(len(self.buffer), 0)
 
-        sample = self.RB_cpu.sample(10, True)
-        self.assertEqual(len(sample["obs"]), 10)
-        self.assertEqual(len(sample["action"]), 10)
-        self.assertEqual(len(sample["reward"]), 10)
-
-    def test_sample_sequential(self):
-        obs = torch.tensor([1.0])
-        action = torch.tensor([0.0])
-        reward = torch.tensor([0.0])
-
-        for _ in range(self.capacity):
-            self.RB_cpu.push(obs, action, reward)
-            reward = torch.tensor([reward.item() + 1.0])
-
-        size = 10
-
-        sample = self.RB_cpu._sequential_sample(size, True)
-        self.assertEqual(len(sample["obs"]), size)
-        # also make sure the reward value is capacity - size, as most recent transitions are sampled
-        self.assertEqual(sample["reward"][0].item(), self.capacity - size)
-
-    def test_clear(self):
-        self.RB_cpu.clear()
-        self.assertEqual(len(self.RB_cpu), 0)
-
-        self.RB_gpu.clear()
-        self.assertEqual(len(self.RB_gpu), 0)
+    def test_dict_to_tens(self):
+        # Test dict_to_tens with a simple dict
+        data = {"a": 1, "b": 2}
+        tensor = ReplayBuffer.dict_to_tens(data, concatenate_all=True)
+        expected = torch.tensor([1.0, 2.0])
+        self.assertTrue(
+            torch.equal(tensor, expected), f"Expected {expected}, got {tensor}"
+        )

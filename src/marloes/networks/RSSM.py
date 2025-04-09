@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .base import BaseNetwork, LayerDetails, HyperParams
+from .WorldModel import Encoder
 from .details import RSSM_LD
 from .util import dist
 
@@ -167,3 +168,11 @@ class RSSM(BaseNetwork):
             priors_details,
             torch.stack(h_ts, dim=0),
         )
+
+    def add_encoder(self, input: int):
+        """
+        Adds an encoder to the RSSM network.
+        """
+        output = self.hidden_size + self.latent_state_size
+        self.encoder = Encoder(input, output)
+        self.encoder.to(self.device)
