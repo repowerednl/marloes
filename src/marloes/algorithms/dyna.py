@@ -81,9 +81,9 @@ class Dyna(BaseAlgorithm):
         # --------------------
         for _ in range(self.model_updates_per_step):
             # Sample from both real and synthetic experiences
-            real_batch = self.real_RB.sample(self.batch_size * self.real_sample_ratio)
+            real_batch = self.real_RB.sample(int(self.batch_size * self.real_sample_ratio))
             synthetic_batch = self.model_RB.sample(
-                self.batch_size * (1 - self.real_sample_ratio)
+                int(self.batch_size * (1 - self.real_sample_ratio))
             )
 
             # Combine batches
