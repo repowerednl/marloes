@@ -94,7 +94,7 @@ class Dreamer(BaseAlgorithm):
         1. The world model is updated with real observations and actions.
         2. The actor-critic model is updated with imagined trajectories and real trajectories.
         """
-        if step % self.update_interval != 0:
+        if step % self.update_interval != 0 and step > 0:
             return
         # | --------------------------------------------------- |#
         # | Step 1: Get a sample from the replay buffer         |#
