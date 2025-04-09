@@ -158,7 +158,7 @@ class RSSM(BaseNetwork):
             h.append(h_ts)
 
         # Return the predicted and actual latent states, and the recurrent states as tensors
-        return torch.stack(pred_z, dim=0), torch.stack(z, dim=0), torch.stack(h, dim=0)
+        return torch.cat(pred_z, dim=0), torch.cat(z, dim=0), torch.cat(h, dim=0)
 
     def _single_rollout(
         self,
@@ -210,9 +210,9 @@ class RSSM(BaseNetwork):
 
         # Return the predicted and actual latent states, and the recurrent states (needed for reward prediction)
         return (
-            torch.stack(pred_z, dim=0).squeeze(1),
-            torch.stack(z, dim=0).squeeze(1),
-            torch.stack(h_ts, dim=0).squeeze(1),
+            torch.cat(pred_z, dim=0),
+            torch.cat(z, dim=0),
+            torch.cat(h_ts, dim=0),
             pred_z_details,
             z_details,
         )
