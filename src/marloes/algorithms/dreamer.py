@@ -62,7 +62,7 @@ class Dreamer(BaseAlgorithm):
 
         # Step 1: Get the recurrent state (based on previous state)  #
         # ---------------------------------------------------------- #
-        h_t, _, _ = self.world_model.rssm(
+        h_t, _, _ = self.world_model.rssm.forward(
             self.previous["h_t"], self.previous["z_t"], self.previous["a_t"]
         )
         h_t = h_t[-1].squeeze(0).squeeze(0)
@@ -76,6 +76,12 @@ class Dreamer(BaseAlgorithm):
         # -------------------------------------------------- #
         s = torch.cat([h_t, z_t], dim=-1)
         actions = self.actor_critic.act(s)
+
+        # Step 4: Update the previous state with the current state  #
+        # -------------------------------------------------- #
+        self.previous["h_t"] = h_t
+        self.previous["z_t"] = z_t
+        self.previous["a_t"] = actions
 
         return {
             agent_id: actions[i]
