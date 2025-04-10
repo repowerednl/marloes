@@ -180,6 +180,8 @@ class SAC:
 
         self.loss_actor.append(actor_loss.item())
 
+        self.loss_actor.append(actor_loss.item())
+
     def _update_target_value_network(self):
         """
         Update the target value network (polyak averaging).
