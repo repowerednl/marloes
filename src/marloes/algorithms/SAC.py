@@ -63,7 +63,7 @@ class SAC:
         V = self.value_network(batch["state"])
 
         # Sample actions and log probabilities from the actor network
-        # (to use in the target value: as we are estimating the value under the current policy)
+        # To use in the target value: as we are estimating the value under the current policy
         actions, log_pi = self.actor_network.sample(batch["state"])
 
         # Use minimum of the two critics
