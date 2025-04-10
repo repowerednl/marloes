@@ -28,6 +28,8 @@ class BaseAlgorithm(ABC):
         # Initialize the Saver, environment, and device
         self.saver = Saver(config=config)
         self.environment = EnergyValley(config, self.__class__.__name__)
+        config["state_dim"] = self.environment.state_dim
+        config["action_dim"] = self.environment.action_dim
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )  # for future ticket, make sure this can run on GPU instead of CPU

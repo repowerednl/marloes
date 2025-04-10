@@ -73,11 +73,9 @@ class EnergyValley(MultiAgentEnv):
         self._dones_cache = {agent.id: False for agent in self.agents}
         self._infos_cache = {agent.id: {} for agent in self.agents}
 
-        # Add observation_shape and action_shape to the environment
-        self.observation_space = ReplayBuffer.dict_to_tens(
-            self._get_full_observation()
-        ).shape
-        self.action_space = torch.Size([len(self.agents)])
+        # Add state_dim and action_dim to the environment
+        self.state_dim = ReplayBuffer.dict_to_tens(self._get_full_observation()).shape
+        self.action_dim = torch.Size([len(self.agents)])
 
     def _initialize_agents(self, config: dict, algorithm_type: str) -> None:
         """
