@@ -40,13 +40,21 @@ class WorldModelTestCase(TestCase):
         cls.action_shape = (6,)
         # initialize a replay buffer to get the observations, actions, rewards and dones
         cls.replay_buffer = ReplayBuffer(100)
-        state = torch.tensor(np.ones(cls.observation_shape))
-        action = torch.tensor(np.ones(cls.action_shape))
-        reward = torch.tensor(1.0)
-        for _ in range(100):
+
+        [
             cls.replay_buffer.push(
-                state=state, actions=action, rewards=reward, next_state=state
+                *cls.sample_transition(i, cls.observation_shape, cls.action_shape)
             )
+            for i in range(100)
+        ]
+
+    @staticmethod
+    def sample_transition(i, obs, act):
+        state = {"value": np.full(obs, i)}
+        actions = {"value": np.full(act, i + 0.1)}
+        rewards = {"value": i + 0.2}
+        next_state = {"value": np.full(obs, i + 1)}
+        return state, actions, rewards, next_state
 
     def test_normal_creation(self):
         """
@@ -83,18 +91,12 @@ class WorldModelTestCase(TestCase):
         """
         No errors during learn() returning the losses.
         """
-        # world_model = WorldModel(self.observation_shape, self.action_shape)
+        world_model = WorldModel(self.observation_shape, self.action_shape)
         # obtain a sample (5) from the replay buffer
-        # sample = self.replay_buffer.sample(5)
-        # dones = torch.ones(5)
-        # # last done should not be continuation (1) but 0
-        # dones[-1] = 0
+        sample = self.replay_buffer.sample(batch_size=5, sequence=5)
 
-        # losses = world_model.learn(
-        #     sample["obs"], sample["action"], sample["reward"], dones
-        # )
-        # self.assertIsInstance(losses["dynamics_loss"], torch.Tensor)
-        # self.assertIsInstance(losses["representation_loss"], torch.Tensor)
-        # self.assertIsInstance(losses["prediction_loss"], torch.Tensor)
-        # self.assertIsInstance(losses["total_loss"], torch.Tensor)
-        pass
+        losses = world_model.learn(sample)
+        self.assertIsInstance(losses["dynamics_loss"], torch.Tensor)
+        self.assertIsInstance(losses["representation_loss"], torch.Tensor)
+        self.assertIsInstance(losses["prediction_loss"], torch.Tensor)
+        self.assertIsInstance(losses["total_loss"], torch.Tensor)

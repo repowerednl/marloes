@@ -146,9 +146,9 @@ class RSSM(BaseNetwork):
         z = []
         h = []
         for sequence in sample:
-            states = sequence["states"]
+            states = sequence["state"]
             actions = sequence["actions"]
-            next_states = sequence["next_states"]
+            next_states = sequence["next_state"]
 
             # Get the predicted and actual latent states
             predicted, actual, h_ts = self._single_rollout(states, actions, next_states)
@@ -175,8 +175,9 @@ class RSSM(BaseNetwork):
         # # infer the initial latent state for the first step
         # z_t = self._get_latent_state(h_t)
         # (alternative: Use Encoder instead, since we can use states)
-        x = torch.cat([states[0], h_t], dim=-1).unsqueeze(0)
-        z_t = self.encoder(x)
+        x = torch.cat([states[0].unsqueeze(0), h_t], dim=-1)
+        print("x:", x.shape)
+        z_t, _ = self.encoder(x)
 
         pred_z = []
         z = []
@@ -184,19 +185,26 @@ class RSSM(BaseNetwork):
         z_details = []
         h_ts = []
         for t in range(T):
-            a_t = actions[t].unsqueeze(0)
+            a_t = actions[t].unsqueeze(0)  # Add batch dimension
+            print("a_t:", a_t.shape)
+            print("h_t:", h_t.shape)
+            print("z_t:", z_t.shape)
             # ------- STEP 1: Pass through RNN to get h_t and predicted latent state ---------#
-            h_t, prior, prior_details = self.forward(h_t, z_t, a_t)
+            h_t, predicted, predicted_details = self.forward(h_t, z_t, a_t)
+            print("h_t:", h_t.shape)
+            print("next:", next_states[t].shape)
             h_ts.append(h_t)
             # ------- STEP 2: Use h_t and state information for (actual) latent state through Encoder ---------#
-            x = torch.cat([next_states[t], h_t], dim=-1).unsqueeze(0)
-            posterior, posterior_detials = self.encoder(x)
-            z_t = posterior
+            x = torch.cat([next_states[t].unsqueeze(0), h_t], dim=-1)
+            print("x:", x.shape)
+            print("states:", next_states[t].shape)
+            encoded, encoded_detials = self.encoder(x)
+            z_t = encoded
             # ------- STEP 3: Save information ---------#
-            pred_z.append(prior)
-            z.append(posterior)
-            pred_z_details.append(prior_details)
-            z_details.append(posterior_detials)
+            pred_z.append(predicted)
+            z.append(encoded)
+            pred_z_details.append(predicted_details)
+            z_details.append(encoded_detials)
         # the details are lists of dictionaries with mean and logvar, return as one dictionary with tensors
         pred_z_details = {
             key: torch.stack([d[key] for d in pred_z_details], dim=0).squeeze(1)
@@ -220,8 +228,8 @@ class RSSM(BaseNetwork):
         """
         Adds an encoder to the RSSM network.
         """
-        output = self.hidden_size + self.latent_state_size
-        self.encoder = Encoder(input, output)
+        input += self.hidden_size
+        self.encoder = Encoder(input, self.latent_state_size)
 
 
 class Encoder(BaseNetwork):

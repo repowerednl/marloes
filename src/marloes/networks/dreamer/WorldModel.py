@@ -137,7 +137,7 @@ class WorldModel:
         Learning step takes a batch of sequences of a certain length (horizon).
         """
         # extract the to be predicted states (next_states) as tensors into x
-        x = torch.stack([sequence["states"] for sequence in sample], dim=0)
+        x = torch.stack([sequence["state"] for sequence in sample], dim=0)
         # extract the rewards and done signals as tensors into rew
         rew = torch.stack([sequence["rewards"] for sequence in sample], dim=0)
 

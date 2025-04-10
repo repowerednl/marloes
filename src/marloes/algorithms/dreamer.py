@@ -71,7 +71,7 @@ class Dreamer(BaseAlgorithm):
         # Step 2: Get the latent state (based on current obs and h_t)  #
         # ------------------------------------------------------------ #
         x = torch.cat([observations, h_t], dim=-1)
-        z_t, _ = self.world_model.encoder(x)
+        z_t, _ = self.world_model.rssm.encoder(x)
 
         # Step 3: Get the action (based on the model state)  #
         # -------------------------------------------------- #
@@ -110,6 +110,7 @@ class Dreamer(BaseAlgorithm):
         # | ----------------------------------------------------- |#
         losses = self.world_model.learn(real_sample)
         print(losses)
+
         # | ----------------------------------------------------- |#
         # | Step 3: Imagine trajectories for ActorCritic learning |#
         # |  - Sample starting point from the replay buffer       |#
