@@ -35,11 +35,11 @@ class WorldModel:
         Initializes the World Model
         """
         self.rssm = RSSM(
+            x_shape=observation_shape[0],
             params=params,
             hyper_params=hyper_params,
             stochastic=True,
         )
-        self.rssm.add_encoder(input=observation_shape[0])
         # RSSM in between, is created first to ensure the link between encoder and decoder
         self.decoder = Decoder(self.rssm.fc.out_features, observation_shape[0])
         self.reward_predictor = RewardPredictor(

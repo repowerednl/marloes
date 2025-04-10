@@ -16,6 +16,7 @@ class RSSM(BaseNetwork):
 
     def __init__(
         self,
+        x_shape: int,
         params: dict = None,
         hyper_params: HyperParams = None,
         stochastic: bool = False,
@@ -23,6 +24,7 @@ class RSSM(BaseNetwork):
         self.stochastic = stochastic
         super().__init__()
         self.initialize_network(params, RSSM_LD)
+        self.encoder = Encoder(x_shape + self.hidden_size, self.latent_state_size)
 
     @staticmethod
     def _validate_rssm(details: LayerDetails):
@@ -229,13 +231,6 @@ class RSSM(BaseNetwork):
             pred_z_details,
             z_details,
         )
-
-    def add_encoder(self, input: int):
-        """
-        Adds an encoder to the RSSM network.
-        """
-        input += self.hidden_size
-        self.encoder = Encoder(input, self.latent_state_size)
 
 
 class Encoder(BaseNetwork):
