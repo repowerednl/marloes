@@ -129,6 +129,8 @@ class SAC:
         actor_loss.backward()
         self.actor_network.optimizer.step()
 
+        self.loss_actor.append(actor_loss.item())
+
     def _update_target_value_network(self):
         """
         Update the target value network (polyak averaging).
