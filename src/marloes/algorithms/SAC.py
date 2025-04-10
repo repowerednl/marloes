@@ -13,6 +13,7 @@ class SAC:
     """
 
     def __init__(self, config: dict):
+        self.config = config
         self.value_network = ValueNetwork(config)  # Parameterized by psi
         self.target_value_network = ValueNetwork(config)  # Parameterized by psi'
         self.critic_1_network = CriticNetwork(config)
