@@ -72,20 +72,28 @@ class WorldModelTestCase(TestCase):
         The imagine() function takes an Actor and returns predicted observations and rewards for a given horizon.
         initial: torch.Tensor with shape (batch, obs_size)
         """
-        # world_model = WorldModel(self.observation_shape, self.action_shape)
-        # initial = torch.tensor(np.ones((1, self.observation_shape[0])))
-        # # Actor input size is h_t + z_t (RSSM hidden state + latent state)
-        # input_size = world_model.rssm.hidden_size + world_model.rssm.latent_state_size
-        # actor = Actor(input_size, self.action_shape[0])
-        # horizon = 16  # from Dreamer
-        # imagined = world_model.imagine(initial, actor, horizon)
-        # self.assertIsInstance(imagined["states"], torch.Tensor)
-        # self.assertIsInstance(imagined["rewards"], torch.Tensor)
-        # self.assertIsInstance(imagined["actions"], torch.Tensor)
-        # self.assertEqual(imagined["states"].shape[0], horizon + 1)  # also initial state
-        # self.assertEqual(imagined["rewards"].shape[0], horizon)
-        # self.assertEqual(imagined["actions"].shape[0], horizon)
-        pass
+        world_model = WorldModel(self.observation_shape, self.action_shape)
+        # sample 5 random starting points from the replay buffer
+        sample = self.replay_buffer.sample(batch_size=5)
+        # Initialize the actor
+        input_size = world_model.rssm.hidden_size + world_model.rssm.latent_state_size
+        actor = Actor(input_size, self.action_shape[0])
+        horizon = 16  # from Dreamer
+        imagined_batch = world_model.imagine(
+            starting_points=sample["state"], actor=actor, horizon=horizon
+        )
+        # should contain length(batch) elements
+        self.assertEqual(len(imagined_batch), len(sample))
+        # should contain dictionaries
+        self.assertTrue(all(isinstance(i, dict) for i in imagined_batch))
+        # each element should have states/actions/rewards with # of elements = horizon
+        for i in imagined_batch:
+            self.assertIn("states", i)
+            self.assertIn("actions", i)
+            self.assertIn("rewards", i)
+            self.assertEqual(i["states"].shape[0], horizon)
+            self.assertEqual(i["actions"].shape[0], horizon)
+            self.assertEqual(i["rewards"].shape[0], horizon)
 
     def test_learn_end_to_end(self):
         """

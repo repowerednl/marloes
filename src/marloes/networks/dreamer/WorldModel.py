@@ -91,9 +91,11 @@ class WorldModel:
                     -1
                 ]  # take the last layer of the GRU, shape (batch=1, hidden_size)
                 # infer z_t
-                z_0 = self.rssm._get_latent_state(h_0)
-                # sample action from the actor
-                a_0 = actor(z_0).sample()  # shape (batch=1, action_dim)
+                z_0, _ = self.rssm._get_latent_state(h_0)
+                # sample action from the actor with model state
+                # model state is the concatenation of h_t and z_t
+                s = torch.cat([h_0, z_0], dim=-1)
+                a_0 = actor(s).sample()  # shape (batch=1, action_dim)
 
                 h_t, z_hat_t, _ = self.rssm.forward(h_0, z_0, a_0)
                 # form model state
@@ -109,8 +111,11 @@ class WorldModel:
                 At each starting point, we imagine trajectories of length horizon.
                 """
                 for t in range(horizon):
-                    # get the action from th
-                    a_t = actor(z_t).sample()
+                    # get the action from the model state
+                    s = torch.cat([h_t, z_t], dim=-1)
+                    # print
+                    print("Model state: ", s.shape)
+                    a_t = actor(s).sample()
 
                     # Get h_t from sequence model (transition)
                     h_t, z_t, _ = self.rssm.forward(h_t, z_t, a_t)

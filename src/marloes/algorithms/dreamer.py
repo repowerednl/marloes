@@ -119,9 +119,10 @@ class Dreamer(BaseAlgorithm):
         # | ----------------------------------------------------- |#
         starting_points = self.real_RB.sample(self.batch_size)
         imagined_sequences = self.world_model.imagine(
-            starting_points["states"], self.actor_critic, self.horizon
+            starting_points["state"], self.actor_critic, self.horizon
         )
         print(imagined_sequences)
+        # TODO:
 
         # | ------------------------------------- |#
         # | Step 4: Update the actor-critic model |#
