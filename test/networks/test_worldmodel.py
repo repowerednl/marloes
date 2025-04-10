@@ -73,8 +73,9 @@ class WorldModelTestCase(TestCase):
         initial: torch.Tensor with shape (batch, obs_size)
         """
         world_model = WorldModel(self.observation_shape, self.action_shape)
-        # sample 5 random starting points from the replay buffer
-        sample = self.replay_buffer.sample(batch_size=5)
+        # sample x random starting points from the replay buffer
+        x = 5
+        sample = self.replay_buffer.sample(batch_size=x)
         # Initialize the actor
         input_size = world_model.rssm.hidden_size + world_model.rssm.latent_state_size
         actor = Actor(input_size, self.action_shape[0])
@@ -82,18 +83,15 @@ class WorldModelTestCase(TestCase):
         imagined_batch = world_model.imagine(
             starting_points=sample["state"], actor=actor, horizon=horizon
         )
-        # should contain length(batch) elements
-        self.assertEqual(len(imagined_batch), len(sample))
-        # should contain dictionaries
-        self.assertTrue(all(isinstance(i, dict) for i in imagined_batch))
-        # each element should have states/actions/rewards with # of elements = horizon
-        for i in imagined_batch:
-            self.assertIn("states", i)
-            self.assertIn("actions", i)
-            self.assertIn("rewards", i)
-            self.assertEqual(i["states"].shape[0], horizon)
-            self.assertEqual(i["actions"].shape[0], horizon)
-            self.assertEqual(i["rewards"].shape[0], horizon)
+        # sample is a dict with keys: state, actions, rewards, next_state
+        # check batch size
+        self.assertEqual(len(imagined_batch), len(sample["state"]))
+        # check horizon
+        for sequence in imagined_batch:
+            # sequence is a dict with states, actions and rewards (all should have horizon elements)
+            self.assertEqual(len(sequence["states"]), horizon)
+            self.assertEqual(len(sequence["actions"]), horizon)
+            self.assertEqual(len(sequence["rewards"]), horizon)
 
     def test_learn_end_to_end(self):
         """

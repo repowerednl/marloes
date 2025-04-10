@@ -104,17 +104,16 @@ class WorldModel:
                 )  # shape (batch=1, obs_dim + hidden_size)
                 z_t, _ = self.rssm.encoder(x)
                 a_t = a_0
-                imagined["states"].append(z_t)
-                imagined["actions"].append(a_t)
-                imagined["rewards"].append(self.reward_predictor(h_t, z_t))
+                # Store the initial state (?) TODO: yes or no?
+                # imagined["states"].append(z_t)
+                # imagined["actions"].append(a_t)
+                # imagined["rewards"].append(self.reward_predictor(h_t, z_t))
                 """
                 At each starting point, we imagine trajectories of length horizon.
                 """
                 for t in range(horizon):
                     # get the action from the model state
                     s = torch.cat([h_t, z_t], dim=-1)
-                    # print
-                    print("Model state: ", s.shape)
                     a_t = actor(s).sample()
 
                     # Get h_t from sequence model (transition)
@@ -127,13 +126,13 @@ class WorldModel:
                     imagined["states"].append(z_t)
                     imagined["actions"].append(a_t)
                     imagined["rewards"].append(r_t)
+
                 # Stack the imagined states, actions and rewards
                 imagined["states"] = torch.stack(imagined["states"], dim=0)
                 imagined["actions"] = torch.stack(imagined["actions"], dim=0)
                 imagined["rewards"] = torch.stack(imagined["rewards"], dim=0)
                 # Append the imagined sequence to the batch
                 batch.append(imagined)
-
         return batch
 
     def learn(self, sample: list[dict]) -> dict:
