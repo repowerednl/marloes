@@ -93,7 +93,7 @@ class WorldModelTestCase(TestCase):
         """
         world_model = WorldModel(self.observation_shape, self.action_shape)
         # obtain a sample (5) from the replay buffer
-        sample = self.replay_buffer.sample(batch_size=5, sequence=5)
+        sample = self.replay_buffer.sample(batch_size=5, sequence=10)
 
         losses = world_model.learn(sample)
         self.assertIsInstance(losses["dynamics_loss"], torch.Tensor)

@@ -136,28 +136,43 @@ class RSSM(BaseNetwork):
         """
         return torch.zeros(self.rnn.num_layers, batch_size, self.rnn.hidden_size)
 
-    def rollout(
-        self, sample: list[dict]
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def rollout(self, sample: list[dict]) -> dict:
         """
         Performs a rollout for each sequence in the batch/sample.
+        Returns a dictionary with predicted and actual latent states, recurrent states, and their details.
         """
-        pred_z = []
-        z = []
-        h = []
+        results = {
+            "predicted": [],
+            "actual": [],
+            "recurrent_states": [],
+            "predicted_details": [],
+            "actual_details": [],
+        }
         for sequence in sample:
+            # unpack
             states = sequence["state"]
             actions = sequence["actions"]
             next_states = sequence["next_state"]
-
             # Get the predicted and actual latent states
-            predicted, actual, h_ts = self._single_rollout(states, actions, next_states)
-            pred_z.append(predicted)
-            z.append(actual)
-            h.append(h_ts)
-
-        # Return the predicted and actual latent states, and the recurrent states as tensors
-        return torch.cat(pred_z, dim=0), torch.cat(z, dim=0), torch.cat(h, dim=0)
+            (
+                predicted,
+                actual,
+                h_ts,
+                predicted_details,
+                actual_details,
+            ) = self._single_rollout(states, actions, next_states)
+            [
+                results[key].append(val)
+                for key, val in zip(
+                    results.keys(),
+                    [predicted, actual, h_ts, predicted_details, actual_details],
+                )
+            ]
+        # Convert lists to tensors or dictionaries as needed
+        results["predicted"] = torch.stack(results["predicted"], dim=0)
+        results["actual"] = torch.stack(results["actual"], dim=0)
+        results["recurrent_states"] = torch.stack(results["recurrent_states"], dim=0)
+        return results
 
     def _single_rollout(
         self,
@@ -176,7 +191,6 @@ class RSSM(BaseNetwork):
         # z_t = self._get_latent_state(h_t)
         # (alternative: Use Encoder instead, since we can use states)
         x = torch.cat([states[0].unsqueeze(0), h_t], dim=-1)
-        print("x:", x.shape)
         z_t, _ = self.encoder(x)
 
         pred_z = []
@@ -186,18 +200,11 @@ class RSSM(BaseNetwork):
         h_ts = []
         for t in range(T):
             a_t = actions[t].unsqueeze(0)  # Add batch dimension
-            print("a_t:", a_t.shape)
-            print("h_t:", h_t.shape)
-            print("z_t:", z_t.shape)
             # ------- STEP 1: Pass through RNN to get h_t and predicted latent state ---------#
             h_t, predicted, predicted_details = self.forward(h_t, z_t, a_t)
-            print("h_t:", h_t.shape)
-            print("next:", next_states[t].shape)
             h_ts.append(h_t)
             # ------- STEP 2: Use h_t and state information for (actual) latent state through Encoder ---------#
             x = torch.cat([next_states[t].unsqueeze(0), h_t], dim=-1)
-            print("x:", x.shape)
-            print("states:", next_states[t].shape)
             encoded, encoded_detials = self.encoder(x)
             z_t = encoded
             # ------- STEP 3: Save information ---------#
@@ -214,7 +221,6 @@ class RSSM(BaseNetwork):
             key: torch.stack([d[key] for d in z_details], dim=0).squeeze(1)
             for key in z_details[0].keys()
         }
-
         # Return the predicted and actual latent states, and the recurrent states (needed for reward prediction)
         return (
             torch.cat(pred_z, dim=0),

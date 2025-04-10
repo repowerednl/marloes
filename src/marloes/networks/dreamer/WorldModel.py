@@ -51,7 +51,6 @@ class WorldModel:
 
         self.modules = [
             self.rssm,
-            self.rssm.encoder,
             self.decoder,
             self.reward_predictor,
             self.continue_predictor,
@@ -114,7 +113,7 @@ class WorldModel:
                     a_t = actor(z_t).sample()
 
                     # Get h_t from sequence model (transition)
-                    h_t, z_t, z_details = self.rssm.forward(h_t, z_t, a_t)
+                    h_t, z_t, _ = self.rssm.forward(h_t, z_t, a_t)
 
                     # Predict the reward
                     r_t = self.reward_predictor(h_t, z_t)
@@ -146,13 +145,16 @@ class WorldModel:
         # |  - Obtain predicted latent states [h_t-1, z_t-1, a_t-1] -> h_t -> z_hat_t    |#
         # |  - And actual latent states [h_t, x_t] -> z_t                                |#
         # | ---------------------------------------------------------------------------- |#
-        z_hat, z, h, z_hat_details, z_details = self.rssm.rollout(sample)
+        results = self.rssm.rollout(sample)
+        # returns a dictionary with predicted and actual latent states, recurrent states, and their details
 
         # | -----------------------------------------------------------------------------|#
         # | Step 2: Predict Reward (and Continue signal)                                 |#
         # |  - Obtain predicted reward [h_t,z_t] -> r_t                                  |#
-        # |  - Obtain Continue signal [h_t,z_t] -> c_t    #TODO                          |#
+        # |  - Obtain Continue signal [h_t,z_t] -> c_t    #TODO or TOREMOVE              |#
         # | ---------------------------------------------------------------------------- |#
+        h = results["recurrent_states"]
+        z = results["actual"]
         r_ts = self.reward_predictor(h, z)
 
         # | -----------------------------------------------------------------------------|#
@@ -167,22 +169,35 @@ class WorldModel:
         # |  - L_rep: KL-divergence between predicted and true latent state              |#
         # |  - L_pred: prediction loss (symlog squared loss)                             |#
         # | ---------------------------------------------------------------------------- |#
+        # unpack the predicted latent states, and distribution (in details)
+        # z_hat = results["predicted"]
 
+        def unpack_details(details: list[dict]) -> tuple[torch.Tensor, torch.Tensor]:
+            """
+            Takes a list of dictionaries. The dictionary contains the mean and logvar of the latent state.
+            Should return mean and logvar (tensors) separately as a batch (lenth of the list).
+            """
+            mean = torch.stack([d["mean"] for d in details], dim=0)
+            logvar = torch.stack([d["logvar"] for d in details], dim=0)
+            return mean, logvar
+
+        z_hat_mean, z_hat_logvar = unpack_details(results["predicted_details"])
+        z_mean, z_logvar = unpack_details(results["actual_details"])
         """
         First loss function, the dynamics loss trains the sequence model to predict the next representation:
         KL-divergence between the predicted latent state and the true latent state (with stop-gradient operator)
                 L_dyn = max(1,KL[sg(z_t) || z_hat_t])
         [stop gradient (sg) can be implemented with detach()]
         """
-        dynamic_loss = torch.nn.functional.kl_div(
-            z_hat, z.detach(), reduction="batchmean"
-        )
+        # dynamic_loss = torch.nn.functional.kl_div(
+        #     z_hat, z.detach(), reduction="batchmean"
+        # )
         # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
         pre_kl = gaussian_kl_divergence(
-            z_details["mean"].detach(),
-            z_details["logvar"].detach(),
-            z_hat_details["mean"],
-            z_hat_details["logvar"],
+            z_mean.detach(),
+            z_logvar.detach(),
+            z_hat_mean,
+            z_hat_logvar,
         )
         dynamic_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
 
@@ -192,15 +207,15 @@ class WorldModel:
                 L_rep = max(1,KL[z_t || sg(z_hat_t)])
         [stop gradient can be implemented with detach()]
         """
-        representation_loss = torch.nn.functional.kl_div(
-            z_hat.detach(), z, reduction="batchmean"
-        )
+        # representation_loss = torch.nn.functional.kl_div(
+        #     z_hat.detach(), z, reduction="batchmean"
+        # )
         # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
         pre_kl = gaussian_kl_divergence(
-            z_hat_details["mean"].detach(),
-            z_hat_details["logvar"].detach(),
-            z_details["mean"],
-            z_details["logvar"],
+            z_hat_mean.detach(),
+            z_hat_logvar.detach(),
+            z_mean,
+            z_logvar,
         )
         representation_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
 
