@@ -20,8 +20,8 @@ class ActorNetwork(SACBaseNetwork):
         self.log_std_layer = nn.Linear(self.hidden_dim, action_dim)
 
         # Clamping range to prevent the policy from becoming too deterministic or too random
-        self.log_std_min = config.get("log_std_min", -20)
-        self.log_std_max = config.get("log_std_max", 2)
+        self.log_std_min = config["SAC"].get("log_std_min", -20)
+        self.log_std_max = config["SAC"].get("log_std_max", 2)
 
     def forward(self, state):
         """
