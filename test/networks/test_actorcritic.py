@@ -61,11 +61,28 @@ class ActorCriticTestCase(TestCase):
         # states: torch.Size([10, 10])
         # actions: torch.Size([10, 5])
         # rewards: torch.Size([10])
-        trajectories = {
+        trajectory = {
             "states": torch.tensor(np.random.rand(10, 10)).float(),
             "actions": torch.tensor(np.random.rand(10, 5)).float(),
-            "rewards": torch.tensor(np.random.rand(10)).float(),
+            "rewards": torch.tensor(np.random.rand(10, 1)).float(),
         }
-        losses = self.actor_critic.learn(trajectories)
-        self.assertTrue("actor_loss" in losses)
-        self.assertTrue("critic_loss" in losses)
+        # create a list of 5 trajectories
+        trajectories = [trajectory] * 5
+        # mock the _compute_advantages and _compute_actor_loss methods
+        with mock.patch.object(
+            self.actor_critic,
+            "_compute_advantages",
+            return_value=(torch.tensor(1.0), torch.tensor(1.0)),
+        ):
+            with mock.patch.object(
+                self.actor_critic, "_compute_actor_loss", return_value=torch.tensor(1.0)
+            ):
+                with mock.patch.object(
+                    self.actor_critic,
+                    "_compute_critic_loss",
+                    return_value=torch.tensor(1.0),
+                ):
+                    # call the learn method
+                    losses = self.actor_critic.learn(trajectories)
+        print("Losses:", losses)
+        self.assertEqual(False, True)

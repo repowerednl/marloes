@@ -27,7 +27,7 @@ class ActorCritic:
 
         self.gamma = 0.997
         self.lmbda = 0.95
-        self.entropy_coef = 0.005
+        self.entropy_coef = 0.0003
         self.beta_weights = {"val": 1.0, "repval": 0.3}
 
     def act(self, model_state: torch.Tensor) -> torch.Tensor:
@@ -36,20 +36,40 @@ class ActorCritic:
         """
         return self.actor(model_state).sample()
 
-    def learn(self, trajectories: dict) -> dict[str, torch.Tensor]:
+    def learn(self, trajectories: list) -> dict[str, torch.Tensor]:
         """
         Learning step for the ActorCritic network.
+        Trajectories is a 'batch' of trajectories, each containing:
+        - states
+        - actions
+        - rewards
         """
-        # Unpack the trajectories
-        states = trajectories["states"]
-        actions = trajectories["actions"]
-        rewards = trajectories["rewards"]
+        # Unpack the states into a batched tensor for the critic
+        states = torch.stack([t["states"] for t in trajectories], dim=0)
+        # Unpack the actions into a batched tensor for the loss computing
+        actions = torch.stack([t["actions"] for t in trajectories], dim=0)
+        # Unpack the rewards into a batched tensor for the loss computing
+        rewards = torch.stack([t["rewards"] for t in trajectories], dim=0)
 
+        print("\nShapes:")
+        print(f"States: {states.shape}")
+        print(f"Actions: {actions.shape}")
+        print(f"Rewards: {rewards.shape}")
         # Critic Evaluation
-        values = self.critic(states).squeeze(-1)
+        values = self.critic(states)
+        print(f"Values: {values.shape}")
+
+        # States: torch.Size([5, 10, 10])
+        # Actions: torch.Size([5, 10, 5])
+        # Rewards: torch.Size([5, 10, 1])
+        # Values: torch.Size([5, 10, 1])
+        # Returns: torch.Size([])
+        # Advantages: torch.Size([])
 
         # Compute the advantages (lambda-returns)
         returns, advantages = self._compute_advantages(rewards, values)
+        print(f"Returns: {returns.shape}")
+        print(f"Advantages: {advantages.shape}\n")
 
         # Compute the actor and critic losses
         actor_loss = self._compute_actor_loss(states, actions, advantages)
@@ -58,10 +78,14 @@ class ActorCritic:
         # Backpropagate the losses
         total_loss = actor_loss + critic_loss
 
+        # Actor loss
         self.actor_optim.zero_grad()
-        self.critic_optim.zero_grad()
-        total_loss.backward()
+        actor_loss.backward()
         self.actor_optim.step()
+
+        # Critic loss
+        self.critic_optim.zero_grad()
+        critic_loss.backward()
         self.critic_optim.step()
 
         return {
@@ -73,11 +97,26 @@ class ActorCritic:
     def _compute_actor_loss(self, states, actions, advantages) -> torch.Tensor:
         """
         Computes the actor loss.
+        Term 1: policy gradient: the negative log probability of the taken actions, weighted by the advantage.
+        Term 2: entropy bonus: encourages exploration by adding a small penalty to the log probability of the actions.
         """
-        dist = self.actor(states)
-        log_probs = dist.log_prob(actions).sum(-1)
-        entropy = dist.entropy().mean()
-        actor_loss = -(log_probs * advantages).mean() - self.entropy_coef * entropy
+        policy_dist = self.actor(states)
+        log_probs = policy_dist.log_prob(actions)
+
+        entropy = policy_dist.entropy().mean()
+
+        # Scale factor S (EMA)
+        flat_advantages = advantages.detach().view(-1)
+        S = torch.clamp(
+            torch.quantile(flat_advantages, 0.95)
+            - torch.quantile(flat_advantages, 0.05),
+            min=0.99,
+        )
+
+        actor_loss = (
+            -((advantages.detach() / S) * log_probs).mean()
+            - self.entropy_coef * entropy
+        )
         return actor_loss
 
     def _compute_critic_loss(
@@ -85,6 +124,7 @@ class ActorCritic:
     ) -> torch.Tensor:
         """
         Computes the critic loss.
+        First implementation: simple MSE loss.
         """
         critic_loss = F.mse_loss(values, returns.detach())
         return critic_loss

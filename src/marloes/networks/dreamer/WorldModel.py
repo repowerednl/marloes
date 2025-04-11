@@ -116,15 +116,16 @@ class WorldModel:
                     s = torch.cat([h_t, z_t], dim=-1)
                     a_t = actor(s).sample()
 
+                    # Store the imagined states, actions and rewards
+                    imagined["states"].append(s)
+                    imagined["actions"].append(a_t)
+
                     # Get h_t from sequence model (transition)
                     h_t, z_t, _ = self.rssm.forward(h_t, z_t, a_t)
 
                     # Predict the reward
                     r_t = self.reward_predictor(h_t, z_t)
 
-                    # Store the imagined states, actions and rewards
-                    imagined["states"].append(z_t)
-                    imagined["actions"].append(a_t)
                     imagined["rewards"].append(r_t)
 
                 # Stack the imagined states, actions and rewards

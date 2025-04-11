@@ -108,8 +108,8 @@ class Dreamer(BaseAlgorithm):
         # | ----------------------------------------------------- |#
         # | Step 2: Update the world model with real interactions |#
         # | ----------------------------------------------------- |#
-        losses = self.world_model.learn(real_sample)
-        print(losses)
+        worldmodel_losses = self.world_model.learn(real_sample)
+        print(worldmodel_losses)
 
         # | ----------------------------------------------------- |#
         # | Step 3: Imagine trajectories for ActorCritic learning |#
@@ -122,9 +122,13 @@ class Dreamer(BaseAlgorithm):
             starting_points["state"], self.actor_critic, self.horizon
         )
         print(imagined_sequences)
-        # TODO:
 
         # | ------------------------------------- |#
         # | Step 4: Update the actor-critic model |#
         # | ------------------------------------- |#
-        # Update the critic model with real and imagined trajectories
+        # Only update with imagined trajectories
+        # (updating with real trajectories should be implemented for:
+        # - environments where the reward is tricky to predict)
+
+        actorcritic_losses = self.actor_critic.learn(imagined_sequences)
+        print(actorcritic_losses)
