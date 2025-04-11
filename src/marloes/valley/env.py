@@ -197,7 +197,7 @@ class EnergyValley(MultiAgentEnv):
 
     def _get_additional_info(self) -> dict:
         """Function to get additional information (market prices, etc.)"""
-        return {}
+        return {"additional_info": {}}  # TODO: Implement additional information
 
     def _get_full_observation(self) -> dict:
         """Function to get the full observation (agent state + additional information)"""
