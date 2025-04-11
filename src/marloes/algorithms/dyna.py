@@ -1,6 +1,11 @@
 import torch
 
 from marloes.algorithms import BaseAlgorithm, SAC
+from marloes.networks.simple_worldmodel.util import (
+    parse_batch,
+    parse_actions,
+    parse_state,
+)
 
 
 class Dyna(BaseAlgorithm):
@@ -16,13 +21,14 @@ class Dyna(BaseAlgorithm):
         """
         super().__init__(config)
         self.world_model = None  # Placeholder for the world model
-        self.sac = SAC(config)
+        self.sac = SAC(self.config)
 
         # Dyna specific parameters
-        self.model_update_frequency = self.config.get("model_update_frequency", 100)
-        self.k = self.config.get("k", 10)  # Model rollout horizon; planning steps
-        self.model_updates_per_step = self.config.get("model_updates_per_step", 10)
-        self.real_sample_ratio = self.config.get("real_sample_ratio", 0.5)
+        dyna_config = config.get("dyna", {})
+        self.model_update_frequency = dyna_config.get("model_update_frequency", 100)
+        self.k = dyna_config.get("k", 10)  # Model rollout horizon; planning steps
+        self.model_updates_per_step = dyna_config.get("model_updates_per_step", 10)
+        self.real_sample_ratio = dyna_config.get("real_sample_ratio", 0.5)
 
     def get_actions(self, state: dict) -> dict:
         """
@@ -62,26 +68,29 @@ class Dyna(BaseAlgorithm):
         # 2. Generate synthetic experiences with the world model
         # --------------------
         # Get starting points for synthetic rollouts
-        synthetic_states = self.real_RB.sample(self.batch_size)
+        sample = self.real_RB.sample(self.batch_size)
+        synthetic_states = [transition.state for transition in sample]
 
         for _ in range(self.k):
             # Generate synthetic actions TODO: decide if random or policy
-            synthetic_actions = self.sample_actions(self.environment.agent_dict)
+            synthetic_actions = [
+                self.sample_actions(self.environment.agent_dict)
+                for _ in range(self.batch_size)
+            ]
 
             # Use the world model to predict next state and reward
             synthetic_next_states, synthetic_rewards = self.world_model.predict(
-                synthetic_states, synthetic_actions
+                synthetic_states, synthetic_actions, device=self.device
             )
 
-            # Store synthetic experiences, one by one
+            # Store synthetic experiences
             for i in range(self.batch_size):
-                _state = {key: val[i] for key, val in synthetic_states.items()}
-                _actions = {key: val[i] for key, val in synthetic_actions.items()}
-                _rewards = {key: val[i] for key, val in synthetic_rewards.items()}
-                _next_state = {
-                    key: val[i] for key, val in synthetic_next_states.items()
-                }
-                self.model_RB.push(_state, _actions, _rewards, _next_state)
+                self.model_RB.push(
+                    synthetic_states[i],
+                    synthetic_actions[i],
+                    synthetic_rewards[i],
+                    synthetic_next_states[i],
+                )
 
             synthetic_states = synthetic_next_states
 
