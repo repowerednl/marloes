@@ -51,25 +51,11 @@ class ActorCritic:
         # Unpack the rewards into a batched tensor for the loss computing
         rewards = torch.stack([t["rewards"] for t in trajectories], dim=0)
 
-        print("\nShapes:")
-        print(f"States: {states.shape}")
-        print(f"Actions: {actions.shape}")
-        print(f"Rewards: {rewards.shape}")
         # Critic Evaluation
         values = self.critic(states)
-        print(f"Values: {values.shape}")
-
-        # States: torch.Size([5, 10, 10])
-        # Actions: torch.Size([5, 10, 5])
-        # Rewards: torch.Size([5, 10, 1])
-        # Values: torch.Size([5, 10, 1])
-        # Returns: torch.Size([])
-        # Advantages: torch.Size([])
 
         # Compute the advantages (lambda-returns)
         returns, advantages = self._compute_advantages(rewards, values)
-        print(f"Returns: {returns.shape}")
-        print(f"Advantages: {advantages.shape}\n")
 
         # Compute the actor and critic losses
         actor_loss = self._compute_actor_loss(states, actions, advantages)
@@ -105,7 +91,7 @@ class ActorCritic:
 
         entropy = policy_dist.entropy().mean()
 
-        # Scale factor S (EMA)
+        # Scale factor S (TODO: add exponential moving average for a more stable normalization)
         flat_advantages = advantages.detach().view(-1)
         S = torch.clamp(
             torch.quantile(flat_advantages, 0.95)
@@ -131,9 +117,17 @@ class ActorCritic:
 
     def _compute_advantages(
         self, rewards: torch.Tensor, values: torch.Tensor
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Uses the lambda-returns to compute the advantages.
+
+        Expects:
+        - rewards: Tensor of shape (B, T, 1)
+        - values: Tensor of shape (B, T, 1)
+
+        Returns:
+        - returns: λ-returns, tensor of shape (B, T, 1)
+        - advantages: returns - values.detach(), tensor of shape (B, T, 1)
         """
         returns = compute_lambda_returns(rewards, values, self.gamma, self.lmbda)
         advantages = returns - values.detach()
