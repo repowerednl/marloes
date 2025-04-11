@@ -76,6 +76,7 @@ class EnergyValley(MultiAgentEnv):
         # Add state_dim and action_dim to the environment
         self.state_dim = ReplayBuffer.dict_to_tens(self._get_full_observation()).shape
         self.action_dim = torch.Size([len(self.agents)])
+        self.global_dim = ReplayBuffer.dict_to_tens(self._get_additional_info()).shape
 
     def _initialize_agents(self, config: dict, algorithm_type: str) -> None:
         """
