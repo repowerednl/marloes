@@ -47,8 +47,7 @@ class ReplayBuffer:
         # Randomly sample
         transitions = random.sample(self.buffer, batch_size)
 
-        # Convert
-        return self._convert_to_tensors(transitions)
+        return transitions
 
     def _sequential_sample(self, batch_size: int, horizon: int = 1) -> list[dict]:
         """

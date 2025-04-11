@@ -74,8 +74,8 @@ class SAC:
         """
         self.actor_network.eval()  # Set to evaluation mode
         with torch.no_grad():  # Disable gradient calculation
-            action, _ = self.actor_network.sample(state)
-        return action
+            actions, _ = self.actor_network.sample(state)
+        return actions
 
     def update(self, batch):
         """

@@ -29,11 +29,19 @@ class Dyna(BaseAlgorithm):
         Generates actions based on the current observation using the SAC agent.
         """
         # Convert state to tensor
-        # TODO: Implement state conversion to tensor if needed
+        state_tensor = self.real_RB._convert_to_tensors([state])
 
         # Get actions from the SAC agent
-        actions = self.sac.act(state)
-        return actions
+        actions = self.sac.act(state_tensor)
+
+        # Convert actions back to the original format
+        action_list = actions.squeeze(0).tolist()
+        action_dict = {
+            key: action_list[i]
+            for i, key in enumerate(self.environment.agent_dict.keys())
+        }
+
+        return action_dict
 
     def perform_training_steps(self, step: int) -> None:
         """
@@ -81,13 +89,21 @@ class Dyna(BaseAlgorithm):
         # --------------------
         for _ in range(self.model_updates_per_step):
             # Sample from both real and synthetic experiences
-            real_batch = self.real_RB.sample(int(self.batch_size * self.real_sample_ratio))
+            real_batch = self.real_RB.sample(
+                int(self.batch_size * self.real_sample_ratio)
+            )
             synthetic_batch = self.model_RB.sample(
                 int(self.batch_size * (1 - self.real_sample_ratio))
             )
 
+            # Convert batches to tensors
+            real_batch_tensor = self.real_RB._convert_to_tensors(real_batch)
+            synthetic_batch_tensor = self.model_RB._convert_to_tensors(synthetic_batch)
+
             # Combine batches
-            combined_batch = self._combine_batches(real_batch, synthetic_batch)
+            combined_batch = self._combine_batches(
+                real_batch_tensor, synthetic_batch_tensor
+            )
 
             # Update the model (SAC) with the combined batch
             self.sac.update(combined_batch)

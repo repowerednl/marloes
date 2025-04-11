@@ -38,7 +38,7 @@ class ActorNetwork(SACBaseNetwork):
 
     def sample(self, state):
         """
-        Sample an action from the policy given the state.
+        Sample actions from the policy given the state.
         Using the reparameterization trick, as described in the original SAC paper.
         """
         # We are using rsample, which uses the reparameterization trick, so conversion is needed
@@ -48,7 +48,7 @@ class ActorNetwork(SACBaseNetwork):
         x = normal.rsample()
 
         # We want actions to be in range [-1, 1], so we use tanh to squash the output
-        action = torch.tanh(x)
+        actions = torch.tanh(x)
 
         ## We need to adjust the log probability for the squashing
         # 1: Compute the log probability of x under the original Gaussian.
@@ -56,11 +56,11 @@ class ActorNetwork(SACBaseNetwork):
 
         # 2: Compute the correction term for the tanh squashing
         # Plus, add a small constant (1e-6) for numerical stability
-        log_prob_correction = torch.log(1 - action.pow(2) + 1e-6).sum(
+        log_prob_correction = torch.log(1 - actions.pow(2) + 1e-6).sum(
             dim=-1, keepdim=True
         )
 
         # 3: Subtract the correction term from the original log probability.
-        log_prob = log_prob_x - log_prob_correction
+        log_probs = log_prob_x - log_prob_correction
 
-        return action, log_prob
+        return actions, log_probs
