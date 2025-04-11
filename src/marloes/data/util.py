@@ -47,8 +47,8 @@ def read_series(
 
 def drop_out_series(
     series: pd.Series,
-    drop_prob: float = 0.01,
-    long_drop_prob: float = 0.001,
+    drop_prob: float = 0,  # TODO: Adjust these parameters to simulate different dropout scenarios
+    long_drop_prob: float = 0,
     max_long_drop_days: int = 5,
 ):
     """
