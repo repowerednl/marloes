@@ -40,7 +40,8 @@ def read_series(
         datetime(2025, 12, 31, 23, 59, tzinfo=ZoneInfo("UTC")),
     )
     series = add_noise_to_series(series)
-    series = drop_out_series(series)
+    if not forecast:
+        series = drop_out_series(series)
     return series
 
 
