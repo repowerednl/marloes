@@ -7,27 +7,30 @@ def parse_state(state_list, device="cpu"):
     Divide state into scalars and forecast per agent and convert to tensors.
     """
     agent_data = {}
-    SCALARS = {
+    SCALAR_KEYS = [
         "power",
         "available_power",
         "nomination",
         "state_of_charge",
         "degradation",
-    }
+    ]
 
-    for idx, state_dict in enumerate(state_list):
+    for state_dict in state_list:
         for agent_name, agent_info in state_dict.items():
             if agent_name not in agent_data:
                 agent_data[agent_name] = {"scalars": [], "forecast": []}
-            # Separate scalar values vs. forecast
             scalars = []
             forecast_array = None
 
-            for k, v in agent_info.items():
-                if k == "forecast":
-                    forecast_array = np.array(v, dtype=np.float32)
-                elif k in SCALARS:
-                    scalars.append(float(v))
+            for key in SCALAR_KEYS:
+                # If the agent has this key, convert it; else add default 0
+                if key in agent_info:
+                    scalars.append(float(agent_info[key]))
+                else:
+                    scalars.append(0.0)
+
+            if "forecast" in agent_info:
+                forecast_array = np.array(agent_info["forecast"], dtype=np.float32)
 
             agent_data[agent_name]["scalars"].append(scalars)
             agent_data[agent_name]["forecast"].append(forecast_array)
@@ -87,25 +90,25 @@ def parse_rewards(reward_list, device="cpu"):
     return torch.from_numpy(rewards).to(device)
 
 
-def convert_batch_of_transitions(batch_of_transitions, device="cpu"):
+def parse_batch(sample, device="cpu"):
     """
     Since the WorldModel requires separating several parts of the transition,
     this converts state to a workable dict of tensors.
     """
-    state_list = [t.state for t in batch_of_transitions]
-    actions_list = [t.actions for t in batch_of_transitions]
-    rewards_list = [t.rewards for t in batch_of_transitions]
-    next_state_list = [t.next_state for t in batch_of_transitions]
+    state_list = [t.state for t in sample]
+    actions_list = [t.actions for t in sample]
+    rewards_list = [t.rewards for t in sample]
+    next_state_list = [t.next_state for t in sample]
 
     states = parse_state(state_list, device=device)
     actions = parse_actions(actions_list, device=device)
     rewards = parse_rewards(rewards_list, device=device)
     next_states = parse_state(next_state_list, device=device)
 
-    batch_dict = {
+    sample_dict = {
         "state": states,
         "actions": actions,
         "rewards": rewards,
         "next_state": next_states,
     }
-    return batch_dict
+    return sample_dict
