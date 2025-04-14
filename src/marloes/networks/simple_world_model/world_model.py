@@ -94,7 +94,7 @@ class WorldModel(nn.Module):
 
         return reconstructed_next_states, rewards_list
 
-    def update(self, transitions_batch):
+    def update(self, transitions_batch: list[dict]):
         """
         Update the world model using a batch of real transitions.
         """
@@ -106,16 +106,16 @@ class WorldModel(nn.Module):
         """
         Function to reformat output of the network to the original state format.
         """
-        reconstructed_state = update_state_dict(state, next_state)
+        reconstructed_state = unflatten_state(state, next_state)
         return reconstructed_state
 
 
-def update_state_dict(original, replacements):
+def unflatten_state(original, replacements):
     """
     Recursively update the state dictionary with new values.
     """
     if isinstance(original, dict):
-        return {k: update_state_dict(v, replacements) for k, v in original.items()}
+        return {k: unflatten_state(v, replacements) for k, v in original.items()}
 
     elif isinstance(original, np.ndarray):
         # We do not predict the forecast currently, so we need to shift the array
@@ -126,3 +126,26 @@ def update_state_dict(original, replacements):
 
     else:
         return original  # Leave as-is
+
+
+def flatten_state(state):
+    """
+    Recursively flattens a state: the exact opposite of unflatten_state.
+    """
+    flattened = []
+
+    if isinstance(state, dict):
+        for key in state:
+            # We do not predict forecast, so skip it
+            if key == "forecast":
+                continue
+            flattened.extend(flatten_state(state[key]))
+
+    elif isinstance(state, (float, int)):
+        flattened.append(float(state))
+
+    else:
+        # For now do nothing for other types
+        pass
+
+    return flattened
