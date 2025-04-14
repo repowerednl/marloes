@@ -76,7 +76,7 @@ class EnergyValley(MultiAgentEnv):
         # Add state_dim and action_dim to the environment
         self.state_dim = ReplayBuffer.dict_to_tens(self._get_full_observation()).shape
         self.action_dim = torch.Size([len(self.agents)])
-        self.global_dim = ReplayBuffer.dict_to_tens(self._get_additional_info()).shape
+        self.global_dim = ReplayBuffer.dict_to_tens(self._get_global_context()).shape
 
     def _initialize_agents(self, config: dict, algorithm_type: str) -> None:
         """
@@ -196,14 +196,14 @@ class EnergyValley(MultiAgentEnv):
             self._state_cache[agent.id] = relevant_state
         return self._state_cache
 
-    def _get_additional_info(self) -> dict:
-        """Function to get additional information (market prices, etc.)"""
-        return {"additional_info": {}}  # TODO: Implement additional information
+    def _get_global_context(self) -> dict:
+        """Function to get additional global information (market prices, etc.)"""
+        return {"global_context": {}}  # TODO: Implement global context
 
     def _get_full_observation(self) -> dict:
         """Function to get the full observation (agent state + additional information)"""
         # TODO: Is the grid information added to the state?
-        return self._combine_states() | self._get_additional_info()
+        return self._combine_states() | self._get_global_context()
 
     def _calculate_reward(self):
         """Function to calculate the reward"""
