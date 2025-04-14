@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import torch.nn as nn
 from torch.optim import Adam
 import torch.nn.functional as F
@@ -74,9 +75,12 @@ class WorldModel(nn.Module):
             global_context = parsed_states["global_context"]
 
         # Forward pass through the model
-        next_states, rewards = self.forward(
-            scalar_list, forecast_list, global_context, parsed_actions
-        )
+        # Detach model since we are not training
+        self.eval()
+        with torch.no_grad():
+            next_states, rewards = self.forward(
+                scalar_list, forecast_list, global_context, parsed_actions
+            )
 
         # Convert next states and rewards to numpy arrays
         next_states_list = next_states.tolist()
