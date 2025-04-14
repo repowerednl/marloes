@@ -107,7 +107,7 @@ class Dyna(BaseAlgorithm):
 
             # Convert batches to tensors
             real_batch_tensor = self.real_RB._convert_to_tensors(real_batch)
-            synthetic_batch_tensor = self.model_RB._convert_to_tensors(synthetic_batch)
+            synthetic_batch_tensor = self.real_RB._convert_to_tensors(synthetic_batch)
 
             # Combine batches
             combined_batch = self._combine_batches(

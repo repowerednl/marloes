@@ -83,8 +83,6 @@ class SAC:
         """
         Updates the networks using a batch of experiences.
         """
-        # TODO: convert batch to tensor (batch_size, state_dim)
-
         # 1. Update the value network
         self._update_value_network(batch)
 
