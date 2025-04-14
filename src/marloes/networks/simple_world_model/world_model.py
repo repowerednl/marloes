@@ -1,3 +1,4 @@
+import numpy as np
 import torch.nn as nn
 from torch.optim import Adam
 import torch.nn.functional as F
@@ -77,13 +78,17 @@ class WorldModel(nn.Module):
             scalar_list, forecast_list, global_context, parsed_actions
         )
 
+        # Convert next states and rewards to numpy arrays
+        next_states_list = next_states.tolist()
+        rewards_list = rewards.squeeze(0).tolist()  # One dimension: squeeze
+
         # Reconvert next state to original format
         reconstructed_next_states = [
-            self._reconstruct_state(curr, pred)
-            for curr, pred in zip(states, next_states)
+            self._reconstruct_state(state, next_state)
+            for state, next_state in zip(states, next_states_list)
         ]
 
-        return reconstructed_next_states, rewards
+        return reconstructed_next_states, rewards_list
 
     def update(self, transitions_batch):
         """
@@ -92,4 +97,26 @@ class WorldModel(nn.Module):
         pass
 
     def _reconstruct_state(self, state, next_state):
-        pass
+        """
+        Function to reformat output of the network to the original state format.
+        """
+        reconstructed_state = update_state_dict(state, next_state)
+        return reconstructed_state
+
+
+def update_state_dict(original, replacements):
+    """
+    Recursively update the state dictionary with new values.
+    """
+    if isinstance(original, dict):
+        return {k: update_state_dict(v, replacements) for k, v in original.items()}
+
+    elif isinstance(original, np.ndarray):
+        # We do not predict the forecast currently, so we need to shift the array
+        return np.append(original[1:], 0)  # Shift left, append 0
+
+    elif isinstance(original, float):
+        return next(replacements)  # Replace with next value from list
+
+    else:
+        return original  # Leave as-is
