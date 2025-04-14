@@ -49,7 +49,7 @@ class Dreamer(BaseAlgorithm):
         Initializes the previous state for the algorithm.
         """
         self.previous = {
-            "h_t": self.world_model.rssm._init_state(1),
+            "h_t": self.world_model.rssm._init_state(1)[-1].squeeze(0),
             "z_t": torch.zeros(1, self.world_model.rssm.latent_state_size),
             "a_t": torch.zeros(1, self.environment.action_space[0]),
         }
@@ -60,13 +60,18 @@ class Dreamer(BaseAlgorithm):
         """
         if not self.previous:
             self._init_previous()
+        # For debugging:
+        # print all elements (shape) of previous
+        print("Previous state:")
+        for key, value in self.previous.items():
+            print(f"{key}: {value.shape}")
 
         # Step 1: Get the recurrent state (based on previous state)  #
         # ---------------------------------------------------------- #
         h_t, _, _ = self.world_model.rssm.forward(
             self.previous["h_t"], self.previous["z_t"], self.previous["a_t"]
         )
-        h_t = h_t[-1].squeeze(0).squeeze(0)
+        h_t = h_t[-1].squeeze(0)
 
         # Step 2: Get the latent state (based on current obs and h_t)  #
         # ------------------------------------------------------------ #
@@ -132,3 +137,13 @@ class Dreamer(BaseAlgorithm):
 
         actorcritic_losses = self.actor_critic.learn(imagined_sequences)
         print(actorcritic_losses)
+
+        # | ----------------------------------------------------- |#
+        # | Step 5: Save the losses                               |#
+        # | ----------------------------------------------------- |#
+        # to Extractor here?
+        # returning losses to Base Algorithm might be cleaner
+        return {
+            "world": worldmodel_losses,
+            "actorcritic": actorcritic_losses,
+        }

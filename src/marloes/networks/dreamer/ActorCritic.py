@@ -23,7 +23,7 @@ class ActorCritic:
         self.critic = Critic(input, hidden_size)
 
         self.actor_optim = Adam(self.actor.parameters(), lr=1e-4)
-        self.critic_optim = Adam(self.critic.parameters(), lr=1e-3)
+        self.critic_optim = Adam(self.critic.parameters(), lr=1e-4)
 
         self.gamma = 0.997
         self.lmbda = 0.95
