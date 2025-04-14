@@ -60,7 +60,7 @@ class Dyna(BaseAlgorithm):
         # --------------------
         if step % self.model_update_frequency == 0 and step != 0:
             # Sample from real experiences
-            real_batch = self.real_RB.sample(self.batch_size)
+            real_batch = self.real_RB.sample(self.batch_size, flatten=False)
 
             # Update the world model with this batch
             self.world_model.update(real_batch)
@@ -68,7 +68,7 @@ class Dyna(BaseAlgorithm):
         # 2. Generate synthetic experiences with the world model
         # --------------------
         # Get starting points for synthetic rollouts
-        sample = self.real_RB.sample(self.batch_size)
+        sample = self.real_RB.sample(self.batch_size, flatten=False)
         synthetic_states = [transition.state for transition in sample]
 
         for _ in range(self.k):
@@ -97,22 +97,16 @@ class Dyna(BaseAlgorithm):
         # 3. Update the model (SAC) with real and synthetic experiences
         # --------------------
         for _ in range(self.model_updates_per_step):
-            # Sample from both real and synthetic experiences
+            # Sample from both real and synthetic experiences; SAC uses flattened batches
             real_batch = self.real_RB.sample(
-                int(self.batch_size * self.real_sample_ratio)
+                int(self.batch_size * self.real_sample_ratio), flatten=True
             )
             synthetic_batch = self.model_RB.sample(
-                int(self.batch_size * (1 - self.real_sample_ratio))
+                int(self.batch_size * (1 - self.real_sample_ratio)), flatten=True
             )
-
-            # Convert batches to tensors
-            real_batch_tensor = self.real_RB._convert_to_tensors(real_batch)
-            synthetic_batch_tensor = self.real_RB._convert_to_tensors(synthetic_batch)
 
             # Combine batches
-            combined_batch = self._combine_batches(
-                real_batch_tensor, synthetic_batch_tensor
-            )
+            combined_batch = self._combine_batches(real_batch, synthetic_batch)
 
             # Update the model (SAC) with the combined batch
             self.sac.update(combined_batch)

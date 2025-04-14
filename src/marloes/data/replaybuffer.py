@@ -27,7 +27,7 @@ class ReplayBuffer:
         """
         self.buffer.append(Transition(state, actions, rewards, next_state))
 
-    def sample(self, batch_size: int, sequence: int = 0):
+    def sample(self, batch_size: int, sequence: int = 0, flatten: bool = True):
         """
         Samples a random batch of transitions, uses the most recent transitions if not random, unless specified otherwise.
         Args:
@@ -38,14 +38,17 @@ class ReplayBuffer:
         if sequence:
             # should sample [batch_size] sequences of size [sequence]
             return self._sequential_sample(batch_size, horizon=sequence)
-        return self._random_sample(batch_size)
+        return self._random_sample(batch_size, flatten=flatten)
 
-    def _random_sample(self, batch_size: int):
+    def _random_sample(self, batch_size: int, flatten: bool = True) -> list[dict]:
         if batch_size > len(self.buffer):
             raise ValueError("Not enough elements in buffer for random sample.")
 
         # Randomly sample
         transitions = random.sample(self.buffer, batch_size)
+
+        if flatten:
+            transitions = self._convert_to_tensors(transitions)
 
         return transitions
 
