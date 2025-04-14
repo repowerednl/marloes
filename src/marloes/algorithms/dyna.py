@@ -1,7 +1,7 @@
 import torch
 
 from marloes.algorithms import BaseAlgorithm, SAC
-from marloes.networks.simple_worldmodel.util import (
+from marloes.networks.simple_world_model.util import (
     parse_batch,
     parse_actions,
     parse_state,
