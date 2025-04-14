@@ -48,7 +48,7 @@ class ReplayBuffer:
         transitions = random.sample(self.buffer, batch_size)
 
         if flatten:
-            transitions = self._convert_to_tensors(transitions)
+            transitions = self.convert_to_tensors(transitions)
 
         return transitions
 
@@ -71,10 +71,10 @@ class ReplayBuffer:
             sequence = [
                 self.buffer[i] for i in range(start_idx, start_idx + batch_size)
             ]
-            batch.append(self._convert_to_tensors(sequence))
+            batch.append(self.convert_to_tensors(sequence))
         return batch
 
-    def _convert_to_tensors(self, transitions):
+    def convert_to_tensors(self, transitions):
         state_list = []
         action_list = []
         reward_list = []

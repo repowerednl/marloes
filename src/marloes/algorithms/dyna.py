@@ -31,7 +31,7 @@ class Dyna(BaseAlgorithm):
         Generates actions based on the current observation using the SAC agent.
         """
         # Convert state to tensor
-        state_tensor = self.real_RB._convert_to_tensors([state])
+        state_tensor = self.real_RB.convert_to_tensors([state])
 
         # Get actions from the SAC agent
         actions = self.sac.act(state_tensor)

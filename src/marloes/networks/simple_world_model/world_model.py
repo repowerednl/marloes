@@ -1,3 +1,4 @@
+from typing import Iterator
 import numpy as np
 import torch
 import torch.nn as nn
@@ -133,15 +134,15 @@ class WorldModel(nn.Module):
 
         self.loss.append(total_loss.item())
 
-    def _reconstruct_state(self, state, next_state):
+    def _reconstruct_state(self, state: dict, next_state: list):
         """
         Function to reformat output of the network to the original state format.
         """
-        reconstructed_state = unflatten_state(state, next_state)
+        reconstructed_state = unflatten_state(state, iter(next_state))
         return reconstructed_state
 
 
-def unflatten_state(original, replacements):
+def unflatten_state(original: dict, replacements: Iterator):
     """
     Recursively update the state dictionary with new values.
     """
