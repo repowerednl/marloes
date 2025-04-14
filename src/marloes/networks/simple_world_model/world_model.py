@@ -89,66 +89,7 @@ class WorldModel(nn.Module):
         """
         Update the world model using a batch of real transitions.
         """
-        # 1. Parse the batch
-        parsed_batch = parse_batch(transitions_batch)
-        scalar_list = [agent["scalars"] for agent in parsed_batch["state"]["agents"]]
-        forecast_list = [agent["forecast"] for agent in parsed_batch["state"]["agents"]]
-        global_context = parsed_batch["state"].get("global_context", None)
-        actions = parsed_batch["actions"]
-        rewards = parsed_batch["rewards"]
-        next_state_target = parsed_batch["next_state"]
-
-        # 2. Forward pass
-        latent_next_state, reward_pred = self.forward(
-            scalar_list, forecast_list, global_context, actions
-        )
-
-        # 3. Compute loss (for example, MSE on state and reward)
-        state_loss = F.mse_loss(latent_next_state, next_state_target)
-        reward_loss = F.mse_loss(reward_pred, rewards)
-        loss = state_loss + reward_loss
-
-        # 4. Backpropagate and update all parameters (all submodules are updated automatically)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-
-        # 5. Store loss for logging
-        self.loss.append(loss.item())
+        pass
 
     def _reconstruct_state(self, state, next_state):
-        new_state = {}
-
-        # Process global context first
-        if "global_context" in state:
-            if "global_context" in next_state:
-                new_state["global_context"] = next_state["global_context"]
-            else:
-                new_state["global_context"] = state["global_context"]
-
-        # Process each agent
-        for agent, agent_data in state.items():
-            if agent == "global_context":
-                continue  # already processed
-            new_agent_data = {}
-            for key, value in agent_data.items():
-                if key == "forecast":
-                    # Shift the forecast:
-                    # Assume forecast is either a list or a numpy array.
-                    if isinstance(value, list):
-                        new_forecast = value[1:] + [0.0]
-                    else:
-                        import numpy as np
-
-                        new_forecast = np.roll(value, -1)
-                        new_forecast[-1] = 0.0
-                    new_agent_data["forecast"] = new_forecast
-                else:
-                    # For non-forecast keys, use the predicted value if provided, else keep current.
-                    if agent in next_state and key in next_state[agent]:
-                        new_agent_data[key] = next_state[agent][key]
-                    else:
-                        new_agent_data[key] = value
-            new_state[agent] = new_agent_data
-
-        return new_state
+        pass
