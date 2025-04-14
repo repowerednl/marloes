@@ -1,11 +1,7 @@
 import torch
 
 from marloes.algorithms import BaseAlgorithm, SAC
-from marloes.networks.simple_world_model.util import (
-    parse_batch,
-    parse_actions,
-    parse_state,
-)
+from marloes.networks.simple_world_model.world_model import WorldModel
 
 
 class Dyna(BaseAlgorithm):
@@ -20,7 +16,7 @@ class Dyna(BaseAlgorithm):
         Initializes the Dyna algorithm.
         """
         super().__init__(config)
-        self.world_model = None  # Placeholder for the world model
+        self.world_model = WorldModel(self.config)
         self.sac = SAC(self.config)
 
         # Dyna specific parameters
