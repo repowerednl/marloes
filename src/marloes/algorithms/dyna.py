@@ -63,7 +63,7 @@ class Dyna(BaseAlgorithm):
             real_batch = self.real_RB.sample(self.batch_size, flatten=False)
 
             # Update the world model with this batch
-            self.world_model.update(real_batch)
+            self.world_model.update(real_batch, self.device)
 
         # 2. Generate synthetic experiences with the world model
         # --------------------

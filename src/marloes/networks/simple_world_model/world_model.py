@@ -94,13 +94,44 @@ class WorldModel(nn.Module):
 
         return reconstructed_next_states, rewards_list
 
-    def update(self, transitions_batch: list[dict]):
+    def update(self, transitions_batch: list[dict], device: str = "cpu"):
         """
         Update the world model using a batch of real transitions.
         """
         # Set network to training mode
         self.train()
-        pass
+
+        # 1. Parse batch to fit world model expectations
+        parsed_batch = parse_batch(transitions_batch)
+        scalar_list = [agent["scalars"] for agent in parsed_batch["state"]["agents"]]
+        forecast_list = [agent["forecast"] for agent in parsed_batch["state"]["agents"]]
+        global_context = parsed_batch["state"].get("global_context", None)
+        actions = parsed_batch["actions"]
+        rewards = parsed_batch["rewards"]
+        next_state = parsed_batch["next_state"]
+
+        # 2. Forward pass
+        latent_next_state, reward_pred = self.forward(
+            scalar_list, forecast_list, global_context, actions
+        )
+
+        # 3. Construct targets
+        next_state_target = torch.from_numpy(
+            np.array([flatten_state(state) for state in next_state], dtype=np.float32)
+        ).to(device)
+        reward_target = torch.from_numpy(np.array(rewards, dtype=np.float32)).to(device)
+
+        # 4. Compute loss (for now simple MSE)
+        next_state_loss = F.mse_loss(latent_next_state, next_state_target)
+        reward_loss = F.mse_loss(reward_pred, reward_target)
+        total_loss = next_state_loss + reward_loss
+
+        # 5. Backpropagation (also through all submodules)
+        self.optimizer.zero_grad()
+        total_loss.backward()
+        self.optimizer.step()
+
+        self.loss.append(total_loss.item())
 
     def _reconstruct_state(self, state, next_state):
         """
@@ -130,7 +161,7 @@ def unflatten_state(original, replacements):
 
 def flatten_state(state):
     """
-    Recursively flattens a state: the exact opposite of unflatten_state.
+    Recursively flattens a state: practically the exact opposite of unflatten_state.
     """
     flattened = []
 
