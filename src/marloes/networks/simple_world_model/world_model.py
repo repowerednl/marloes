@@ -98,6 +98,8 @@ class WorldModel(nn.Module):
         """
         Update the world model using a batch of real transitions.
         """
+        # Set network to training mode
+        self.train()
         pass
 
     def _reconstruct_state(self, state, next_state):

@@ -92,6 +92,7 @@ class SAC:
         self._update_critic_networks(batch)
 
         # 3. Update the actor network
+        self.actor_network.train()  # Set back to training mode
         self._update_actor_network(batch)
 
         # 4. Update the target value network
