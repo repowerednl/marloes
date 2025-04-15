@@ -80,6 +80,7 @@ class EnergyValley(MultiAgentEnv):
         self.agents_scalar_dim = [
             len(state) for state in self._combine_states(False).values()
         ]
+        self.forecasts = [agent.forecast is not None for agent in self.agents]
 
     def _initialize_agents(self, config: dict, algorithm_type: str) -> None:
         """

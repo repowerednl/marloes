@@ -31,6 +31,7 @@ class BaseAlgorithm(ABC):
         config["action_dim"] = self.environment.action_dim
         config["global_dim"] = self.environment.global_dim
         config["agents_scalar_dim"] = self.environment.agents_scalar_dim
+        config["forecasts"] = self.environment.forecasts
         self.config = config
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
