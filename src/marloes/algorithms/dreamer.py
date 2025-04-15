@@ -6,11 +6,16 @@ import torch
 
 
 class Dreamer(BaseAlgorithm):
-    __name__ = "Dreamer"
+    """
+    Dreamer algorithm implementation using the WorldModel and ActorCritic modules.
+    """
 
     def __init__(self, config: dict):
         """
-        Initializes the Dreamer algorithm working with the WorldModel.
+        Initializes the Dreamer algorithm.
+
+        Args:
+            config (dict): Configuration dictionary for the algorithm.
         """
         super().__init__(config)
         self._initialize_world_model()
@@ -53,6 +58,12 @@ class Dreamer(BaseAlgorithm):
     def get_actions(self, observations):
         """
         Computes actions based on the current observations and model state.
+
+        Args:
+            observations (torch.Tensor): Current observations.
+
+        Returns:
+            dict: Dictionary mapping agent IDs to actions.
         """
         if not self.previous:
             self._init_previous()
@@ -90,8 +101,12 @@ class Dreamer(BaseAlgorithm):
     def perform_training_steps(self, step: int):
         """
         Executes a training step for the Dreamer algorithm.
-        1. The world model is updated with real observations and actions.
-        2. The actor-critic model is updated with imagined trajectories and real trajectories.
+
+        Args:
+            step (int): Current training step.
+
+        Returns:
+            dict: Dictionary containing world model and actor-critic losses.
         """
         if step % self.update_interval != 0 and step > 0:
             return

@@ -32,7 +32,13 @@ class WorldModel:
         hyper_params: HyperParams = None,
     ):
         """
-        Initializes the World Model
+        Initializes the World Model.
+
+        Args:
+            state_dim (tuple): Shape of the observation space.
+            action_dim (tuple): Shape of the action space.
+            params (dict, optional): Dictionary with network parameters.
+            hyper_params (HyperParams, optional): Hyperparameters for the network.
         """
         self.rssm = RSSM(
             x_shape=state_dim[0],
@@ -72,9 +78,15 @@ class WorldModel:
         self, starting_points: torch.Tensor, actor: Actor, horizon: int = 16
     ) -> list[dict]:
         """
-        Imagine function for rollouts from the initial state, using the actor to sample actions (from current policy).
-        Returns the predicted observations and rewards.
-        Only used for testing and validation, not for training.
+        Generates imagined trajectories from the initial state using the actor.
+
+        Args:
+            starting_points (torch.Tensor): Batch of initial states.
+            actor (Actor): Actor model to sample actions.
+            horizon (int, optional): Length of the imagined trajectory. Defaults to 16.
+
+        Returns:
+            list[dict]: List of imagined trajectories containing states, actions, and rewards.
         """
         with torch.no_grad():
             batch = []
@@ -139,7 +151,13 @@ class WorldModel:
 
     def learn(self, sample: list[dict]) -> dict:
         """
-        Learning step takes a batch of sequences of a certain length (horizon).
+        Performs a learning step for the world model using real trajectories.
+
+        Args:
+            sample (list[dict]): Batch of real trajectories.
+
+        Returns:
+            dict: Dictionary containing dynamics, representation, prediction, and total losses.
         """
         # extract the to be predicted states (next_states) as tensors into x
         x = torch.stack([sequence["state"] for sequence in sample], dim=0)
@@ -182,6 +200,12 @@ class WorldModel:
             """
             Takes a list of dictionaries. The dictionary contains the mean and logvar of the latent state.
             Should return mean and logvar (tensors) separately as a batch (lenth of the list).
+
+            Args:
+                details (list[dict]): List of dictionaries containing mean and logvar.
+
+            Returns:
+                tuple[torch.Tensor, torch.Tensor]: Mean and logvar tensors.
             """
             mean = torch.stack([d["mean"] for d in details], dim=0)
             logvar = torch.stack([d["logvar"] for d in details], dim=0)
@@ -257,19 +281,31 @@ class WorldModel:
 
 class Decoder(BaseNetwork):
     """
-    Class that decodes the latent state to the observations for the RSSM network.
-    Since we have no images (CNN) in this case, we can use a simple MLP.
+    Decodes the latent state to observations using a simple MLP.
     """
 
     def __init__(self, latent_dim: int, output: int, hidden_dim: int = 256):
+        """
+        Initializes the Decoder.
+
+        Args:
+            latent_dim (int): Dimension of the latent state.
+            output (int): Dimension of the output (observation space).
+            hidden_dim (int, optional): Dimension of the hidden layer. Defaults to 256.
+        """
         super(Decoder, self).__init__()
         self.fc1 = nn.Linear(latent_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, output)
 
     def forward(self, z_t: torch.Tensor) -> torch.Tensor:
         """
-        Receives latent state z_t -> which is a tensor.
-        Passes through the MLP to predict the next observation.
+        Forward pass through the Decoder.
+
+        Args:
+            z_t (torch.Tensor): Latent state.
+
+        Returns:
+            torch.Tensor: Predicted observation.
         """
         x = F.relu(self.fc1(z_t.float()))
         x_hat_t = self.fc2(x)
@@ -278,11 +314,17 @@ class Decoder(BaseNetwork):
 
 class RewardPredictor(BaseNetwork):
     """
-    Class that predicts the reward from the latent state.
-    forward pass: (h_t, z_t (posterior)) -> r_t
+    Predicts the reward from the latent state using a simple MLP.
     """
 
     def __init__(self, hidden_dim: int, latent_dim: int):
+        """
+        Initializes the RewardPredictor.
+
+        Args:
+            hidden_dim (int): Dimension of the hidden state.
+            latent_dim (int): Dimension of the latent state.
+        """
         super(RewardPredictor, self).__init__()
         # simple MLP
         self.fc = nn.Linear(hidden_dim + latent_dim, 1)
@@ -290,7 +332,14 @@ class RewardPredictor(BaseNetwork):
 
     def forward(self, h_t: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
         """
-        Concatenates h_t (size hidden_dim) and z_t (size latent_dim) and predicts the reward.
+        Forward pass through the RewardPredictor.
+
+        Args:
+            h_t (torch.Tensor): Hidden state.
+            z_t (torch.Tensor): Latent state.
+
+        Returns:
+            torch.Tensor: Predicted reward.
         """
         x = torch.cat([h_t, z_t], dim=-1)
         r_t = self.fc(x)
@@ -299,11 +348,17 @@ class RewardPredictor(BaseNetwork):
 
 class ContinuePredictor(BaseNetwork):
     """
-    Class that predicts whether to continue from the latent state.
-    A binary classification task; (h_t, z_t (posterior)) -> c_t = [0,1].
+    Predicts whether to continue from the latent state using a binary classification task.
     """
 
     def __init__(self, hidden_dim: int, latent_dim: int):
+        """
+        Initializes the ContinuePredictor.
+
+        Args:
+            hidden_dim (int): Dimension of the hidden state.
+            latent_dim (int): Dimension of the latent state.
+        """
         super(ContinuePredictor, self).__init__()
         # simple MLP with sigmoid activation function
         self.fc = nn.Linear(hidden_dim + latent_dim, 1)
@@ -311,7 +366,14 @@ class ContinuePredictor(BaseNetwork):
 
     def forward(self, h_t: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
         """
-        Concatenates h_t (size hidden_dim) and z_t (size latent_dim) and predicts whether to continue.
+        Forward pass through the ContinuePredictor.
+
+        Args:
+            h_t (torch.Tensor): Hidden state.
+            z_t (torch.Tensor): Latent state.
+
+        Returns:
+            torch.Tensor: Probability of continuing.
         """
         x = torch.cat([h_t, z_t], dim=-1)
         c_t = self.fc(x)

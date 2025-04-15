@@ -21,6 +21,15 @@ class RSSM(BaseNetwork):
         hyper_params: HyperParams = None,
         stochastic: bool = False,
     ):
+        """
+        Initializes the RSSM network.
+
+        Args:
+            x_shape (int): Shape of the input observations.
+            params (dict, optional): Dictionary with network parameters.
+            hyper_params (HyperParams, optional): Hyperparameters for the network.
+            stochastic (bool, optional): Whether to use stochastic latent states. Defaults to False.
+        """
         self.stochastic = stochastic
         super().__init__()
         self.initialize_network(params, RSSM_LD)
@@ -28,6 +37,15 @@ class RSSM(BaseNetwork):
 
     @staticmethod
     def _validate_rssm(details: LayerDetails):
+        """
+        Validates the RSSM layer details.
+
+        Args:
+            details (LayerDetails): Layer details for the RSSM network.
+
+        Raises:
+            ValueError: If required keys are missing in the layer details.
+        """
         # own validation: hidden should have "recurrent": {}
         if "recurrent" not in details.hidden:
             raise ValueError("RSSM network requires a recurrent hidden layer.")
@@ -55,8 +73,11 @@ class RSSM(BaseNetwork):
 
     def initialize_network(self, params: dict, details: LayerDetails):
         """
-        Overrides the base class initialization.
-        #TODO: add "type" option to details (recurrent and dense), requires changes in validation
+        Initializes the RSSM network.
+
+        Args:
+            params (dict): Network parameters.
+            details (LayerDetails): Layer details for the RSSM network.
         """
         self._validate_rssm(details)
         self.latent_state_size = details.hidden["dense"]["out_features"]
@@ -89,9 +110,15 @@ class RSSM(BaseNetwork):
 
     def forward(self, h_t: torch.Tensor, z_t: torch.Tensor, a_t: torch.Tensor):
         """
-        Forward pass through the network, overriding the base class.
-        Predicts the next latent state given the previous state and action.
-        Used for one single step in the environment.
+        Forward pass through the RSSM network.
+
+        Args:
+            h_t (torch.Tensor): Hidden state.
+            z_t (torch.Tensor): Latent state.
+            a_t (torch.Tensor): Action.
+
+        Returns:
+            tuple: Updated hidden state, predicted latent state, and latent state details.
         """
         assert (
             torch.cat([h_t, z_t, a_t], dim=-1).shape[-1] == self.rnn.input_size
@@ -115,13 +142,27 @@ class RSSM(BaseNetwork):
     ):
         """
         Predicts the next hidden state from the previous hidden state, latent state, and action.
+
+        Args:
+            h_t (torch.Tensor): Previous hidden state.
+            z_t (torch.Tensor): Previous latent state.
+            a_t (torch.Tensor): Action.
+
+        Returns:
+            tuple: Output and hidden state from the RNN.
         """
         x = torch.cat([h_t, z_t, a_t], dim=-1).float()
         return self.rnn(x)
 
     def _get_latent_state(self, h_t: torch.Tensor) -> tuple[torch.Tensor, dict]:
         """
-        Predicts the latent state from the hidden state, method depends on stochasticity.
+        Predicts the latent state from the hidden state.
+
+        Args:
+            h_t (torch.Tensor): Hidden state.
+
+        Returns:
+            tuple: Latent state and its details (mean and log variance).
         """
         if self.stochastic:
             mu = self.fc_mu(h_t)
@@ -135,13 +176,24 @@ class RSSM(BaseNetwork):
     def _init_state(self, batch_size: int):
         """
         Initializes the hidden state for the RNN.
+
+        Args:
+            batch_size (int): Batch size.
+
+        Returns:
+            torch.Tensor: Initialized hidden state.
         """
         return torch.zeros(self.rnn.num_layers, batch_size, self.rnn.hidden_size)
 
     def rollout(self, sample: list[dict]) -> dict:
         """
-        Performs a rollout for each sequence in the batch/sample.
-        Returns a dictionary with predicted and actual latent states, recurrent states, and their details.
+        Performs a rollout for a batch of sequences.
+
+        Args:
+            sample (list[dict]): Batch of sequences.
+
+        Returns:
+            dict: Dictionary containing predicted and actual latent states, recurrent states, and their details.
         """
         results = {
             "predicted": [],
@@ -184,6 +236,14 @@ class RSSM(BaseNetwork):
     ):
         """
         Single rollout for a single sequence in the batch obtaining the predicted and actual latent states.
+
+        Args:
+            states (torch.Tensor): Observed states.
+            actions (torch.Tensor): Actions taken.
+            next_states (torch.Tensor): Next observed states.
+
+        Returns:
+            tuple: Predicted latent states, actual latent states, recurrent states, and their details.
         """
         h_0 = self._init_state(1)  # Batch size of 1: single rollout
         h_t = h_0[-1]  # Take the last layer and unsqueeze for batch dim
@@ -240,6 +300,14 @@ class Encoder(BaseNetwork):
     """
 
     def __init__(self, input: int, latent_dim: int, hidden_dim: int = 256):
+        """
+        Initializes the Encoder.
+
+        Args:
+            input (int): Dimension of the input.
+            latent_dim (int): Dimension of the latent state.
+            hidden_dim (int, optional): Dimension of the hidden layer. Defaults to 256.
+        """
         super(Encoder, self).__init__()
         self.fc1 = nn.Linear(input, hidden_dim)
         self.fc_mu = nn.Linear(hidden_dim, latent_dim)
@@ -247,7 +315,13 @@ class Encoder(BaseNetwork):
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
         """
-        Passes observations (x) through the MLP to predict latent state.
+        Forward pass through the Encoder.
+
+        Args:
+            x (torch.Tensor): Input observations.
+
+        Returns:
+            tuple: Latent state and its details (mean and log variance).
         """
         x = F.relu(
             self.fc1(x.float())
