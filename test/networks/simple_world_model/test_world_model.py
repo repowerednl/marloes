@@ -24,6 +24,7 @@ def dummy_config():
             "scalar_dim": 5,
         },
         "agents_scalar_dim": [3, 3],
+        "forecasts": [True, False],
     }
 
 
@@ -67,7 +68,6 @@ def dummy_transition():
         "Agent 1": {
             "power": 0.0,
             "available_power": 20.0,
-            "forecast": np.array([4.0, 5.0, 6.0], dtype=np.float32),
             "nomination": 5.0,
         },
         "global_context": {},

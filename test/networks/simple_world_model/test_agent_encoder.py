@@ -10,7 +10,7 @@ def test_agent_state_encoder_dimensions():
         "agent_enc_dim": 16,
         "forecast_num_layers": 1,
     }
-    encoder = AgentStateEncoder(config, config["scalar_dim"])
+    encoder = AgentStateEncoder(config, config["scalar_dim"], True)
 
     batch_size = 4
     seq_length = 10

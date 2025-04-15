@@ -25,10 +25,13 @@ class WorldModel(nn.Module):
         self.world_model_config = config.get("WorldModel", {})
         self.num_agents = config["num_agents"]
         agents_scalar_dim = config["agents_scalar_dim"]
+        forecasts = config["forecasts"]
 
         self.agent_state_encoders = nn.ModuleList(
             [
-                AgentStateEncoder(self.world_model_config, agents_scalar_dim[i])
+                AgentStateEncoder(
+                    self.world_model_config, agents_scalar_dim[i], forecasts[i]
+                )
                 for i in range(self.num_agents)
             ]
         )
