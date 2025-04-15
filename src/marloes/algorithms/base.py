@@ -23,31 +23,34 @@ class BaseAlgorithm(ABC):
         logging.info(
             f"Initializing {self.__class__.__name__} algorithm and setting up the environment..."
         )
-        self.config = config
 
         # Initialize the Saver, environment, and device
         self.saver = Saver(config=config)
         self.environment = EnergyValley(config, self.__class__.__name__)
         config["state_dim"] = self.environment.state_dim
         config["action_dim"] = self.environment.action_dim
+        config["global_dim"] = self.environment.global_dim
+        config["agents_scalar_dim"] = self.environment.agents_scalar_dim
+        config["forecasts"] = self.environment.forecasts
+        self.config = config
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )  # for future ticket, make sure this can run on GPU instead of CPU
 
         # General settings
-        self.chunk_size = self.config.get("chunk_size", 10000)
-        self.training_steps = self.config.get("training_steps", 100000)
-        self.num_initial_random_steps = self.config.get("num_initial_random_steps", 0)
-        self.batch_size = self.config.get("batch_size", 128)
+        self.chunk_size = config.get("chunk_size", 10000)
+        self.training_steps = config.get("training_steps", 100000)
+        self.num_initial_random_steps = config.get("num_initial_random_steps", 0)
+        self.batch_size = config.get("batch_size", 128)
 
         # Initialize ReplayBuffers
         self.real_RB = ReplayBuffer(
-            capacity=self.config["replay_buffers"].get("real_capacity", 1000),
+            capacity=config["replay_buffers"].get("real_capacity", 1000),
             device=self.device,
         )
         try:
             self.model_RB = ReplayBuffer(
-                capacity=self.config["replay_buffers"].get("model_capacity", 1000),
+                capacity=config["replay_buffers"].get("model_capacity", 1000),
                 device=self.device,
             )
         except KeyError:
