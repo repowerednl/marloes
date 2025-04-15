@@ -13,7 +13,7 @@ class SAC:
     """
 
     def __init__(self, config: dict):
-        self.config = config
+        self.SAC_config = config.get("SAC", {})
         self.value_network = ValueNetwork(config)  # Parameterized by psi
         self.target_value_network = ValueNetwork(config)  # Parameterized by psi'
         self.critic_1_network = CriticNetwork(config)
@@ -30,18 +30,20 @@ class SAC:
         self.loss_critic_2 = []
         self.loss_actor = []
 
-        self.gamma = config.get("gamma", 0.99)  # Discount factor
-        self.alpha = config.get("alpha", 0.2)  # Temperature parameter for entropy
-        self.tau = config.get("tau", 0.005)  # Target network update rate
+        self.gamma = self.SAC_config.get("gamma", 0.99)  # Discount factor
+        self.alpha = self.SAC_config.get(
+            "alpha", 0.2
+        )  # Temperature parameter for entropy
+        self.tau = self.SAC_config.get("tau", 0.005)  # Target network update rate
 
     def _init_optimizers(self):
         """
         Initialize the optimizers for the networks.
         """
         # Create optimizers here
-        learning_rate = self.config.get("learning_rate", 3e-4)
-        eps = self.config.get("eps", 1e-7)
-        weight_decay = self.config.get("weight_decay", 0.0)
+        learning_rate = self.SAC_config.get("learning_rate", 3e-4)
+        eps = self.SAC_config.get("eps", 1e-7)
+        weight_decay = self.SAC_config.get("weight_decay", 0.0)
 
         self.value_optimizer = Adam(
             self.value_network.parameters(),
@@ -74,15 +76,13 @@ class SAC:
         """
         self.actor_network.eval()  # Set to evaluation mode
         with torch.no_grad():  # Disable gradient calculation
-            action, _ = self.actor_network.sample(state)
-        return action
+            actions, _ = self.actor_network.sample(state)
+        return actions
 
     def update(self, batch):
         """
         Updates the networks using a batch of experiences.
         """
-        # TODO: convert batch to tensor (batch_size, state_dim)
-
         # 1. Update the value network
         self._update_value_network(batch)
 
@@ -90,6 +90,7 @@ class SAC:
         self._update_critic_networks(batch)
 
         # 3. Update the actor network
+        self.actor_network.train()  # Set back to training mode
         self._update_actor_network(batch)
 
         # 4. Update the target value network
