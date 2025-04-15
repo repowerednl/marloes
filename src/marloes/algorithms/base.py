@@ -36,6 +36,8 @@ class BaseAlgorithm(ABC):
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )  # for future ticket, make sure this can run on GPU instead of CPU
+        # Set the device back to cpu
+        self.device = torch.device("cpu")
 
         # General settings
         self.chunk_size = config.get("chunk_size", 10000)
@@ -44,10 +46,16 @@ class BaseAlgorithm(ABC):
         self.batch_size = config.get("batch_size", 128)
 
         # Initialize ReplayBuffers
-        self.real_RB = ReplayBuffer(
-            capacity=config["replay_buffers"].get("real_capacity", 1000),
-            device=self.device,
-        )
+        try:
+            self.real_RB = ReplayBuffer(
+                capacity=self.config["replay_buffers"].get("real_capacity", 1000),
+                device=self.device,
+            )
+        except KeyError:
+            self.real_RB = ReplayBuffer(
+                capacity=10000,  # Default capacity if not specified
+                device=self.device,
+            )
         try:
             self.model_RB = ReplayBuffer(
                 capacity=config["replay_buffers"].get("model_capacity", 1000),
@@ -84,10 +92,10 @@ class BaseAlgorithm(ABC):
                 # Get actions from the algorithm
                 actions = self.get_actions(state)
 
-            next_state, rewards, dones, infos = self.environment.step(actions)
+            next_state, reward, dones, infos = self.environment.step(actions)
 
             # Store (real) experiences
-            self.real_RB.push(state, actions, rewards, next_state)
+            self.real_RB.push(state, actions, reward, next_state)
 
             state = next_state
 

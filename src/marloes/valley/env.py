@@ -212,7 +212,7 @@ class EnergyValley(MultiAgentEnv):
 
     def _calculate_reward(self):
         """Function to calculate the reward"""
-        reward = 0  # TODO: Implement reward calculation
+        reward = 0  # TODO: Implement reward calculation (Return scalar value)
         # once the reward is calculated, also save it to the extractor
         self.extractor.save_reward(reward)
         for agent in self.agents:

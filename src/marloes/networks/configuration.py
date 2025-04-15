@@ -30,35 +30,44 @@ class NetworkConfig:
     def __init__(self):
         self.networks = defaultdict()
 
+    def _validation(self):
+        """
+        Validation of the network configuration. We expect every instance to be [str, BaseNetwork].
+        """
+        for key, value in self.networks.items():
+            if not isinstance(key, str):
+                raise ValueError(f"Key {key} is not a string.")
+            if not isinstance(value, BaseNetwork):
+                raise ValueError(f"Value {value} is not a BaseNetwork.")
+
     """
     Below are the load and save functions that allow the configuration to be saved and loaded from a file.
     """
 
-    def load(self, uid, layer_details):
+    def load(self, uid):
         """
         Loading available configurations for a given UID. If UID is not found, it will return an empty dictionary.
         It requires some specifics about the network architecture to be passed as well (layer details), this should be defined in the algorithm to match the saved configuration.
         """
-        if not layer_details:
-            raise ValueError(
-                "Layer details must be provided to load the network configuration."
-            )
+        self._validation()
         if not os.path.exists(f"configs/{uid}"):
-            return {}
-        for config_type in os.listdir(f"configs/{uid}"):
-            path = f"configs/{uid}/{config_type}.pth"
-            self.networks[config_type] = BaseNetwork(
-                params=torch.load(path), layer_details=layer_details
-            )
+            raise ValueError(f"Configuration with UID {uid} not found.")
+        for network in os.listdir(f"configs/{uid}"):
+            if network not in self.networks:
+                raise ValueError(f"Network type {network} not found in configuration.")
+            path = f"configs/{uid}/{network}.pth"
+            self.networks[network].load(path)
 
     def save(self, uid):
         """
         Saving the current configuration to separate files identified by the given UID.
         """
-        for config_type in self.networks:
-            path = f"configs/{uid}/{config_type}.pth"
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            self.networks[config_type].save(path)
+        self._validation()
+        for network in self.networks:
+            path = f"configs/{uid}/{network}.pth"
+            # make sure configs/uid exists
+            os.makedirs(f"configs/{uid}", exist_ok=True)
+            self.networks[network].save(path)
 
     """
     Below is functionality that allows the NetworkConfig class to be used as a dictionary.
