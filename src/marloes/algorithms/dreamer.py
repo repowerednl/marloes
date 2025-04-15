@@ -60,34 +60,34 @@ class Dreamer(BaseAlgorithm):
         """
         if not self.previous:
             self._init_previous()
+        with torch.no_grad():
+            # Step 1: Get the recurrent state (based on previous state)  #
+            # ---------------------------------------------------------- #
+            h_t, _, _ = self.world_model.rssm.forward(
+                self.previous["h_t"], self.previous["z_t"], self.previous["a_t"]
+            )
+            h_t = h_t[-1].squeeze(0).squeeze(0)
 
-        # Step 1: Get the recurrent state (based on previous state)  #
-        # ---------------------------------------------------------- #
-        h_t, _, _ = self.world_model.rssm.forward(
-            self.previous["h_t"], self.previous["z_t"], self.previous["a_t"]
-        )
-        h_t = h_t[-1].squeeze(0).squeeze(0)
+            # Step 2: Get the latent state (based on current obs and h_t)  #
+            # ------------------------------------------------------------ #
+            x = torch.cat([observations, h_t], dim=-1)
+            z_t, _ = self.world_model.rssm.encoder(x)
 
-        # Step 2: Get the latent state (based on current obs and h_t)  #
-        # ------------------------------------------------------------ #
-        x = torch.cat([observations, h_t], dim=-1)
-        z_t, _ = self.world_model.rssm.encoder(x)
+            # Step 3: Get the action (based on the model state)  #
+            # -------------------------------------------------- #
+            s = torch.cat([h_t, z_t], dim=-1)
+            actions = self.actor_critic.act(s)
 
-        # Step 3: Get the action (based on the model state)  #
-        # -------------------------------------------------- #
-        s = torch.cat([h_t, z_t], dim=-1)
-        actions = self.actor_critic.act(s)
+            # Step 4: Update the previous state with the current state  #
+            # -------------------------------------------------- #
+            self.previous["h_t"] = h_t
+            self.previous["z_t"] = z_t
+            self.previous["a_t"] = actions
 
-        # Step 4: Update the previous state with the current state  #
-        # -------------------------------------------------- #
-        self.previous["h_t"] = h_t
-        self.previous["z_t"] = z_t
-        self.previous["a_t"] = actions
-
-        return {
-            agent_id: actions[i]
-            for i, agent_id in enumerate(self.environment.agent_dict.keys())
-        }
+            return {
+                agent_id: actions[i]
+                for i, agent_id in enumerate(self.environment.agent_dict.keys())
+            }
 
     def perform_training_steps(self, step: int):
         """
