@@ -70,13 +70,11 @@ class Dreamer(BaseAlgorithm):
             # ------------------------------------------------------------ #
             x = torch.cat([observations, h_t], dim=-1)
             z_t, _ = self.world_model.rssm.encoder(x)
-            print(z_t)
 
             # Step 3: Get the action (based on the model state)  #
             # -------------------------------------------------- #
             s = torch.cat([h_t, z_t], dim=-1)
             actions = self.actor_critic.act(s)
-            print(actions)
 
             # Step 4: Update the previous state with the current state  #
             # -------------------------------------------------- #

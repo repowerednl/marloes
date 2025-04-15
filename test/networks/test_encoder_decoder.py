@@ -5,7 +5,7 @@ import torch
 from marloes.networks.dreamer.WorldModel import Decoder, RewardPredictor
 from marloes.networks.dreamer.RSSM import Encoder
 from marloes.networks.details import RSSM_LD
-from marloes.networks.util import dict_to_tens
+from marloes.data.replaybuffer import ReplayBuffer
 
 
 class EncoderDecoderTestCase(TestCase):
@@ -18,7 +18,7 @@ class EncoderDecoderTestCase(TestCase):
         state = {"nom": 1, "test": 2}
         state_2 = {"nom": 3, "test": 4, "extra": 5}
         cls.observation = {"agent1": state, "agent2": state_2}
-        cls.tensor = dict_to_tens(cls.observation)
+        cls.tensor = ReplayBuffer.dict_to_tens(cls.observation)
 
         cls.z_t_size = RSSM_LD.hidden["dense"]["out_features"]
         cls.encoder = Encoder(cls.tensor.shape[0], cls.z_t_size)

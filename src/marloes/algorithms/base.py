@@ -89,10 +89,10 @@ class BaseAlgorithm(ABC):
                 # Get actions from the algorithm
                 actions = self.get_actions(state)
 
-            next_state, rewards, dones, infos = self.environment.step(actions)
+            next_state, reward, dones, infos = self.environment.step(actions)
 
             # Store (real) experiences
-            self.real_RB.push(state, actions, rewards, next_state)
+            self.real_RB.push(state, actions, reward, next_state)
 
             state = next_state
 
