@@ -72,20 +72,26 @@ class WorldModelTestCase(TestCase):
         The imagine() function takes an Actor and returns predicted observations and rewards for a given horizon.
         initial: torch.Tensor with shape (batch, obs_size)
         """
-        # world_model = WorldModel(self.observation_shape, self.action_shape)
-        # initial = torch.tensor(np.ones((1, self.observation_shape[0])))
-        # # Actor input size is h_t + z_t (RSSM hidden state + latent state)
-        # input_size = world_model.rssm.hidden_size + world_model.rssm.latent_state_size
-        # actor = Actor(input_size, self.action_shape[0])
-        # horizon = 16  # from Dreamer
-        # imagined = world_model.imagine(initial, actor, horizon)
-        # self.assertIsInstance(imagined["states"], torch.Tensor)
-        # self.assertIsInstance(imagined["rewards"], torch.Tensor)
-        # self.assertIsInstance(imagined["actions"], torch.Tensor)
-        # self.assertEqual(imagined["states"].shape[0], horizon + 1)  # also initial state
-        # self.assertEqual(imagined["rewards"].shape[0], horizon)
-        # self.assertEqual(imagined["actions"].shape[0], horizon)
-        pass
+        world_model = WorldModel(self.observation_shape, self.action_shape)
+        # sample x random starting points from the replay buffer
+        x = 5
+        sample = self.replay_buffer.sample(batch_size=x)
+        # Initialize the actor
+        input_size = world_model.rssm.hidden_size + world_model.rssm.latent_state_size
+        actor = Actor(input_size, self.action_shape[0])
+        horizon = 16  # from Dreamer
+        imagined_batch = world_model.imagine(
+            starting_points=sample["state"], actor=actor, horizon=horizon
+        )
+        # sample is a dict with keys: state, actions, rewards, next_state
+        # check batch size
+        self.assertEqual(len(imagined_batch), len(sample["state"]))
+        # check horizon
+        for sequence in imagined_batch:
+            # sequence is a dict with states, actions and rewards (all should have horizon elements)
+            self.assertEqual(len(sequence["states"]), horizon)
+            self.assertEqual(len(sequence["actions"]), horizon)
+            self.assertEqual(len(sequence["rewards"]), horizon)
 
     def test_learn_end_to_end(self):
         """

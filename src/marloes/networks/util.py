@@ -68,24 +68,22 @@ def compute_lambda_returns(
     """
     Compute λ-returns (bootstrapped n-step returns) from rewards and value estimates.
 
-    Args:
-        rewards: Tensor of shape (T, B) with rewards at each time step.
-        values: Tensor of shape (T, B) with critic value estimates.
-        gamma: Discount factor.
-        lambda_: Mixing parameter for multi-step bootstrapping.
+    Expects rewards and values of shape (B, T, 1), where B is the batch size and T is the trajectory length.
 
     Returns:
-        Tensor of shape (T, B) with computed λ-returns.
+        Tensor of shape (B, T, 1) with computed λ-returns.
     """
-    T = rewards.size(0)
+    B, T, _ = rewards.shape
+    # Initialize returns with the same shape as rewards.
     returns = torch.zeros_like(rewards)
     # Bootstrap from the final value.
-    returns[-1] = values[-1]
-    # Compute returns recursively from the end of the trajectory.
-    for t in reversed(range(T - 1)):
-        # The lambda-return is: r_t + gamma * [(1 - lambda_) * v_{t+1} + lambda_ * R_{t+1}]
-        returns[t] = rewards[t] + gamma * (
-            (1 - lambda_) * values[t + 1] + lambda_ * returns[t + 1]
+    returns[:, -1, :] = values[:, -1, :]
+    # Compute returns recursively from the second-last time step down to t=0.
+    for t in range(T - 2, -1, -1):
+        # The lambda-return is computed per batch element:
+        # returns[t] = rewards[t] + gamma * ((1 - lambda_) * values[t+1] + lambda_ * returns[t+1])
+        returns[:, t, :] = rewards[:, t, :] + gamma * (
+            (1 - lambda_) * values[:, t + 1, :] + lambda_ * returns[:, t + 1, :]
         )
     return returns
 

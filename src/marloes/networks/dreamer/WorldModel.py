@@ -35,11 +35,11 @@ class WorldModel:
         Initializes the World Model
         """
         self.rssm = RSSM(
+            x_shape=observation_shape[0],
             params=params,
             hyper_params=hyper_params,
             stochastic=True,
         )
-        self.rssm.add_encoder(input=observation_shape[0])
         # RSSM in between, is created first to ensure the link between encoder and decoder
         self.decoder = Decoder(self.rssm.fc.out_features, observation_shape[0])
         self.reward_predictor = RewardPredictor(
@@ -66,6 +66,7 @@ class WorldModel:
             "dyn": 1.0,
             "rep": 0.1,
         }
+        self.loss = []
 
     def imagine(
         self, starting_points: torch.Tensor, actor: Actor, horizon: int = 16
@@ -91,9 +92,11 @@ class WorldModel:
                     -1
                 ]  # take the last layer of the GRU, shape (batch=1, hidden_size)
                 # infer z_t
-                z_0 = self.rssm._get_latent_state(h_0)
-                # sample action from the actor
-                a_0 = actor(z_0).sample()  # shape (batch=1, action_dim)
+                z_0, _ = self.rssm._get_latent_state(h_0)
+                # sample action from the actor with model state
+                # model state is the concatenation of h_t and z_t
+                s = torch.cat([h_0, z_0], dim=-1)
+                a_0 = actor(s).sample()  # shape (batch=1, action_dim)
 
                 h_t, z_hat_t, _ = self.rssm.forward(h_0, z_0, a_0)
                 # form model state
@@ -102,15 +105,21 @@ class WorldModel:
                 )  # shape (batch=1, obs_dim + hidden_size)
                 z_t, _ = self.rssm.encoder(x)
                 a_t = a_0
-                imagined["states"].append(z_t)
-                imagined["actions"].append(a_t)
-                imagined["rewards"].append(self.reward_predictor(h_t, z_t))
+                # Store the initial state (?) TODO: yes or no?
+                # imagined["states"].append(z_t)
+                # imagined["actions"].append(a_t)
+                # imagined["rewards"].append(self.reward_predictor(h_t, z_t))
                 """
                 At each starting point, we imagine trajectories of length horizon.
                 """
                 for t in range(horizon):
-                    # get the action from th
-                    a_t = actor(z_t).sample()
+                    # get the action from the model state
+                    s = torch.cat([h_t, z_t], dim=-1)
+                    a_t = actor(s).sample()
+
+                    # Store the imagined states, actions and rewards
+                    imagined["states"].append(s)
+                    imagined["actions"].append(a_t)
 
                     # Get h_t from sequence model (transition)
                     h_t, z_t, _ = self.rssm.forward(h_t, z_t, a_t)
@@ -118,17 +127,14 @@ class WorldModel:
                     # Predict the reward
                     r_t = self.reward_predictor(h_t, z_t)
 
-                    # Store the imagined states, actions and rewards
-                    imagined["states"].append(z_t)
-                    imagined["actions"].append(a_t)
                     imagined["rewards"].append(r_t)
+
                 # Stack the imagined states, actions and rewards
                 imagined["states"] = torch.stack(imagined["states"], dim=0)
                 imagined["actions"] = torch.stack(imagined["actions"], dim=0)
                 imagined["rewards"] = torch.stack(imagined["rewards"], dim=0)
                 # Append the imagined sequence to the batch
                 batch.append(imagined)
-
         return batch
 
     def learn(self, sample: list[dict]) -> dict:
@@ -237,6 +243,9 @@ class WorldModel:
         self.optim.zero_grad()
         total_loss.backward()
         self.optim.step()
+
+        # Store the loss in the list
+        self.loss.append(total_loss.item())
 
         return {
             "dynamics_loss": dynamic_loss,
