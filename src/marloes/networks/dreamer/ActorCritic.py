@@ -171,8 +171,12 @@ class Actor(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         # Apply tanh bound to keep actions in [-1, 1]
-        mu = torch.tanh(self.fc_mean(x))
+        mu = self.fc_mean(x)
+        print("\nmu:", mu)
+        mu = torch.tanh(mu)
         std = torch.exp(self.log_std)
+        print("mu:", mu)
+        print("std:", std)
         return torch.distributions.Normal(mu, std)
 
 

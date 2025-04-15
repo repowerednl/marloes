@@ -68,10 +68,7 @@ class ReplayBuffer:
         for b in range(batch_size):
             # randomly select a starting index
             start_idx = random.randint(0, max_idx)
-
-            sequence = [
-                self.buffer[i] for i in range(start_idx, start_idx + batch_size)
-            ]
+            sequence = [self.buffer[i] for i in range(start_idx, start_idx + horizon)]
             batch.append(self._convert_to_tensors(sequence))
         return batch
 

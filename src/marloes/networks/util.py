@@ -2,10 +2,11 @@ import torch
 import numpy as np
 
 
-def dist(mu, logvar):
-    """
-    Reparametrization trick to create a stochastic latent state, using mu and logvar for the distribution.
-    """
+def dist(mu, raw_logvar):
+    # Instead of directly using raw_logvar, apply softplus to ensure positivity,
+    # then subtract a constant offset if needed.
+    logvar = torch.log(torch.nn.functional.softplus(raw_logvar) + 1e-6)
+    logvar = torch.clamp(logvar, min=-10.0, max=10.0)
     std = torch.exp(0.5 * logvar)
     eps = torch.randn_like(std)
     return mu + eps * std

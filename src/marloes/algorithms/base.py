@@ -33,6 +33,8 @@ class BaseAlgorithm(ABC):
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )  # for future ticket, make sure this can run on GPU instead of CPU
+        # Set the device back to cpu
+        self.device = torch.device("cpu")
 
         # General settings
         self.chunk_size = self.config.get("chunk_size", 10000)
