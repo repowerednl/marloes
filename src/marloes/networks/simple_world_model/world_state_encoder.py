@@ -11,12 +11,13 @@ class WorldStateEncoder(nn.Module):
         super(WorldStateEncoder, self).__init__()
         agent_enc_dim = world_model_config.get("agent_enc_dim", 16)
         world_enc_dim = world_model_config.get("world_enc_dim", 64)
+        hidden_size = world_model_config.get("world_hidden_size", 128)
 
         input_dim = num_agents * agent_enc_dim + global_dim
         self.mlp = nn.Sequential(
-            nn.Linear(input_dim, 128),
+            nn.Linear(input_dim, hidden_size),
             nn.ReLU(),
-            nn.Linear(128, world_enc_dim),
+            nn.Linear(hidden_size, world_enc_dim),
             nn.ReLU(),
         )
 

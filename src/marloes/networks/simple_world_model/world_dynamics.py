@@ -10,12 +10,12 @@ class WorldDynamicsModel(nn.Module):
     def __init__(self, world_model_config: dict, action_dim: int, scalar_dims: list):
         super().__init__()
         world_enc_dim = world_model_config.get("world_enc_dim", 64)
+        hidden_size = world_model_config.get("world_dynamics_hidden_size", 128)
         # Only predict the next scalars for each agent
         # We don't need to predict forecast
         # TODO: Explain this in the paper
         next_state_dim = sum(scalar_dims)
 
-        hidden_size = 128
         self.shared_net = nn.Sequential(
             nn.Linear(world_enc_dim + action_dim, hidden_size),
             nn.ReLU(),
