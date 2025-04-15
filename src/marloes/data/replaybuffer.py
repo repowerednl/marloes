@@ -54,6 +54,9 @@ class ReplayBuffer:
         """
         Samples sequences from the buffer, returns a batch of size [batch_size] with each element being a sequence of size [horizon].
         """
+        print(
+            f"Buffer size: {len(self.buffer)}, batch size: {batch_size}, horizon: {horizon}"
+        )
         if batch_size > len(self.buffer):
             raise ValueError("Not enough elements in buffer for sequential sample.")
         if horizon > len(self.buffer):

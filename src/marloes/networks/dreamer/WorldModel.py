@@ -26,8 +26,8 @@ class WorldModel:
 
     def __init__(
         self,
-        observation_shape: tuple,
-        action_shape: tuple,  # Unused now, but added if we want init more dynamically.
+        state_dim: tuple,
+        action_dim: tuple,  # Unused now, but added if we want init more dynamically.
         params: dict = None,
         hyper_params: HyperParams = None,
     ):
@@ -35,13 +35,13 @@ class WorldModel:
         Initializes the World Model
         """
         self.rssm = RSSM(
-            x_shape=observation_shape[0],
+            x_shape=state_dim[0],
             params=params,
             hyper_params=hyper_params,
             stochastic=True,
         )
         # RSSM in between, is created first to ensure the link between encoder and decoder
-        self.decoder = Decoder(self.rssm.fc.out_features, observation_shape[0])
+        self.decoder = Decoder(self.rssm.fc.out_features, state_dim[0])
         self.reward_predictor = RewardPredictor(
             self.rssm.rnn.hidden_size, self.rssm.fc.out_features
         )

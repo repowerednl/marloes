@@ -1,13 +1,8 @@
 from .base import BaseAlgorithm
 from marloes.networks.dreamer.WorldModel import WorldModel
 from marloes.networks.dreamer.ActorCritic import ActorCritic
-from marloes.data.replaybuffer import ReplayBuffer
-from marloes.networks.util import dict_to_tens
 
-import random
-from torch.optim import Adam
 import torch
-import logging
 
 
 class Dreamer(BaseAlgorithm):
@@ -29,8 +24,8 @@ class Dreamer(BaseAlgorithm):
         Initializes the WorldModel with observation and action shapes.
         """
         self.world_model = WorldModel(
-            observation_shape=self.environment.observation_space,
-            action_shape=self.environment.action_space,
+            state_dim=self.environment.state_dim,
+            action_dim=self.environment.action_dim,
         )
 
     def _initialize_actor_critic(self):
@@ -41,7 +36,7 @@ class Dreamer(BaseAlgorithm):
             self.world_model.rssm.hidden_size + self.world_model.rssm.latent_state_size
         )
         self.actor_critic = ActorCritic(
-            input=input_size, output=self.environment.action_space[0]
+            input=input_size, output=self.environment.action_dim[0]
         )
 
     def _init_previous(self):
@@ -49,9 +44,9 @@ class Dreamer(BaseAlgorithm):
         Initializes the previous state for the algorithm.
         """
         self.previous = {
-            "h_t": self.world_model.rssm._init_state(1)[-1].squeeze(0),
+            "h_t": self.world_model.rssm._init_state(1)[-1],
             "z_t": torch.zeros(1, self.world_model.rssm.latent_state_size),
-            "a_t": torch.zeros(1, self.environment.action_space[0]),
+            "a_t": torch.zeros(1, self.environment.action_dim[0]),
         }
 
     def get_actions(self, observations):
@@ -60,11 +55,22 @@ class Dreamer(BaseAlgorithm):
         """
         if not self.previous:
             self._init_previous()
+        # for debugging print all previous elements shapes:
+        print(
+            f"previous h_t: {self.previous['h_t'].shape}, z_t: {self.previous['z_t'].shape}, a_t: {self.previous['a_t'].shape}"
+        )
         # set world_model to eval mode
         # set actor_critic to eval mode
         with torch.no_grad():
             # Step 1: Get the recurrent state (based on previous state)  #
             # ---------------------------------------------------------- #
+            print(
+                torch.cat(
+                    [self.previous["h_t"], self.previous["z_t"], self.previous["a_t"]],
+                    dim=-1,
+                ).shape
+            )
+            print(self.world_model.rssm.rnn.input_size)
             h_t, _, _ = self.world_model.rssm.forward(
                 self.previous["h_t"], self.previous["z_t"], self.previous["a_t"]
             )

@@ -54,7 +54,7 @@ class NESubReward(SubReward):
         wind_nomination = self._get_target(
             extractor.total_wind_nomination, time_slice, actual
         )
-
+        # TODO: Add all production and all nomation together (NB: demand nomination is positive, should be negative)
         solar_penalty = abs(np.mean(solar_production) - np.mean(solar_nomination))
         wind_penalty = abs(np.mean(wind_production) - np.mean(wind_nomination))
 
