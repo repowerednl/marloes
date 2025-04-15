@@ -8,16 +8,17 @@ from marloes.networks.util import compute_lambda_returns
 
 class ActorCritic:
     """
-    This ActorCritic module is based on the DreamerV3 architecture.
-    The Actor and Critic networks are combined here, and learn from abstract trajectories or representations (latent states) predicted by the WorldModel.
-    - The Actor and Critic operate on model states, s_t = {h_t, z_t}.
-    - The Actor aims to maximize return with gamma-discounted rewards (gamma = 0.997).
-    - The Critic aims to predict the value of the current state.
+    Combines the Actor and Critic networks for learning from abstract trajectories.
     """
 
     def __init__(self, input: int, output: int, hidden_size: int = 64):
         """
-        Initializes the ActorCritic network.
+        Initializes the ActorCritic module.
+
+        Args:
+            input (int): Dimension of the input (model state).
+            output (int): Dimension of the output (action space).
+            hidden_size (int, optional): Dimension of the hidden layers. Defaults to 64.
         """
         self.actor = Actor(input, output, hidden_size)
         self.critic = Critic(input, hidden_size)
@@ -36,17 +37,25 @@ class ActorCritic:
 
     def act(self, model_state: torch.Tensor) -> torch.Tensor:
         """
-        Returns the actions predicted by the Actor network.
+        Predicts actions using the Actor network.
+
+        Args:
+            model_state (torch.Tensor): Current model state.
+
+        Returns:
+            torch.Tensor: Predicted actions.
         """
         return self.actor(model_state).sample()
 
     def learn(self, trajectories: list) -> dict[str, torch.Tensor]:
         """
-        Learning step for the ActorCritic network.
-        Trajectories is a 'batch' of trajectories, each containing:
-        - states
-        - actions
-        - rewards
+        Performs a learning step for the ActorCritic module.
+
+        Args:
+            trajectories (list): Batch of trajectories.
+
+        Returns:
+            dict: Dictionary containing actor, critic, and total losses.
         """
         # Unpack the states into a batched tensor for the critic
         states = torch.stack([t["states"] for t in trajectories], dim=0)
@@ -91,8 +100,18 @@ class ActorCritic:
     def _compute_actor_loss(self, states, actions, advantages, returns) -> torch.Tensor:
         """
         Computes the actor loss.
+
         Term 1: policy gradient: the negative log probability of the taken actions, weighted by the advantage.
         Term 2: entropy bonus: encourages exploration by adding a small penalty to the log probability of the actions.
+
+        Args:
+            states (torch.Tensor): States tensor.
+            actions (torch.Tensor): Actions tensor.
+            advantages (torch.Tensor): Advantages tensor.
+            returns (torch.Tensor): Returns tensor.
+
+        Returns:
+            torch.Tensor: Computed actor loss.
         """
         policy_dist = self.actor(states)
         log_probs = policy_dist.log_prob(actions)
@@ -122,7 +141,15 @@ class ActorCritic:
     ) -> torch.Tensor:
         """
         Computes the critic loss.
+
         First implementation: simple MSE loss.
+
+        Args:
+            values (torch.Tensor): Predicted values tensor.
+            returns (torch.Tensor): Returns tensor.
+
+        Returns:
+            torch.Tensor: Computed critic loss.
         """
         critic_loss = F.mse_loss(values, returns.detach())
         return critic_loss
@@ -134,12 +161,11 @@ class ActorCritic:
         Uses the lambda-returns to compute the advantages.
 
         Expects:
-        - rewards: Tensor of shape (B, T, 1)
-        - values: Tensor of shape (B, T, 1)
+            rewards (torch.Tensor): Tensor of shape (B, T, 1).
+            values (torch.Tensor): Tensor of shape (B, T, 1).
 
         Returns:
-        - returns: λ-returns, tensor of shape (B, T, 1)
-        - advantages: returns - values.detach(), tensor of shape (B, T, 1)
+            tuple: λ-returns tensor of shape (B, T, 1) and advantages tensor of shape (B, T, 1).
         """
         returns = compute_lambda_returns(rewards, values, self.gamma, self.lmbda)
         advantages = returns - values.detach()
@@ -148,13 +174,17 @@ class ActorCritic:
 
 class Actor(nn.Module):
     """
-    Actor class, MLP network with hidden layers, predicts the 'continuous' actions per agent. TODO: Discrete actions.
-    Produces Gaussian policy over continuous actions.
+    Actor network for predicting continuous actions.
     """
 
     def __init__(self, input_size: int, output_size: int, hidden_size: int = 256):
         """
         Initializes the Actor network.
+
+        Args:
+            input_size (int): Dimension of the input.
+            output_size (int): Dimension of the output (action space).
+            hidden_size (int, optional): Dimension of the hidden layers. Defaults to 256.
         """
         super(Actor, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
@@ -167,6 +197,12 @@ class Actor(nn.Module):
     def forward(self, x):
         """
         Forward pass through the Actor network.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.distributions.Normal: Gaussian policy distribution.
         """
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -179,12 +215,16 @@ class Actor(nn.Module):
 
 class Critic(nn.Module):
     """
-    Critic class, MLP network with hidden layers, predicts the value of the current state.
+    Critic network for predicting the value of the current state.
     """
 
     def __init__(self, input_size: int, hidden_size: int = 256):
         """
         Initializes the Critic network.
+
+        Args:
+            input_size (int): Dimension of the input.
+            hidden_size (int, optional): Dimension of the hidden layers. Defaults to 256.
         """
         super(Critic, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
@@ -194,6 +234,12 @@ class Critic(nn.Module):
     def forward(self, x):
         """
         Forward pass through the Critic network.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Predicted value of the state.
         """
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
