@@ -17,10 +17,32 @@ from marloes.networks.simple_world_model.world_state_encoder import WorldStateEn
 
 class WorldModel(nn.Module):
     """
-    World model that combines all components.
+    World model that combines all components to predict the next state and reward.
+
+    This model integrates agent state encoders, a world state encoder, and a world dynamics model
+    to process environment states and actions, and predict the next state and reward.
+
+    Attributes:
+        agent_state_encoders (nn.ModuleList): list of encoders for each agent's state.
+        world_state_encoder (WorldStateEncoder): Encoder for aggregating agent encodings and global context.
+        world_dynamics_model (WorldDynamicsModel): Model for predicting the next state and reward.
+        optimizer (Adam): Optimizer for training the model.
+        loss (list[float]): list to store the loss values during training.
     """
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict) -> None:
+        """
+        Initialize the WorldModel.
+
+        Args:
+            config (dict): Configuration dictionary containing:
+                - "WorldModel" (dict): Sub-configuration for the world model.
+                - "num_agents" (int): Number of agents in the environment.
+                - "agents_scalar_dim" (list[int]): list of scalar dimensions for each agent.
+                - "forecasts" (list[int]): list of forecast dimensions for each agent.
+                - "action_dim" (int): Dimension of the action input.
+                - "global_dim" (int, optional): Dimension of the global context (default: 0).
+        """
         super(WorldModel, self).__init__()
         self.world_model_config = config.get("WorldModel", {})
         self.num_agents = config["num_agents"]
@@ -48,7 +70,27 @@ class WorldModel(nn.Module):
         )
         self.loss = []
 
-    def forward(self, scalar_list, forecast_list, global_context, actions):
+    def forward(
+        self,
+        scalar_list: list[torch.Tensor],
+        forecast_list: list[torch.Tensor],
+        global_context: torch.Tensor,
+        actions: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Perform a forward pass through the world model.
+
+        Args:
+            scalar_list (list[torch.Tensor]): list of scalar tensors for each agent.
+            forecast_list (list[torch.Tensor]): list of forecast tensors for each agent.
+            global_context (torch.Tensor): Global context tensor.
+            actions (torch.Tensor): Action tensor of shape (batch_size, action_dim).
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]:
+                - Next state prediction tensor of shape (batch_size, next_state_dim).
+                - Reward prediction tensor of shape (batch_size, 1).
+        """
         # Encode each agent
         agent_encodings = []
         for i in range(self.num_agents):
@@ -65,9 +107,21 @@ class WorldModel(nn.Module):
 
         return next_state, reward
 
-    def predict(self, states: list[dict], actions: list[dict], device: str = "cpu"):
+    def predict(
+        self, states: list[dict], actions: list[dict], device: str = "cpu"
+    ) -> tuple[list[dict], list[float]]:
         """
         Given environment states and actions, predict the next state and reward.
+
+        Args:
+            states (list[dict[str, Any]]): list of state dictionaries for each sample in the batch.
+            actions (list[dict[str, float]]): list of action dictionaries for each sample in the batch.
+            device (str, optional): Device to place the tensors on (default: "cpu").
+
+        Returns:
+            tuple[list[dict[str, Any]], list[float]]:
+                - list of reconstructed next state dictionaries.
+                - list of predicted rewards.
         """
         # Convert original formats to separable tensors
         parsed_states = parse_state(states, device=device)
@@ -104,9 +158,13 @@ class WorldModel(nn.Module):
 
         return reconstructed_next_states, rewards_list
 
-    def update(self, transitions_batch: list[dict], device: str = "cpu"):
+    def update(self, transitions_batch: list[dict], device: str = "cpu") -> None:
         """
         Update the world model using a batch of real transitions.
+
+        Args:
+            transitions_batch (list[dict[str, Any]]): Batch of transition dictionaries.
+            device (str, optional): Device to place the tensors on (default: "cpu").
         """
         # Set network to training mode
         self.train()
@@ -149,17 +207,31 @@ class WorldModel(nn.Module):
 
         self.loss.append(total_loss.item())
 
-    def _reconstruct_state(self, state: dict, next_state: list):
+    def _reconstruct_state(self, state: dict, next_state: list[float]) -> dict:
         """
         Function to reformat output of the network to the original state format.
+
+        Args:
+            state (dict[str, Any]): Original state dictionary.
+            next_state (list[float]): Flattened next state values.
+
+        Returns:
+            dict[str, Any]: Reconstructed state dictionary.
         """
         reconstructed_state = unflatten_state(state, iter(next_state))
         return reconstructed_state
 
 
-def unflatten_state(original: dict, replacements: Iterator):
+def unflatten_state(original: dict, replacements: Iterator) -> dict:
     """
     Recursively update the state dictionary with new values.
+
+    Args:
+        original (dict[str, Any]): Original state dictionary.
+        replacements (Iterator): Iterator of replacement values.
+
+    Returns:
+        dict: Updated state dictionary.
     """
     if isinstance(original, dict):
         return {k: unflatten_state(v, replacements) for k, v in original.items()}
@@ -175,9 +247,15 @@ def unflatten_state(original: dict, replacements: Iterator):
         return original  # Leave as-is
 
 
-def flatten_state(state):
+def flatten_state(state: dict) -> list[float]:
     """
     Recursively flattens a state: practically the exact opposite of unflatten_state.
+
+    Args:
+        state (dict[str, Any]): State dictionary to flatten.
+
+    Returns:
+        list[float]: Flattened state values.
     """
     flattened = []
 
