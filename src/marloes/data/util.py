@@ -40,14 +40,15 @@ def read_series(
         datetime(2025, 12, 31, 23, 59, tzinfo=ZoneInfo("UTC")),
     )
     series = add_noise_to_series(series)
-    series = drop_out_series(series)
+    if not forecast:
+        series = drop_out_series(series)
     return series
 
 
 def drop_out_series(
     series: pd.Series,
-    drop_prob: float = 0.01,
-    long_drop_prob: float = 0.001,
+    drop_prob: float = 0,  # TODO: Adjust these parameters to simulate different dropout scenarios
+    long_drop_prob: float = 0,
     max_long_drop_days: int = 5,
 ):
     """
