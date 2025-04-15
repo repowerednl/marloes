@@ -77,8 +77,19 @@ class DreamerTestCase(TestCase):
         # one action for each agent
         self.assertEqual(len(actions), 3)
 
-    def test__train_step(self):
+    def test_perform_training_steps(self):
         """
-        Testing the training step of the Dummy algorithm.
+        Testing the training steps.
         """
-        pass
+        obs, _ = self.alg.environment.reset()
+        self.alg.update_interval = 5
+        # it should not call self.world_model.learn or self.actor_critic.learn for step 0-4 and return None
+        for step in range(5):
+            self.alg.perform_training_steps(step)
+            self.assertIsNone(self.alg.world_model.learn)
+            self.assertIsNone(self.alg.actor_critic.learn)
+        # Mocking the learn methods to return a dictionary and make sure if step % update_interval == 0 returns a dict
+        with patch.object(self.alg.world_model, "learn", return_value={}):
+            with patch.object(self.alg.actor_critic, "learn", return_value={}):
+                loss = self.alg.perform_training_steps(5)
+                self.assertIsInstance(loss, dict)

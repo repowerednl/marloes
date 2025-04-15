@@ -23,12 +23,16 @@ class ActorCritic:
         self.critic = Critic(input, hidden_size)
 
         self.actor_optim = Adam(self.actor.parameters(), lr=1e-4)
-        self.critic_optim = Adam(self.critic.parameters(), lr=1e-3)
+        self.critic_optim = Adam(self.critic.parameters(), lr=1e-4)
 
         self.gamma = 0.997
         self.lmbda = 0.95
         self.entropy_coef = 0.0003
         self.beta_weights = {"val": 1.0, "repval": 0.3}
+
+        # Store losses
+        self.actor_loss = []
+        self.critic_loss = []
 
     def act(self, model_state: torch.Tensor) -> torch.Tensor:
         """
@@ -69,10 +73,14 @@ class ActorCritic:
         actor_loss.backward()
         self.actor_optim.step()
 
+        self.actor_loss.append(actor_loss.item())
+
         # Critic loss
         self.critic_optim.zero_grad()
         critic_loss.backward()
         self.critic_optim.step()
+
+        self.critic_loss.append(critic_loss.item())
 
         return {
             "actor_loss": actor_loss,

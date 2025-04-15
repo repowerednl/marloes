@@ -46,7 +46,7 @@ class BaseAlgorithm(ABC):
             )
         except KeyError:
             self.real_RB = ReplayBuffer(
-                capacity=10000,
+                capacity=10000,  # Default capacity if not specified
                 device=self.device,
             )
         try:
