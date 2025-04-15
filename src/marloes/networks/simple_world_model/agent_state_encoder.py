@@ -9,15 +9,14 @@ class AgentStateEncoder(nn.Module):
     Combines the encoded forecast with scalar features for a single asset.
     """
 
-    def __init__(self, world_model_config: dict):
+    def __init__(self, world_model_config: dict, agent_scalar_dim: int):
         super(AgentStateEncoder, self).__init__()
         forecast_hidden_size = world_model_config.get("forecast_hidden_size", 64)
-        scalar_dim = world_model_config.get("scalar_dim", 5)
         agent_enc_dim = world_model_config.get("agent_enc_dim", 16)
 
         self.forecast_encoder = ForecastEncoder(world_model_config)
         self.mlp = nn.Sequential(
-            nn.Linear(forecast_hidden_size + scalar_dim, 64),
+            nn.Linear(forecast_hidden_size + agent_scalar_dim, 64),
             nn.ReLU(),
             nn.Linear(64, agent_enc_dim),
             nn.ReLU(),

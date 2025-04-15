@@ -24,15 +24,19 @@ class WorldModel(nn.Module):
         super(WorldModel, self).__init__()
         self.world_model_config = config.get("WorldModel", {})
         self.num_agents = config["num_agents"]
+        agents_scalar_dim = config["agents_scalar_dim"]
 
         self.agent_state_encoders = nn.ModuleList(
-            [AgentStateEncoder(self.world_model_config) for _ in range(self.num_agents)]
+            [
+                AgentStateEncoder(self.world_model_config, agents_scalar_dim[i])
+                for i in range(self.num_agents)
+            ]
         )
         self.world_state_encoder = WorldStateEncoder(
             self.world_model_config, self.num_agents, config.get("global_dim", 0)
         )
         self.world_dynamics_model = WorldDynamicsModel(
-            self.world_model_config, config["action_dim"]
+            self.world_model_config, config["action_dim"], agents_scalar_dim
         )
         self.optimizer = Adam(
             self.parameters(),
@@ -67,8 +71,10 @@ class WorldModel(nn.Module):
         parsed_actions = parse_actions(actions, device=device)
 
         # Extract scalar variables and forecast from states
-        scalar_list = [agent["scalars"] for agent in parsed_states["agents"]]
-        forecast_list = [agent["forecast"] for agent in parsed_states["agents"]]
+        scalar_list = [agent["scalars"] for agent in parsed_states["agents"].values()]
+        forecast_list = [
+            agent["forecast"] for agent in parsed_states["agents"].values()
+        ]
 
         # Extract global context if available
         global_context = None
@@ -85,7 +91,7 @@ class WorldModel(nn.Module):
 
         # Convert next states and rewards to numpy arrays
         next_states_list = next_states.tolist()
-        rewards_list = rewards.squeeze(0).tolist()  # One dimension: squeeze
+        rewards_list = rewards.squeeze(-1).tolist()  # One dimension: squeeze
 
         # Reconvert next state to original format
         reconstructed_next_states = [
@@ -104,12 +110,15 @@ class WorldModel(nn.Module):
 
         # 1. Parse batch to fit world model expectations
         parsed_batch = parse_batch(transitions_batch)
-        scalar_list = [agent["scalars"] for agent in parsed_batch["state"]["agents"]]
-        forecast_list = [agent["forecast"] for agent in parsed_batch["state"]["agents"]]
+        scalar_list = [
+            agent["scalars"] for agent in parsed_batch["state"]["agents"].values()
+        ]
+        forecast_list = [
+            agent["forecast"] for agent in parsed_batch["state"]["agents"].values()
+        ]
         global_context = parsed_batch["state"].get("global_context", None)
         actions = parsed_batch["actions"]
         rewards = parsed_batch["rewards"]
-        next_state = parsed_batch["next_state"]
 
         # 2. Forward pass
         latent_next_state, reward_pred = self.forward(
@@ -118,7 +127,10 @@ class WorldModel(nn.Module):
 
         # 3. Construct targets
         next_state_target = torch.from_numpy(
-            np.array([flatten_state(state) for state in next_state], dtype=np.float32)
+            np.array(
+                [flatten_state(t.next_state) for t in transitions_batch],
+                dtype=np.float32,
+            )
         ).to(device)
         reward_target = torch.from_numpy(np.array(rewards, dtype=np.float32)).to(device)
 
