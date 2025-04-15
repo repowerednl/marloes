@@ -26,11 +26,13 @@ def parse_state(state_list, device="cpu"):
                 # If the agent has this key, convert it; else add default 0
                 if key in agent_info:
                     scalars.append(float(agent_info[key]))
-                else:
-                    scalars.append(0.0)
 
             if "forecast" in agent_info:
-                forecast_array = np.array(agent_info["forecast"], dtype=np.float32)
+                # GRU expects (.., seq_length, num_features), not (.., num_features, seq_length)
+                # So we reshape
+                forecast_array = np.array(
+                    agent_info["forecast"], dtype=np.float32
+                ).reshape(-1, 1)
 
             agent_data[agent_name]["scalars"].append(scalars)
             agent_data[agent_name]["forecast"].append(forecast_array)
@@ -64,21 +66,20 @@ def parse_actions(action_list, device="cpu"):
     """
     Turn actions into a tensor.
     """
+    # Sort to ensure consistency
     all_agents = list(action_list[0].keys())
-    agent_actions = {agent: [] for agent in all_agents}
+    action_tensors = []
 
-    # Accumulate actions for each agent
-    for actions_dict in action_list:
-        for agent in all_agents:
-            value = float(actions_dict[agent])
-            agent_actions[agent].append(value)
-
-    # Convert to torch
-    final_actions = {}
     for agent in all_agents:
-        actions = np.array(agent_actions[agent], dtype=np.float32)
-        final_actions[agent] = torch.from_numpy(actions).to(device)
+        actions = [float(actions_dict[agent]) for actions_dict in action_list]
+        # Also reshape; network requires (batch_size, feature_dim)
+        # Here, feature_dim is 1 since we have a single action per agent
+        agent_array = np.array(actions, dtype=np.float32).reshape(-1, 1)
+        agent_tensor = torch.from_numpy(agent_array).to(device)
+        action_tensors.append(agent_tensor)
 
+    # Actions can be a single tensor with shape (batch_size, num_agents)
+    final_actions = torch.cat(action_tensors, dim=-1)
     return final_actions
 
 

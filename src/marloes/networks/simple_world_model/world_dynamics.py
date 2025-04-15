@@ -7,15 +7,13 @@ class WorldDynamicsModel(nn.Module):
     World dynamics model that predicts the next state and reward given the current state and action.
     """
 
-    def __init__(self, world_model_config: dict, action_dim: int):
+    def __init__(self, world_model_config: dict, action_dim: int, scalar_dims: list):
         super().__init__()
         world_enc_dim = world_model_config.get("world_enc_dim", 64)
-        scalar_dim = world_model_config.get("scalar_dim", 5)
-        num_agents = action_dim  # Every agent has its own action
-        # Only predict the next state for each agent
+        # Only predict the next scalars for each agent
         # We don't need to predict forecast
         # TODO: Explain this in the paper
-        next_state_dim = scalar_dim * num_agents
+        next_state_dim = sum(scalar_dims)
 
         hidden_size = 128
         self.shared_net = nn.Sequential(

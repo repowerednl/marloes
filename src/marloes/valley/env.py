@@ -73,10 +73,13 @@ class EnergyValley(MultiAgentEnv):
         self._dones_cache = {agent.id: False for agent in self.agents}
         self._infos_cache = {agent.id: {} for agent in self.agents}
 
-        # Add state_dim and action_dim to the environment
+        # Add dims to the environment
         self.state_dim = ReplayBuffer.dict_to_tens(self._get_full_observation()).shape
         self.action_dim = torch.Size([len(self.agents)])
         self.global_dim = ReplayBuffer.dict_to_tens(self._get_global_context()).shape
+        self.agents_scalar_dim = [
+            len(state) for state in self._combine_states(False).values()
+        ]
 
     def _initialize_agents(self, config: dict, algorithm_type: str) -> None:
         """
@@ -183,7 +186,7 @@ class EnergyValley(MultiAgentEnv):
             }
             return priority_map[target_agent_type]
 
-    def _combine_states(self) -> dict:
+    def _combine_states(self, include_forecast: bool = True) -> dict:
         """Function to combine all agents states into one observation"""
         for agent in self.agents:
             full_state = agent.get_state(self.i)
@@ -191,7 +194,8 @@ class EnergyValley(MultiAgentEnv):
             relevant_state = {
                 key: value
                 for key, value in full_state.items()
-                if key != "time" and key != "is_fcr"
+                if key not in ["time", "is_fcr"]
+                and (include_forecast or key != "forecast")
             }
             self._state_cache[agent.id] = relevant_state
         return self._state_cache
