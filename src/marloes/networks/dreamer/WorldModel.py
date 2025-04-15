@@ -66,6 +66,7 @@ class WorldModel:
             "dyn": 1.0,
             "rep": 0.1,
         }
+        self.loss = []
 
     def imagine(
         self, starting_points: torch.Tensor, actor: Actor, horizon: int = 16
@@ -242,6 +243,9 @@ class WorldModel:
         self.optim.zero_grad()
         total_loss.backward()
         self.optim.step()
+
+        # Store the loss in the list
+        self.loss.append(total_loss.item())
 
         return {
             "dynamics_loss": dynamic_loss,

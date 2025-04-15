@@ -23,12 +23,16 @@ class ActorCritic:
         self.critic = Critic(input, hidden_size)
 
         self.actor_optim = Adam(self.actor.parameters(), lr=1e-4)
-        self.critic_optim = Adam(self.critic.parameters(), lr=1e-3)
+        self.critic_optim = Adam(self.critic.parameters(), lr=1e-4)
 
         self.gamma = 0.997
         self.lmbda = 0.95
         self.entropy_coef = 0.0003
         self.beta_weights = {"val": 1.0, "repval": 0.3}
+
+        # Store losses
+        self.actor_loss = []
+        self.critic_loss = []
 
     def act(self, model_state: torch.Tensor) -> torch.Tensor:
         """
@@ -58,7 +62,7 @@ class ActorCritic:
         returns, advantages = self._compute_advantages(rewards, values)
 
         # Compute the actor and critic losses
-        actor_loss = self._compute_actor_loss(states, actions, advantages)
+        actor_loss = self._compute_actor_loss(states, actions, advantages, returns)
         critic_loss = self._compute_critic_loss(values, returns)
 
         # Backpropagate the losses
@@ -69,10 +73,14 @@ class ActorCritic:
         actor_loss.backward()
         self.actor_optim.step()
 
+        self.actor_loss.append(actor_loss.item())
+
         # Critic loss
         self.critic_optim.zero_grad()
         critic_loss.backward()
         self.critic_optim.step()
+
+        self.critic_loss.append(critic_loss.item())
 
         return {
             "actor_loss": actor_loss,
@@ -80,7 +88,7 @@ class ActorCritic:
             "total_loss": total_loss,
         }
 
-    def _compute_actor_loss(self, states, actions, advantages) -> torch.Tensor:
+    def _compute_actor_loss(self, states, actions, advantages, returns) -> torch.Tensor:
         """
         Computes the actor loss.
         Term 1: policy gradient: the negative log probability of the taken actions, weighted by the advantage.
@@ -91,13 +99,17 @@ class ActorCritic:
 
         entropy = policy_dist.entropy().mean()
 
-        # Scale factor S (TODO: add exponential moving average for a more stable normalization)
-        flat_advantages = advantages.detach().view(-1)
+        # Scale factor S=EMA( Per(returns, 95) - Per(returns, 5) )
+        # where Per(x, p) is the p-th percentile of x (detaching to prevent gradient flow)
+        flat_returns = returns.detach().view(-1)
+        # Compute the 95th and 5th percentiles
+        quantile_95 = torch.quantile(flat_returns, 0.95)
+        quantile_5 = torch.quantile(flat_returns, 0.05)
         S = torch.clamp(
-            torch.quantile(flat_advantages, 0.95)
-            - torch.quantile(flat_advantages, 0.05),
+            quantile_95 - quantile_5,
             min=0.99,
         )
+        # TODO: EMA is the exponential moving average.
 
         actor_loss = (
             -((advantages.detach() / S) * log_probs).mean()
