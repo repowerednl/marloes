@@ -23,12 +23,16 @@ class ActorCritic:
         self.critic = Critic(input, hidden_size)
 
         self.actor_optim = Adam(self.actor.parameters(), lr=1e-4)
-        self.critic_optim = Adam(self.critic.parameters(), lr=1e-3)
+        self.critic_optim = Adam(self.critic.parameters(), lr=1e-4)
 
         self.gamma = 0.997
         self.lmbda = 0.95
-        self.entropy_coef = 0.005
+        self.entropy_coef = 0.0003
         self.beta_weights = {"val": 1.0, "repval": 0.3}
+
+        # Store losses
+        self.actor_loss = []
+        self.critic_loss = []
 
     def act(self, model_state: torch.Tensor) -> torch.Tensor:
         """
@@ -36,33 +40,47 @@ class ActorCritic:
         """
         return self.actor(model_state).sample()
 
-    def learn(self, trajectories: dict) -> dict[str, torch.Tensor]:
+    def learn(self, trajectories: list) -> dict[str, torch.Tensor]:
         """
         Learning step for the ActorCritic network.
+        Trajectories is a 'batch' of trajectories, each containing:
+        - states
+        - actions
+        - rewards
         """
-        # Unpack the trajectories
-        states = trajectories["states"]
-        actions = trajectories["actions"]
-        rewards = trajectories["rewards"]
+        # Unpack the states into a batched tensor for the critic
+        states = torch.stack([t["states"] for t in trajectories], dim=0)
+        # Unpack the actions into a batched tensor for the loss computing
+        actions = torch.stack([t["actions"] for t in trajectories], dim=0)
+        # Unpack the rewards into a batched tensor for the loss computing
+        rewards = torch.stack([t["rewards"] for t in trajectories], dim=0)
 
         # Critic Evaluation
-        values = self.critic(states).squeeze(-1)
+        values = self.critic(states)
 
         # Compute the advantages (lambda-returns)
         returns, advantages = self._compute_advantages(rewards, values)
 
         # Compute the actor and critic losses
-        actor_loss = self._compute_actor_loss(states, actions, advantages)
+        actor_loss = self._compute_actor_loss(states, actions, advantages, returns)
         critic_loss = self._compute_critic_loss(values, returns)
 
         # Backpropagate the losses
         total_loss = actor_loss + critic_loss
 
+        # Actor loss
         self.actor_optim.zero_grad()
-        self.critic_optim.zero_grad()
-        total_loss.backward()
+        actor_loss.backward()
         self.actor_optim.step()
+
+        self.actor_loss.append(actor_loss.item())
+
+        # Critic loss
+        self.critic_optim.zero_grad()
+        critic_loss.backward()
         self.critic_optim.step()
+
+        self.critic_loss.append(critic_loss.item())
 
         return {
             "actor_loss": actor_loss,
@@ -70,14 +88,33 @@ class ActorCritic:
             "total_loss": total_loss,
         }
 
-    def _compute_actor_loss(self, states, actions, advantages) -> torch.Tensor:
+    def _compute_actor_loss(self, states, actions, advantages, returns) -> torch.Tensor:
         """
         Computes the actor loss.
+        Term 1: policy gradient: the negative log probability of the taken actions, weighted by the advantage.
+        Term 2: entropy bonus: encourages exploration by adding a small penalty to the log probability of the actions.
         """
-        dist = self.actor(states)
-        log_probs = dist.log_prob(actions).sum(-1)
-        entropy = dist.entropy().mean()
-        actor_loss = -(log_probs * advantages).mean() - self.entropy_coef * entropy
+        policy_dist = self.actor(states)
+        log_probs = policy_dist.log_prob(actions)
+
+        entropy = policy_dist.entropy().mean()
+
+        # Scale factor S=EMA( Per(returns, 95) - Per(returns, 5) )
+        # where Per(x, p) is the p-th percentile of x (detaching to prevent gradient flow)
+        flat_returns = returns.detach().view(-1)
+        # Compute the 95th and 5th percentiles
+        quantile_95 = torch.quantile(flat_returns, 0.95)
+        quantile_5 = torch.quantile(flat_returns, 0.05)
+        S = torch.clamp(
+            quantile_95 - quantile_5,
+            min=0.99,
+        )
+        # TODO: EMA is the exponential moving average.
+
+        actor_loss = (
+            -((advantages.detach() / S) * log_probs).mean()
+            - self.entropy_coef * entropy
+        )
         return actor_loss
 
     def _compute_critic_loss(
@@ -85,15 +122,24 @@ class ActorCritic:
     ) -> torch.Tensor:
         """
         Computes the critic loss.
+        First implementation: simple MSE loss.
         """
         critic_loss = F.mse_loss(values, returns.detach())
         return critic_loss
 
     def _compute_advantages(
         self, rewards: torch.Tensor, values: torch.Tensor
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Uses the lambda-returns to compute the advantages.
+
+        Expects:
+        - rewards: Tensor of shape (B, T, 1)
+        - values: Tensor of shape (B, T, 1)
+
+        Returns:
+        - returns: λ-returns, tensor of shape (B, T, 1)
+        - advantages: returns - values.detach(), tensor of shape (B, T, 1)
         """
         returns = compute_lambda_returns(rewards, values, self.gamma, self.lmbda)
         advantages = returns - values.detach()

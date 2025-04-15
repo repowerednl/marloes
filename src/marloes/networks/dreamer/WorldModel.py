@@ -66,6 +66,7 @@ class WorldModel:
             "dyn": 1.0,
             "rep": 0.1,
         }
+        self.loss = []
 
     def imagine(
         self, starting_points: torch.Tensor, actor: Actor, horizon: int = 16
@@ -116,15 +117,16 @@ class WorldModel:
                     s = torch.cat([h_t, z_t], dim=-1)
                     a_t = actor(s).sample()
 
+                    # Store the imagined states, actions and rewards
+                    imagined["states"].append(s)
+                    imagined["actions"].append(a_t)
+
                     # Get h_t from sequence model (transition)
                     h_t, z_t, _ = self.rssm.forward(h_t, z_t, a_t)
 
                     # Predict the reward
                     r_t = self.reward_predictor(h_t, z_t)
 
-                    # Store the imagined states, actions and rewards
-                    imagined["states"].append(z_t)
-                    imagined["actions"].append(a_t)
                     imagined["rewards"].append(r_t)
 
                 # Stack the imagined states, actions and rewards
@@ -241,6 +243,9 @@ class WorldModel:
         self.optim.zero_grad()
         total_loss.backward()
         self.optim.step()
+
+        # Store the loss in the list
+        self.loss.append(total_loss.item())
 
         return {
             "dynamics_loss": dynamic_loss,

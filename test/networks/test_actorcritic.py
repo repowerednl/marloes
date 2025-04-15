@@ -61,11 +61,19 @@ class ActorCriticTestCase(TestCase):
         # states: torch.Size([10, 10])
         # actions: torch.Size([10, 5])
         # rewards: torch.Size([10])
-        trajectories = {
+        trajectory = {
             "states": torch.tensor(np.random.rand(10, 10)).float(),
             "actions": torch.tensor(np.random.rand(10, 5)).float(),
-            "rewards": torch.tensor(np.random.rand(10)).float(),
+            "rewards": torch.tensor(np.random.rand(10, 1)).float(),
         }
+        # create a list of 5 trajectories
+        trajectories = [trajectory] * 5
         losses = self.actor_critic.learn(trajectories)
-        self.assertTrue("actor_loss" in losses)
-        self.assertTrue("critic_loss" in losses)
+        # actor_loss and critic_loss should be in the dict
+        self.assertIn("actor_loss", losses)
+        self.assertIn("critic_loss", losses)
+        self.assertIn("total_loss", losses)
+        # all elements should be tensors
+        self.assertIsInstance(losses["actor_loss"], torch.Tensor)
+        self.assertIsInstance(losses["critic_loss"], torch.Tensor)
+        self.assertIsInstance(losses["total_loss"], torch.Tensor)

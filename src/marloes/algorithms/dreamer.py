@@ -49,7 +49,7 @@ class Dreamer(BaseAlgorithm):
         Initializes the previous state for the algorithm.
         """
         self.previous = {
-            "h_t": self.world_model.rssm._init_state(1),
+            "h_t": self.world_model.rssm._init_state(1)[-1].squeeze(0),
             "z_t": torch.zeros(1, self.world_model.rssm.latent_state_size),
             "a_t": torch.zeros(1, self.environment.action_space[0]),
         }
@@ -60,34 +60,36 @@ class Dreamer(BaseAlgorithm):
         """
         if not self.previous:
             self._init_previous()
+        # set world_model to eval mode
+        # set actor_critic to eval mode
+        with torch.no_grad():
+            # Step 1: Get the recurrent state (based on previous state)  #
+            # ---------------------------------------------------------- #
+            h_t, _, _ = self.world_model.rssm.forward(
+                self.previous["h_t"], self.previous["z_t"], self.previous["a_t"]
+            )
+            h_t = h_t[-1].squeeze(0)
 
-        # Step 1: Get the recurrent state (based on previous state)  #
-        # ---------------------------------------------------------- #
-        h_t, _, _ = self.world_model.rssm.forward(
-            self.previous["h_t"], self.previous["z_t"], self.previous["a_t"]
-        )
-        h_t = h_t[-1].squeeze(0).squeeze(0)
+            # Step 2: Get the latent state (based on current obs and h_t)  #
+            # ------------------------------------------------------------ #
+            x = torch.cat([observations, h_t], dim=-1)
+            z_t, _ = self.world_model.rssm.encoder(x)
 
-        # Step 2: Get the latent state (based on current obs and h_t)  #
-        # ------------------------------------------------------------ #
-        x = torch.cat([observations, h_t], dim=-1)
-        z_t, _ = self.world_model.rssm.encoder(x)
+            # Step 3: Get the action (based on the model state)  #
+            # -------------------------------------------------- #
+            s = torch.cat([h_t, z_t], dim=-1)
+            actions = self.actor_critic.act(s)
 
-        # Step 3: Get the action (based on the model state)  #
-        # -------------------------------------------------- #
-        s = torch.cat([h_t, z_t], dim=-1)
-        actions = self.actor_critic.act(s)
+            # Step 4: Update the previous state with the current state  #
+            # -------------------------------------------------- #
+            self.previous["h_t"] = h_t
+            self.previous["z_t"] = z_t
+            self.previous["a_t"] = actions
 
-        # Step 4: Update the previous state with the current state  #
-        # -------------------------------------------------- #
-        self.previous["h_t"] = h_t
-        self.previous["z_t"] = z_t
-        self.previous["a_t"] = actions
-
-        return {
-            agent_id: actions[i]
-            for i, agent_id in enumerate(self.environment.agent_dict.keys())
-        }
+            return {
+                agent_id: actions[i]
+                for i, agent_id in enumerate(self.environment.agent_dict.keys())
+            }
 
     def perform_training_steps(self, step: int):
         """
@@ -97,6 +99,9 @@ class Dreamer(BaseAlgorithm):
         """
         if step % self.update_interval != 0 and step > 0:
             return
+        # set world_model to train mode
+        # set actor_critic to train mode
+
         # | --------------------------------------------------- |#
         # | Step 1: Get a sample from the replay buffer         |#
         # |  - should be a sample of sequences (size=horizon)   |#
@@ -108,8 +113,7 @@ class Dreamer(BaseAlgorithm):
         # | ----------------------------------------------------- |#
         # | Step 2: Update the world model with real interactions |#
         # | ----------------------------------------------------- |#
-        losses = self.world_model.learn(real_sample)
-        print(losses)
+        worldmodel_losses = self.world_model.learn(real_sample)
 
         # | ----------------------------------------------------- |#
         # | Step 3: Imagine trajectories for ActorCritic learning |#
@@ -121,10 +125,22 @@ class Dreamer(BaseAlgorithm):
         imagined_sequences = self.world_model.imagine(
             starting_points["state"], self.actor_critic, self.horizon
         )
-        print(imagined_sequences)
-        # TODO:
 
         # | ------------------------------------- |#
         # | Step 4: Update the actor-critic model |#
         # | ------------------------------------- |#
-        # Update the critic model with real and imagined trajectories
+        # Only update with imagined trajectories
+        # (updating with real trajectories should be implemented for:
+        # - environments where the reward is tricky to predict)
+
+        actorcritic_losses = self.actor_critic.learn(imagined_sequences)
+
+        # | ----------------------------------------------------- |#
+        # | Step 5: Save the losses                               |#
+        # | ----------------------------------------------------- |#
+        # to Extractor here?
+        # returning losses to Base Algorithm might be cleaner
+        return {
+            "world": worldmodel_losses,
+            "actorcritic": actorcritic_losses,
+        }
