@@ -11,9 +11,16 @@ class Dyna(BaseAlgorithm):
 
     __name__ = "Dyna"
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict) -> None:
         """
         Initializes the Dyna algorithm.
+
+        Args:
+            config (dict): Configuration dictionary containing:
+                - "model_update_frequency" (int): Frequency of world model updates.
+                - "k" (int): Model rollout horizon; planning steps.
+                - "model_updates_per_step" (int): Number of model updates per step.
+                - "real_sample_ratio" (float): Ratio of real to synthetic samples.
         """
         super().__init__(config)
         self.world_model = WorldModel(self.config)
@@ -29,6 +36,12 @@ class Dyna(BaseAlgorithm):
     def get_actions(self, state: dict) -> dict:
         """
         Generates actions based on the current observation using the SAC agent.
+
+        Args:
+            state (dict): Current state of the environment.
+
+        Returns:
+            dict: Actions to take in the environment.
         """
         # Convert state to tensor
         state_tensor = self.real_RB.convert_to_tensors([state])
@@ -51,6 +64,9 @@ class Dyna(BaseAlgorithm):
         1. Update the world model with real experiences.
         2. Generate synthetic experiences using the world model.
         3. Update the model (SAC) with both real and synthetic experiences.
+
+        Args:
+            step (int): Current training step.
         """
         # 1. Update world model (with real experiences only)
         # --------------------
@@ -111,6 +127,13 @@ class Dyna(BaseAlgorithm):
     def _combine_batches(real_batch, synthetic_batch):
         """
         Combines real and synthetic batches for training.
+
+        Args:
+            real_batch (dict): Real batch of experiences.
+            synthetic_batch (dict): Synthetic batch of experiences.
+
+        Returns:
+            dict: Combined batch of experiences.
         """
         combined_batch = {}
         for key in real_batch.keys():
