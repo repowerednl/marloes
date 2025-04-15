@@ -60,12 +60,8 @@ class Dreamer(BaseAlgorithm):
         """
         if not self.previous:
             self._init_previous()
-        # For debugging:
-        # print all elements (shape) of previous
-        print("Previous state:")
-        for key, value in self.previous.items():
-            print(f"{key}: {value.shape}")
-
+        # set world_model to eval mode
+        # set actor_critic to eval mode
         with torch.no_grad():
             # Step 1: Get the recurrent state (based on previous state)  #
             # ---------------------------------------------------------- #
@@ -103,6 +99,9 @@ class Dreamer(BaseAlgorithm):
         """
         if step % self.update_interval != 0 and step > 0:
             return
+        # set world_model to train mode
+        # set actor_critic to train mode
+
         # | --------------------------------------------------- |#
         # | Step 1: Get a sample from the replay buffer         |#
         # |  - should be a sample of sequences (size=horizon)   |#
