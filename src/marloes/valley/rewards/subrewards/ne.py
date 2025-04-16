@@ -25,9 +25,10 @@ class NESubReward(SubReward):
                     extractor, slice(extractor.i - 60, extractor.i), actual=True
                 )
                 if self._hour_has_passed(extractor.i)
-                else 0
+                else self._calculate_intermediate_penalty(extractor, actual=True)
             )
 
+        # TODO: add intermediate penalty for existing data
         reward_array = np.zeros(len(extractor.total_solar_production))
         for t in range(60, len(reward_array), 60):
             reward_array[t] = -self._calculate_penalty(
@@ -63,3 +64,37 @@ class NESubReward(SubReward):
     @staticmethod
     def _hour_has_passed(i: int) -> bool:
         return i % 60 == 0 and i != 0
+
+    def _calculate_intermediate_penalty(
+        self, extractor: Extractor, actual: bool
+    ) -> float:
+        """
+        Returns the difference between actual nomination_fraction and the expected nomination_fraction as a small penalty.
+        Scaled down, since it is not final, and can be corrected.
+        """
+        pass
+
+    def _get_expected_nomination_fraction(
+        self, extractor: Extractor, actual: bool
+    ) -> float | np.ndarray:
+        """
+        Returns the sum of all nominations.
+        If actual:
+            - Use the current timestep nominations
+        If not actual:
+            - Sum the full arrays of nominations
+        """
+        total_nomination = sum(
+            self._get_target(nom, extractor.i, actual)
+            for nom in [
+                extractor.total_solar_nomination,
+                extractor.total_wind_nomination,
+                extractor.total_demand_nomination,
+            ]
+        )
+        # single calculation for actual
+        if actual:
+            return total_nomination * (extractor.i % 60) / 60
+        # full array calculation
+        indices = np.arange(len(total_nomination))
+        return total_nomination * (indices % 60) / 60
