@@ -74,14 +74,18 @@ class TestSolarAgentGetState(unittest.TestCase):
 
         # Mock asset state
         solar_agent.asset = MagicMock()
-        solar_agent.asset.state.model_dump.return_value = {"mocked_state": True}
+        solar_agent.asset.state.model_dump.return_value = {"power": 0.1}
 
         # Check initial state
         state = solar_agent.get_state(start_idx=0)
         self.assertIn("forecast", state)
         self.assertEqual(len(state["forecast"]), 1440)
         np.testing.assert_array_equal(state["forecast"], solar_agent.forecast[:1440])
-        self.assertEqual(state["mocked_state"], True)
+        self.assertEqual(state["power"], 0.1)
+
+        # Check nomination_fraction (exists and value should be 0.0 + power / nominated_volume)
+        self.assertIn("nomination_fraction", state)
+        self.assertEqual(state["nomination_fraction"], 0.0 + 0.1 / 1 / 60)
 
         # Check state at a later index
         state = solar_agent.get_state(start_idx=500)
@@ -101,9 +105,9 @@ class TestSolarAgentGetState(unittest.TestCase):
 
         # Mock asset state
         solar_agent.asset = MagicMock()
-        solar_agent.asset.state.model_dump.return_value = {"mocked_state": True}
+        solar_agent.asset.state.model_dump.return_value = {"power": 0.5}
 
-        # Test when start index is near the end
+        # Test when start index is near the end (in the last hour: nominated volume = 5)
         start_idx = 1400
         state = solar_agent.get_state(start_idx=start_idx)
 
@@ -112,7 +116,14 @@ class TestSolarAgentGetState(unittest.TestCase):
         np.testing.assert_array_equal(
             state["forecast"], solar_agent.forecast[1400:1500]
         )
-        self.assertEqual(state["mocked_state"], True)
+        self.assertEqual(state["power"], 0.5)
+        self.assertEqual(state["nomination_fraction"], 0.0 + 0.5 / 5 / 60)
+
+        # when we call get_state with start_idx += 1, the nomination fraction should be updated with the updated power
+        solar_agent.asset.state.model_dump.return_value = {"power": 0.2}
+        state = solar_agent.get_state(start_idx=start_idx + 1)
+        # nomination_fraction = 0.5 / 5 / 60 + 0.2 / 5 / 60
+        self.assertEqual(state["nomination_fraction"], 0.5 / 5 / 60 + 0.2 / 5 / 60)
 
     @patch.object(
         SolarAgent, "__init__", lambda self, *args, **kwargs: None
@@ -139,4 +150,4 @@ class TestSolarAgentGetState(unittest.TestCase):
         self.assertIn("forecast", state)
         self.assertIn("nomination", state)
         self.assertNotIn("time", state)
-        self.assertEqual(len(state), 4)
+        self.assertEqual(len(state), 5)
