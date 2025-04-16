@@ -122,7 +122,7 @@ class TestSolarAgentGetState(unittest.TestCase):
         # when we call get_state with start_idx += 1, the nomination fraction should be updated with the updated power
         solar_agent.asset.state.model_dump.return_value = {"power": 0.2}
         state = solar_agent.get_state(start_idx=start_idx + 1)
-        # nomination_fraction = 0.5 / 5 + 0.2 / 5
+        # nomination_fraction = 0.5 / 5 / 60 + 0.2 / 5 / 60
         self.assertEqual(state["nomination_fraction"], 0.5 / 5 / 60 + 0.2 / 5 / 60)
 
     @patch.object(
