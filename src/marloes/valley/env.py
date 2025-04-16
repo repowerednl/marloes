@@ -203,7 +203,18 @@ class EnergyValley(MultiAgentEnv):
 
     def _get_global_context(self) -> dict:
         """Function to get additional global information (market prices, etc.)"""
-        return {"global_context": {}}  # TODO: Implement global context
+        current_month = self.time_stamp.month
+        current_day = self.time_stamp.day
+        current_hour = self.time_stamp.hour
+        current_minute = self.time_stamp.minute
+        return {
+            "global_context": {
+                "month": current_month,
+                "day": current_day,
+                "hour": current_hour,
+                "minute": current_minute,
+            }
+        }
 
     def _get_full_observation(self) -> dict:
         """Function to get the full observation (agent state + additional information)"""
