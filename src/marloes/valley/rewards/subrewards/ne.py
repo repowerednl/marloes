@@ -26,9 +26,11 @@ class NESubReward(SubReward):
         - defaults to 1/60 of the normal scaling factor.
         """
         super().__init__(active, scaling_factor)
-        self.intermediate_scaling_factor = (
-            intermediate_scaling_factor or scaling_factor / 60
-        )
+        if intermediate_scaling_factor is None:
+            self.intermediate_scaling_factor = scaling_factor / 60
+        else:
+            self.intermediate_scaling_factor = intermediate_scaling_factor
+
         if self.intermediate_scaling_factor > scaling_factor:
             logging.warning(
                 "Intermediate scaling factor exceeds normal scaling factor."

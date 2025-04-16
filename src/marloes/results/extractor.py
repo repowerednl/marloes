@@ -183,7 +183,7 @@ class Extractor:
                     "nomination"
                 ]  # TODO: what if no nomination?
             if agent_type in demand_nominations:
-                supply_nominations[agent_type] += observation["nomination"]
+                demand_nominations[agent_type] += observation["nomination"]
 
         return supply_nominations | demand_nominations
 
