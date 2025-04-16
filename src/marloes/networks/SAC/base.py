@@ -13,7 +13,7 @@ class SACBaseNetwork(nn.Module):
         hidden_layers (nn.Sequential): Sequential container for the hidden layers.
     """
 
-    def __init__(self, input_dim: int, config: dict, activation=nn.ReLU()) -> None:
+    def __init__(self, input_dim: int, sac_config: dict, activation=nn.ReLU()) -> None:
         """
         Initializes the SACBaseNetwork with the given input and output dimensions and hidden layer dimensions.
         All provided defaults are based on the original SAC paper.
@@ -28,8 +28,8 @@ class SACBaseNetwork(nn.Module):
         super(SACBaseNetwork, self).__init__()
 
         # Get the parameters from the config
-        self.hidden_dim = config.get("hidden_dim", 256)
-        num_layers = config.get("num_layers", 2)
+        self.hidden_dim = sac_config.get("hidden_dim", 256)
+        num_layers = sac_config.get("num_layers", 2)
 
         # Build the layers
         layers = []
