@@ -38,7 +38,12 @@ def example_state():
             },
             "BatteryAgent 0": {"power": 0.0, "state_of_charge": 0.5, "degradation": 0},
             "BatteryAgent 1": {"power": 0.0, "state_of_charge": 0.5, "degradation": 0},
-            "additional_info": {},
+            "global_context": {
+                "month": 1,
+                "day": 1,
+                "hour": 12,
+                "minute": 30,
+            },
         }
     ]
 
