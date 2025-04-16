@@ -170,7 +170,9 @@ class Extractor:
         for agent_id, observation in observations.items():
             agent_type = agent_id.split(" ")[0]
             if agent_type in nominations:
-                nominations[agent_type] += observation["nomination"]
+                nominations[agent_type] += observation[
+                    "nomination"
+                ]  # TODO: what if no nomination?
 
         return nominations
 

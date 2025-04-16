@@ -98,6 +98,7 @@ class Agent(ABC):
             state["forecast"] = self.forecast[
                 start_idx:end_idx
             ]  # Numpy slicing is O(1)
+            # TODO: MAR-142 Transform forecast to only relevant information
 
             # Also include nomination
             hour_idx = start_idx // 60  # 60 minutes in an hour
