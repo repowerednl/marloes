@@ -9,11 +9,14 @@ from PyQt6.QtWidgets import (
     QSpinBox,
     QVBoxLayout,
     QWidget,
+    QCheckBox,
+    QGroupBox,
+    QHBoxLayout,
 )
 from PyQt6.QtCore import QTimer
 
 from gui.success_screen import SuccessScreen
-from src.marloes.algorithms import MADDPG, BaseAlgorithm, Priorities, SimpleSetpoint
+from src.marloes.algorithms import BaseAlgorithm, Priorities, SimpleSetpoint
 from src.marloes.validation.validate_config import validate_config
 
 from .errors import ErrorScreen
@@ -58,6 +61,37 @@ class ExperimentSetupApp(QWidget):
         self.extractor_type_dropdown.addItems(["default", "extensive"])
         layout.addWidget(self.extractor_type_label)
         layout.addWidget(self.extractor_type_dropdown)
+
+        # SUBREWARDS SELECTION WITH SCALING FACTORS
+        self.subreward_group = QGroupBox("Select Subrewards:")
+        self.subreward_layout = QVBoxLayout()
+
+        self.subreward_checkboxes = {}
+        self.subreward_scalings = {}
+
+        for name in ["CO2", "SS", "NC", "NB", "NE"]:
+            row = QHBoxLayout()
+
+            checkbox = QCheckBox(name)
+            checkbox.setChecked(name == "CO2")  # Default only CO2 selected
+            self.subreward_checkboxes[name] = checkbox
+
+            label = QLabel("Scaling:")
+            scaling_box = QDoubleSpinBox()
+            scaling_box.setRange(0.0, 1.0)
+            scaling_box.setValue(1.0)
+            scaling_box.setDecimals(2)
+            scaling_box.setSingleStep(0.01)
+            self.subreward_scalings[name] = scaling_box
+
+            row.addWidget(checkbox)
+            row.addWidget(label)
+            row.addWidget(scaling_box)
+
+            self.subreward_layout.addLayout(row)
+
+        self.subreward_group.setLayout(self.subreward_layout)
+        layout.addWidget(self.subreward_group)
 
         # EPOCHS
         self.epochs_label = QLabel("Epochs:")  # Must be an integer
@@ -151,6 +185,16 @@ class ExperimentSetupApp(QWidget):
             config["learning_rate"] = self.learning_rate.value()
 
         config["extractor_type"] = self.extractor_type_dropdown.currentText()
+
+        selected_subrewards = {
+            name: {
+                "active": True,
+                "scaling_factor": self.subreward_scalings[name].value(),
+            }
+            for name, checkbox in self.subreward_checkboxes.items()
+            if checkbox.isChecked()
+        }
+        config["subrewards"] = selected_subrewards
 
         # TODO: add additional parameters as needed
         self.config = config
