@@ -61,11 +61,13 @@ class Agent(ABC):
 
         # Store the forecast if provided in an efficient format
         if forecast is not None:
-            self.forecast: np.ndarray = forecast.values.astype(np.float32)
+            self.forecast: np.ndarray = forecast.values.astype(np.float32)  # kW
             self.horizon = 1440  # 24 hours for now
 
             # Also add nomination based on forecast
-            self.nominated_volume: np.ndarray = convert_to_hourly_nomination(forecast)
+            self.nominated_volume: np.ndarray = convert_to_hourly_nomination(
+                forecast
+            )  # kW
         else:
             self.forecast = None
 
@@ -115,8 +117,8 @@ class Agent(ABC):
             # Add the current hour's nomination to the state
             state["nomination"] = float(self.nominated_volume[hour_idx])
 
-            # Asset has power - add this to the fraction
-            self.nomination_fraction += state["power"] / state["nomination"]
+            # Asset has power - add this to the fraction of the hour
+            self.nomination_fraction += (state["power"] / state["nomination"]) / 60
 
             # Add the current nomination fraction to the state
             state["nomination_fraction"] = self.nomination_fraction
