@@ -98,13 +98,29 @@ class Agent(ABC):
             state["forecast"] = self.forecast[
                 start_idx:end_idx
             ]  # Numpy slicing is O(1)
-            # TODO: MAR-142 Transform forecast to only relevant information
 
             # Also include nomination
             hour_idx = start_idx // 60  # 60 minutes in an hour
             hour_idx = min(hour_idx, len(self.nominated_volume) - 1)  # safety
+
+            current_minute = start_idx % 60
+            # only add the attribute to the agent if a forecast is present
+            if not hasattr(self, "nomination_fraction"):
+                self.nomination_fraction = 0.0
+
+            # reset the fraction at the first minute of the hour
+            if current_minute == 0:
+                self.nomination_fraction = 0.0
+
+            # Asset has power - add this to the fraction
+            self.nomination_fraction += self.asset.state.power / float(
+                self.nominated_volume[hour_idx]
+            )
+
             # Add the current hour's nomination to the state
             state["nomination"] = float(self.nominated_volume[hour_idx])
+            # Add the current nomination fraction to the state
+            state["nomination_fraction"] = float(self.nomination_fraction)
 
         # remove 'time' from the state since this is the same for all agents
         if "time" in state:
