@@ -64,8 +64,7 @@ def run_app_mode(args):
     app = QApplication(sys.argv)
 
     if args.visualizer:
-        available_metrics = [item.value for item in Metrics]
-        visualizer_window = VisualizerGUI(available_metrics)
+        visualizer_window = VisualizerGUI()
         visualizer_window.show()
     else:
         window = startup.ExperimentSetupApp()
