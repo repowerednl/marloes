@@ -43,7 +43,7 @@ class NESubReward(SubReward):
         """
         if actual:
             return (
-                -self._calculate_penalty(
+                self._calculate_penalty(
                     extractor, slice(extractor.i - 60, extractor.i), actual=True
                 )
                 if self._hour_has_passed(extractor.i)
@@ -53,7 +53,7 @@ class NESubReward(SubReward):
         # TODO: add intermediate penalty for existing data
         reward_array = np.zeros(len(extractor.total_solar_production))
         for t in range(60, len(reward_array), 60):
-            reward_array[t] = -self._calculate_penalty(
+            reward_array[t] = self._calculate_penalty(
                 extractor, slice(t - 60, t), actual=False
             )
 
@@ -77,11 +77,11 @@ class NESubReward(SubReward):
         wind_nomination = self._get_target(
             extractor.total_wind_nomination, time_slice, actual
         )
-        # TODO: Add all production and all nomation together (NB: demand nomination is negative)
+        # TODO: Add all production and all nomination together (NB: demand nomination is negative)
         solar_penalty = abs(np.mean(solar_production) - np.mean(solar_nomination))
         wind_penalty = abs(np.mean(wind_production) - np.mean(wind_nomination))
 
-        return solar_penalty + wind_penalty
+        return -(solar_penalty + wind_penalty)
 
     @staticmethod
     def _hour_has_passed(i: int) -> bool:
@@ -94,7 +94,18 @@ class NESubReward(SubReward):
         Returns the difference between actual nomination_fraction and the expected nomination_fraction as a small penalty.
         Scaled down, since it is not final, and can be corrected.
         """
-        pass
+        nomination_fraction = self._get_target(
+            extractor.total_nomination_fraction, extractor.i, actual
+        )
+        # the expected nomination fraction is the sum of all nominations / 60 * (i % 60)
+        expected_nomination_fraction = self._get_expected_nomination_fraction(
+            extractor, actual
+        )
+
+        return (
+            -abs(nomination_fraction - expected_nomination_fraction)
+            * self.intermediate_scaling_factor
+        )
 
     def _get_expected_nomination_fraction(
         self, extractor: Extractor, actual: bool
