@@ -3,6 +3,8 @@ import numpy as np
 from marloes.results.extractor import Extractor
 from marloes.valley.rewards.subrewards.base import SubReward
 
+import logging
+
 
 class NESubReward(SubReward):
     """
@@ -11,6 +13,26 @@ class NESubReward(SubReward):
     """
 
     name = "NE"
+
+    def __init__(
+        self,
+        active: bool = False,
+        scaling_factor: float = 1.0,
+        intermediate_scaling_factor: float = None,
+    ):
+        """
+        Initializes the NESubReward instance with activation and scaling properties.
+        Initializes allows for a different scaling factor for the intermediate penalty;
+        - defaults to 1/60 of the normal scaling factor.
+        """
+        super().__init__(active, scaling_factor)
+        self.intermediate_scaling_factor = (
+            intermediate_scaling_factor or scaling_factor / 60
+        )
+        if self.intermediate_scaling_factor > scaling_factor:
+            logging.warning(
+                "Intermediate scaling factor exceeds normal scaling factor."
+            )
 
     def calculate(
         self, extractor: Extractor, actual: bool, **kwargs
