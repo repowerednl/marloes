@@ -2,9 +2,20 @@ import torch
 import numpy as np
 
 
-def parse_state(state_list, device="cpu"):
+def parse_state(
+    state_list: list[dict], device: str = "cpu"
+) -> dict[str, dict[str, dict[str, torch.Tensor]]]:
     """
     Divide state into scalars and forecast per agent and convert to tensors.
+
+    Args:
+        state_list (list[dict[str, Any]]): list of state dictionaries, where each dictionary contains
+            agent-specific data including scalars and forecasts.
+        device (str, optional): Device to place the tensors on (default: "cpu").
+
+    Returns:
+        dict[str, dict[str, dict[str, torch.Tensor]]]: A dictionary containing tensors for each agent's
+            scalars and forecasts.
     """
     agent_data = {}
     SCALAR_KEYS = [
@@ -62,9 +73,18 @@ def parse_state(state_list, device="cpu"):
     return final_dict
 
 
-def parse_actions(action_list, device="cpu"):
+def parse_actions(
+    action_list: list[dict[str, float]], device: str = "cpu"
+) -> torch.Tensor:
     """
     Turn actions into a tensor.
+
+    Args:
+        action_list (list[dict[str, float]]): list of dictionaries containing actions for each agent.
+        device (str, optional): Device to place the tensor on (default: "cpu").
+
+    Returns:
+        torch.Tensor: Tensor of shape (batch_size, num_agents) containing the actions.
     """
     # Sort to ensure consistency
     all_agents = list(action_list[0].keys())
@@ -83,18 +103,32 @@ def parse_actions(action_list, device="cpu"):
     return final_actions
 
 
-def parse_rewards(reward_list, device="cpu"):
+def parse_rewards(reward_list: list[float], device: str = "cpu") -> torch.Tensor:
     """
     Convert rewards to a tensor.
+
+    Args:
+        reward_list (list[float]): list of rewards for each sample in the batch.
+        device (str, optional): Device to place the tensor on (default: "cpu").
+
+    Returns:
+        torch.Tensor: Tensor of shape (batch_size,) containing the rewards.
     """
     rewards = np.array(reward_list, dtype=np.float32)
     return torch.from_numpy(rewards).to(device)
 
 
-def parse_batch(sample, device="cpu"):
+def parse_batch(sample: list, device: str = "cpu") -> dict:
     """
-    Since the WorldModel requires separating several parts of the transition,
-    this converts state to a workable dict of tensors.
+    Convert a batch of transitions into a workable dictionary of tensors.
+
+    Args:
+        sample (list[Any]): list of transition objects, where each transition contains
+            state, actions, rewards, and next_state.
+        device (str, optional): Device to place the tensors on (default: "cpu").
+
+    Returns:
+        dict[str, Any]: A dictionary containing tensors for states, actions, rewards, and next states.
     """
     state_list = [t.state for t in sample]
     actions_list = [t.actions for t in sample]

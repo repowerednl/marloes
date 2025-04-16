@@ -46,19 +46,14 @@ class BaseAlgorithm(ABC):
         self.batch_size = config.get("batch_size", 128)
 
         # Initialize ReplayBuffers
-        try:
-            self.real_RB = ReplayBuffer(
-                capacity=self.config["replay_buffers"].get("real_capacity", 1000),
-                device=self.device,
-            )
-        except KeyError:
-            self.real_RB = ReplayBuffer(
-                capacity=10000,  # Default capacity if not specified
-                device=self.device,
-            )
+        replay_buffer_config = config.get("replay_buffers", {})
+        self.real_RB = ReplayBuffer(
+            capacity=replay_buffer_config.get("real_capacity", 1000),
+            device=self.device,
+        )
         try:
             self.model_RB = ReplayBuffer(
-                capacity=config["replay_buffers"].get("model_capacity", 1000),
+                capacity=replay_buffer_config.get("model_capacity", 1000),
                 device=self.device,
             )
         except KeyError:
