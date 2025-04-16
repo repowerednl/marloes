@@ -34,7 +34,7 @@ replay_buffers:
   real_capacity: 100000
   model_capacity: 100000
 dyna:
-  model_update_frequency: 100
+  world_model_update_frequency: 100
   k: 10
   model_updates_per_step: 10
   real_sample_ratio: 0.5

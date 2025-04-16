@@ -238,7 +238,7 @@ class EnergyValley(MultiAgentEnv):
         self.time_stamp = self.start_time
         return self._get_full_observation(), {agent.id: {} for agent in self.agents}
 
-    def step(self, actions: dict):
+    def step(self, actions: dict, loss_dict: dict | None = None):
         """Function should return the observation, reward, done, info"""
 
         # Set setpoints for agents based on actions
@@ -265,11 +265,13 @@ class EnergyValley(MultiAgentEnv):
 
         # Extract results and calculate next states
         self.extractor.from_model(self.model)
-        # TODO: add additional information, market_prices to the observations (and info for logging?)
         self.extractor.from_observations(observations)
+        if loss_dict is not None:
+            self.extractor.store_loss(loss_dict)
 
         # All relevant information must be added to the extractor before this is called
-        rewards = self._calculate_reward()
+        reward = self._calculate_reward()
+        self.extractor.store_reward(reward)
 
         # Update the extractor
         self.extractor.update()
@@ -277,4 +279,4 @@ class EnergyValley(MultiAgentEnv):
         # After the update, the ExtensiveExtractor needs the model again to save additional information
         self.extractor.add_additional_info_from_model(self.model)
 
-        return observations, rewards, self._dones_cache, self._infos_cache
+        return observations, reward, self._dones_cache, self._infos_cache
