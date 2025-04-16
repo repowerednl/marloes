@@ -49,9 +49,9 @@ class NESubReward(SubReward):
                 if self._hour_has_passed(extractor.i)
                 else self._calculate_intermediate_penalty(extractor, actual=True)
             )
-
-        # TODO: add intermediate penalty for existing data
-        reward_array = np.zeros(len(extractor.total_solar_production))
+        # first calculate the full array of intermediate penalties
+        reward_array = self._calculate_intermediate_penalty(extractor, actual=False)
+        # overwrite every 60th timestep with the "FULL" Nomination Error
         for t in range(60, len(reward_array), 60):
             reward_array[t] = self._calculate_penalty(
                 extractor, slice(t - 60, t), actual=False
@@ -89,7 +89,7 @@ class NESubReward(SubReward):
 
     def _calculate_intermediate_penalty(
         self, extractor: Extractor, actual: bool
-    ) -> float:
+    ) -> float | np.ndarray:
         """
         Returns the difference between actual nomination_fraction and the expected nomination_fraction as a small penalty.
         Scaled down, since it is not final, and can be corrected.
