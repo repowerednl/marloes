@@ -49,13 +49,14 @@ class NESubReward(SubReward):
                 if self._hour_has_passed(extractor.i)
                 else self._calculate_intermediate_penalty(extractor, actual=True)
             )
-        # first calculate the full array of intermediate penalties
+        # Calculate intermediate penalties and full penalties only at required timesteps
         reward_array = self._calculate_intermediate_penalty(extractor, actual=False)
-        # overwrite every 60th timestep with the "FULL" Nomination Error
-        for t in range(60, len(reward_array), 60):
-            reward_array[t] = self._calculate_penalty(
-                extractor, slice(t - 60, t), actual=False
-            )
+        full_penalty_indices = np.arange(60, len(reward_array), 60)
+        full_penalties = [
+            self._calculate_penalty(extractor, slice(t - 60, t), actual=False)
+            for t in full_penalty_indices
+        ]
+        reward_array[full_penalty_indices] = full_penalties
 
         return reward_array
 
