@@ -24,6 +24,7 @@ from marloes.agents import (
 )
 from marloes.results.extractor import ExtensiveExtractor, Extractor
 from marloes.data.replaybuffer import ReplayBuffer
+from marloes.valley.rewards.reward import Reward
 
 
 class EnergyValley(MultiAgentEnv):
@@ -59,6 +60,7 @@ class EnergyValley(MultiAgentEnv):
         self.extractor: Extractor = self.EXTRACTOR_MAP[
             config.pop("extractor_type", "default")
         ]()
+        self.reward = Reward(actual=True, **config.get("subrewards", {}))
 
         self._initialize_agents(config, algorithm_type)
         self._initialize_model(
@@ -68,7 +70,6 @@ class EnergyValley(MultiAgentEnv):
         # For efficiency
         self.agent_dict = {agent.id: agent for agent in self.agents}
         self._state_cache = {agent.id: None for agent in self.agents}
-        self._reward_cache = {agent.id: None for agent in self.agents}
         # is the hub ever done? Is life ever done? Is life a simulation?
         self._dones_cache = {agent.id: False for agent in self.agents}
         self._infos_cache = {agent.id: {} for agent in self.agents}
@@ -212,12 +213,10 @@ class EnergyValley(MultiAgentEnv):
 
     def _calculate_reward(self):
         """Function to calculate the reward"""
-        reward = 0  # TODO: Implement reward calculation (Return scalar value)
+        reward = self.reward.get(self.extractor)
         # once the reward is calculated, also save it to the extractor
         self.extractor.save_reward(reward)
-        for agent in self.agents:
-            self._reward_cache[agent.id] = reward
-        return self._reward_cache
+        return reward
 
     def reset(self) -> tuple[dict, dict]:
         """
