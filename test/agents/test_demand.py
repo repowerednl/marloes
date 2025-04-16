@@ -30,6 +30,12 @@ class TestDemandAgent(unittest.TestCase):
         self.assertEqual(demand_agent.asset.max_power_in, 10.0)
         self.assertIsInstance(demand_agent.asset.data_source, DummyDataSource)
         self.assertEqual(demand_agent.asset.data_source.value, 5.0)
+        # also test the get_state() method
+        state = demand_agent.get_state(0)
+        # state should have forecast, nomination and nomination_fraction
+        self.assertIn("forecast", state)
+        self.assertIn("nomination", state)
+        self.assertIn("nomination_fraction", state)
 
     @pytest.mark.slow
     def test_partial_init(self):

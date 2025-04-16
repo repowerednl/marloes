@@ -112,15 +112,14 @@ class Agent(ABC):
             if current_minute == 0:
                 self.nomination_fraction = 0.0
 
-            # Asset has power - add this to the fraction
-            self.nomination_fraction += self.asset.state.power / float(
-                self.nominated_volume[hour_idx]
-            )
-
             # Add the current hour's nomination to the state
             state["nomination"] = float(self.nominated_volume[hour_idx])
+
+            # Asset has power - add this to the fraction
+            self.nomination_fraction += state["power"] / state["nomination"]
+
             # Add the current nomination fraction to the state
-            state["nomination_fraction"] = float(self.nomination_fraction)
+            state["nomination_fraction"] = self.nomination_fraction
 
         # remove 'time' from the state since this is the same for all agents
         if "time" in state:
