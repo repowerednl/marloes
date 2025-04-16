@@ -61,7 +61,10 @@ class WorldModel(nn.Module):
             self.world_model_config, self.num_agents, config.get("global_dim", 0)
         )
         self.world_dynamics_model = WorldDynamicsModel(
-            self.world_model_config, config["action_dim"], agents_scalar_dim
+            self.world_model_config,
+            config["action_dim"],
+            agents_scalar_dim,
+            config["global_dim"],
         )
         self.optimizer = Adam(
             self.parameters(),
