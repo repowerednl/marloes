@@ -16,7 +16,7 @@ from marloes.agents import (
     WindAgent,
     ElectrolyserAgent,
 )
-from marloes.agents.base import SupplyAgents, StorageAgents
+from marloes.agents.base import SupplyAgents, StorageAgents, DemandAgents
 from marloes.data.extensive_data import ExtensiveDataStore
 
 MINUTES_IN_A_YEAR = 525600
@@ -53,6 +53,8 @@ class Extractor:
             # Observation info
             self.total_solar_nomination = np.zeros(self.size)
             self.total_wind_nomination = np.zeros(self.size)
+            self.total_demand_nomination = np.zeros(self.size)
+            self.total_nomination_fraction = np.zeros(self.size)
 
     def clear(self):
         """Reset the timestep index to zero."""
@@ -156,25 +158,34 @@ class Extractor:
         nominations = self._get_total_nomination_by_type(observations)
         self.total_solar_nomination[self.i] = nominations["SolarAgent"]
         self.total_wind_nomination[self.i] = nominations["WindAgent"]
+        self.total_demand_nomination[self.i] = nominations["DemandAgent"]
+
+        # sum all nomination_fractions in observations together
+        for key, value in observations.items():
+            if "nomination_fraction" in value:
+                self.total_nomination_fraction[self.i] += value["nomination_fraction"]
 
     @staticmethod
     def _get_total_nomination_by_type(observations: dict) -> dict[str, float]:
         """
-        At a timestep, sums the nomination of all assets of a specific (supply) type.
+        At a timestep, sums the nomination of all Supply and Demand agents
         - SolarAgent
         - WindAgent
-        TODO: demand has nominations (because they have a forecast), add it here or remove if from being created (marloes.agents.base)
+        - DemandAgent
         """
-        nominations = {agent.value: 0.0 for agent in SupplyAgents}
+        supply_nominations = {agent.value: 0.0 for agent in SupplyAgents}
+        demand_nominations = {agent.value: 0.0 for agent in DemandAgents}
 
         for agent_id, observation in observations.items():
             agent_type = agent_id.split(" ")[0]
-            if agent_type in nominations:
-                nominations[agent_type] += observation[
+            if agent_type in supply_nominations:
+                supply_nominations[agent_type] += observation[
                     "nomination"
                 ]  # TODO: what if no nomination?
+            if agent_type in demand_nominations:
+                supply_nominations[agent_type] += observation["nomination"]
 
-        return nominations
+        return supply_nominations | demand_nominations
 
     @staticmethod
     def _get_total_flow_between_types(model: Model, type1: Type, type2: Type) -> float:
