@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 
-def dist(mu, raw_logvar):
+def dist(mu, raw_logvar) -> torch.Tensor:
     # Instead of directly using raw_logvar, apply softplus to ensure positivity,
     # then subtract a constant offset if needed.
     logvar = torch.log(torch.nn.functional.softplus(raw_logvar) + 1e-6)

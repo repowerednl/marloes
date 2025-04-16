@@ -209,10 +209,11 @@ class WorldModel:
             """
             mean = torch.stack([d["mean"] for d in details], dim=0)
             logvar = torch.stack([d["logvar"] for d in details], dim=0)
-            return mean, logvar
+            return mean.squeeze(), logvar.squeeze()
 
         z_hat_mean, z_hat_logvar = unpack_details(results["predicted_details"])
         z_mean, z_logvar = unpack_details(results["actual_details"])
+
         """
         First loss function, the dynamics loss trains the sequence model to predict the next representation:
         KL-divergence between the predicted latent state and the true latent state (with stop-gradient operator)

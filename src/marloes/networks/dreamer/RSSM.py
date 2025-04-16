@@ -151,7 +151,8 @@ class RSSM(BaseNetwork):
         Returns:
             tuple: Output and hidden state from the RNN.
         """
-        x = torch.cat([h_t, z_t, a_t], dim=-1).float()
+        x = torch.cat([h_t, z_t, a_t], dim=-1).unsqueeze(0).float()
+        # x should be of shape [1, batch_size, input_size]
         return self.rnn(x)
 
     def _get_latent_state(self, h_t: torch.Tensor) -> tuple[torch.Tensor, dict]:
@@ -264,16 +265,16 @@ class RSSM(BaseNetwork):
             a_t = actions[t].unsqueeze(0)  # Add batch dimension
             # ------- STEP 1: Pass through RNN to get h_t and predicted latent state ---------#
             h_t, predicted, predicted_details = self.forward(h_t, z_t, a_t)
+            h_t = h_t[-1]  # Take the last layer and unsqueeze for batch dim
             h_ts.append(h_t)
             # ------- STEP 2: Use h_t and state information for (actual) latent state through Encoder ---------#
             x = torch.cat([next_states[t].unsqueeze(0), h_t], dim=-1)
-            encoded, encoded_detials = self.encoder(x)
-            z_t = encoded
+            encoded, encoded_details = self.encoder(x)
             # ------- STEP 3: Save information ---------#
             pred_z.append(predicted)
             z.append(encoded)
             pred_z_details.append(predicted_details)
-            z_details.append(encoded_detials)
+            z_details.append(encoded_details)
         # the details are lists of dictionaries with mean and logvar, return as one dictionary with tensors
         pred_z_details = {
             key: torch.stack([d[key] for d in pred_z_details], dim=0).squeeze(1)
@@ -323,6 +324,7 @@ class Encoder(BaseNetwork):
         Returns:
             tuple: Latent state and its details (mean and log variance).
         """
+        # x should have the shape [batch_size, input_size]
         x = F.relu(
             self.fc1(x.float())
         )  # float() added to ensure compatibility with torch.tensor float32

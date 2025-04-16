@@ -75,11 +75,11 @@ class Dreamer(BaseAlgorithm):
             h_t, _, _ = self.world_model.rssm.forward(
                 self.previous["h_t"], self.previous["z_t"], self.previous["a_t"]
             )
-            h_t = h_t[-1].squeeze(0)
-
+            h_t = h_t[-1]
+            h_t = h_t.view(h_t.size(0), -1)  # Flatten the hidden state
             # Step 2: Get the latent state (based on current obs and h_t)  #
             # ------------------------------------------------------------ #
-            x = torch.cat([observations, h_t], dim=-1)
+            x = torch.cat([observations.unsqueeze(0), h_t], dim=-1)
             z_t, _ = self.world_model.rssm.encoder(x)
 
             # Step 3: Get the action (based on the model state)  #
