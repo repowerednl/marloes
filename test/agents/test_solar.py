@@ -107,7 +107,7 @@ class TestSolarAgentGetState(unittest.TestCase):
         solar_agent.asset = MagicMock()
         solar_agent.asset.state.model_dump.return_value = {"power": 0.5}
 
-        # Test when start index is near the end (in hte last hour: nominated volume = 5)
+        # Test when start index is near the end (in the last hour: nominated volume = 5)
         start_idx = 1400
         state = solar_agent.get_state(start_idx=start_idx)
 
