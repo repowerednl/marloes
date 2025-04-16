@@ -68,7 +68,7 @@ class WorldModel(nn.Module):
             lr=self.world_model_config.get("lr", 1e-3),
             weight_decay=self.world_model_config.get("weight_decay", 0.0),
         )
-        self.loss = []
+        self.loss = None
 
     def forward(
         self,
@@ -205,7 +205,7 @@ class WorldModel(nn.Module):
         total_loss.backward()
         self.optimizer.step()
 
-        self.loss.append(total_loss.item())
+        self.loss = total_loss.item()
 
     def _reconstruct_state(self, state: dict, next_state: list[float]) -> dict:
         """

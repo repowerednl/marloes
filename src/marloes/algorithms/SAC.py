@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
@@ -24,17 +25,21 @@ class SAC:
         self._init_optimizers()
         self.target_value_network.load_state_dict(self.value_network.state_dict())
 
-        # Store losses
-        self.loss_values = []
-        self.loss_critic_1 = []
-        self.loss_critic_2 = []
-        self.loss_actor = []
+        # Initialize losses
+        self._init_losses(config.get("model_updates_per_step", 10))
 
         self.gamma = self.SAC_config.get("gamma", 0.99)  # Discount factor
         self.alpha = self.SAC_config.get(
             "alpha", 0.2
         )  # Temperature parameter for entropy
         self.tau = self.SAC_config.get("tau", 0.005)  # Target network update rate
+
+    def _init_losses(self, model_updates_per_step):
+        self.i = 0
+        self.loss_value = np.zeros(model_updates_per_step)
+        self.loss_critic_1 = np.zeros(model_updates_per_step)
+        self.loss_critic_2 = np.zeros(model_updates_per_step)
+        self.loss_actor = np.zeros(model_updates_per_step)
 
     def _init_optimizers(self):
         """
@@ -96,6 +101,8 @@ class SAC:
         # 4. Update the target value network
         self._update_target_value_network()
 
+        self.i += 1
+
     def _update_value_network(self, batch):
         """
         Updates the value network using the given batch of experiences.
@@ -123,7 +130,7 @@ class SAC:
         value_loss.backward()
         self.value_optimizer.step()
 
-        self.loss_values.append(value_loss.item())
+        self.loss_value[self.i] = value_loss.item()
 
     def _update_critic_networks(self, batch):
         """
@@ -156,9 +163,9 @@ class SAC:
 
             # Store the critic loss
             if i == 0:
-                self.loss_critic_1.append(critic_loss.item())
+                self.loss_critic_1[self.i] = critic_loss.item()
             else:
-                self.loss_critic_2.append(critic_loss.item())
+                self.loss_critic_2[self.i] = critic_loss.item()
 
     def _update_actor_network(self, batch):
         """
@@ -180,7 +187,7 @@ class SAC:
         actor_loss.backward()
         self.actor_optimizer.step()
 
-        self.loss_actor.append(actor_loss.item())
+        self.loss_actor[self.i] = actor_loss.item()
 
     def _update_target_value_network(self):
         """

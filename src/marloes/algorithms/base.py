@@ -59,6 +59,9 @@ class BaseAlgorithm(ABC):
         except KeyError:
             self.model_RB = None
 
+        # Save losses
+        self.losses = {}
+
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         BaseAlgorithm._registry[cls.__name__] = cls
@@ -96,7 +99,7 @@ class BaseAlgorithm(ABC):
 
             # 2. Perform algorithm-specific training steps
             # --------------------
-            self.perform_training_steps(step)
+            self.losses = self.perform_training_steps(step)
 
             # Any time a chunk is "full", it should be saved
             if self.chunk_size != 0 and step % self.chunk_size == 0 and step != 0:
@@ -122,9 +125,10 @@ class BaseAlgorithm(ABC):
         pass
 
     @abstractmethod
-    def perform_training_steps(self, step: int) -> None:
+    def perform_training_steps(self, step: int) -> dict[str, float]:
         """
         Placeholder for a single training step. To be overridden.
+        Should return a dict with the losses of the (parts of) the model.
         """
         pass
 
