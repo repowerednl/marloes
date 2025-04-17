@@ -68,7 +68,7 @@ def get_mock_observation(
     - battery has SOC, degradation
     - solar has forecast, power and available_power and nomination
     - wind has forecast, power and available_power and nomination
-    - demand has forecast and power
+    - demand has forecast nomination and power
     """
     observation = {
         "SolarAgent 0": {
@@ -85,6 +85,7 @@ def get_mock_observation(
         },
         "DemandAgent 0": {
             "forecast": [-2.0, -3.0, -4.0],
+            "nomination": -3.0,
             "power": 0.1,
         },
     }

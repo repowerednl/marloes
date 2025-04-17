@@ -104,7 +104,6 @@ class NESubReward(SubReward):
         expected_nomination_fraction = self._get_expected_nomination_fraction(
             extractor, actual
         )
-
         return (
             -abs(nomination_fraction - expected_nomination_fraction)
             * self.intermediate_scaling_factor

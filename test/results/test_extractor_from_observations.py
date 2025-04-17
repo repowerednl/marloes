@@ -32,6 +32,7 @@ class TestExtractorFromObservations(unittest.TestCase):
         result = self.extractor._get_total_nomination_by_type(self.base_observation)
         self.assertEqual(result["SolarAgent"], 1.8)
         self.assertEqual(result["WindAgent"], 0.9)
+        self.assertEqual(result["DemandAgent"], -3.0)
 
         # Add a solar and a wind agent with different nominations
         new_observation = self.base_observation.copy()
@@ -55,6 +56,7 @@ class TestExtractorFromObservations(unittest.TestCase):
         result = self.extractor._get_total_nomination_by_type(new_observation)
         self.assertEqual(result["SolarAgent"], 4.0)
         self.assertEqual(result["WindAgent"], 2.4)
+        self.assertEqual(result["DemandAgent"], -3.0)
 
     def test_from_observations(self):
         """
