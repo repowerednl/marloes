@@ -15,7 +15,7 @@ def dummy_config():
     return {
         "num_agents": 2,
         "action_dim": 2,
-        "global_dim": 0,
+        "global_dim": 4,
         "WorldModel": {
             "forecast_hidden_size": 8,
             "forecast_num_layers": 1,
@@ -70,7 +70,12 @@ def dummy_transition():
             "available_power": 20.0,
             "nomination": 5.0,
         },
-        "global_context": {},
+        "global_context": {
+            "month": 1,
+            "day": 1,
+            "hour": 2,
+            "minute": 2,
+        },
     }
     actions = {"Agent 0": 0.5, "Agent 1": -0.3}
     reward = 1.0

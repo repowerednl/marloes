@@ -94,4 +94,4 @@ class TestWindAgent(unittest.TestCase):
         self.assertIn("forecast", state)
         self.assertIn("nomination", state)
         self.assertNotIn("time", state)
-        self.assertEqual(len(state), 4)
+        self.assertEqual(len(state), 5)

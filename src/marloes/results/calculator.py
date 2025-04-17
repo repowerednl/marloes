@@ -10,6 +10,7 @@ from marloes.valley.rewards.subrewards import (
     SSSubReward,
     SubReward,
 )
+from marloes.valley.rewards.subrewards.ne import NESubReward
 
 from .extractor import Extractor
 
@@ -25,6 +26,7 @@ class Calculator:
         "SS": SSSubReward,
         "NC": NCSubReward,
         "NB": NBSubReward,
+        "NE": NESubReward,
     }
 
     def __init__(self, uid: int | None = None, dir: str = "results"):

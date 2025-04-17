@@ -17,7 +17,11 @@ class WorldDynamicsModel(nn.Module):
     """
 
     def __init__(
-        self, world_model_config: dict, action_dim: int, scalar_dims: list[int]
+        self,
+        world_model_config: dict,
+        action_dim: int,
+        scalar_dims: list[int],
+        global_dim: int,
     ) -> None:
         """
         Initialize the WorldDynamicsModel.
@@ -29,6 +33,7 @@ class WorldDynamicsModel(nn.Module):
             action_dim (int): Dimension of the action input.
             scalar_dims (list[int]): List of scalar dimensions for each agent, used to determine the
                 output size for the next state prediction.
+            global_dim (int): Dimension of the global context, also used in the output size.
         """
         super().__init__()
         world_enc_dim = world_model_config.get("world_enc_dim", 64)
@@ -36,7 +41,7 @@ class WorldDynamicsModel(nn.Module):
         # Only predict the next scalars for each agent
         # We don't need to predict forecast
         # TODO: Explain this in the paper
-        next_state_dim = sum(scalar_dims)
+        next_state_dim = sum(scalar_dims) + global_dim
 
         self.shared_net = nn.Sequential(
             nn.Linear(world_enc_dim + action_dim, hidden_size),

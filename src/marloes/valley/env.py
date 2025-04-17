@@ -25,6 +25,7 @@ from marloes.agents import (
 from marloes.data.util import encode_datetime
 from marloes.results.extractor import ExtensiveExtractor, Extractor
 from marloes.data.replaybuffer import ReplayBuffer
+from marloes.valley.rewards.reward import Reward
 
 
 class EnergyValley(MultiAgentEnv):
@@ -60,6 +61,7 @@ class EnergyValley(MultiAgentEnv):
         self.extractor: Extractor = self.EXTRACTOR_MAP[
             config.pop("extractor_type", "default")
         ]()
+        self.reward = Reward(actual=True, **config.get("subrewards", {}))
 
         self._initialize_agents(config, algorithm_type)
         self._initialize_model(
@@ -69,7 +71,6 @@ class EnergyValley(MultiAgentEnv):
         # For efficiency
         self.agent_dict = {agent.id: agent for agent in self.agents}
         self._state_cache = {agent.id: None for agent in self.agents}
-        self._reward_cache = {agent.id: None for agent in self.agents}
         # is the hub ever done? Is life ever done? Is life a simulation?
         self._dones_cache = {agent.id: False for agent in self.agents}
         self._infos_cache = {agent.id: {} for agent in self.agents}
@@ -228,12 +229,10 @@ class EnergyValley(MultiAgentEnv):
 
     def _calculate_reward(self):
         """Function to calculate the reward"""
-        reward = 0  # TODO: Implement reward calculation (Return scalar value)
+        reward = self.reward.get(self.extractor)
         # once the reward is calculated, also save it to the extractor
         self.extractor.save_reward(reward)
-        for agent in self.agents:
-            self._reward_cache[agent.id] = reward
-        return self._reward_cache
+        return reward
 
     def reset(self) -> tuple[dict, dict]:
         """
@@ -244,7 +243,9 @@ class EnergyValley(MultiAgentEnv):
         self.time_stamp = self.start_time
         return self._get_full_observation(), {agent.id: {} for agent in self.agents}
 
-    def step(self, actions: dict, normalize: bool = True):
+    def step(
+        self, actions: dict, loss_dict: dict | None = None, normalize: bool = True
+    ):
         """Function should return the observation, reward, done, info"""
 
         # Set setpoints for agents based on actions
@@ -271,11 +272,13 @@ class EnergyValley(MultiAgentEnv):
 
         # Extract results and calculate next states
         self.extractor.from_model(self.model)
-        # TODO: add additional information, market_prices to the observations (and info for logging?)
         self.extractor.from_observations(observations)
+        if loss_dict is not None:
+            self.extractor.store_loss(loss_dict)
 
         # All relevant information must be added to the extractor before this is called
-        rewards = self._calculate_reward()
+        reward = self._calculate_reward()
+        self.extractor.store_reward(reward)
 
         # Update the extractor
         self.extractor.update()
@@ -286,7 +289,7 @@ class EnergyValley(MultiAgentEnv):
         if normalize:
             observations = self._normalize_observations(observations)
 
-        return observations, rewards, self._dones_cache, self._infos_cache
+        return observations, reward, self._dones_cache, self._infos_cache
 
     def _normalize_observations(self, observations: dict):
         """

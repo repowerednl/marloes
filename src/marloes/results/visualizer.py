@@ -16,22 +16,37 @@ class Visualizer:
         Each UID will have its own Calculator instance.
         """
         self.uids = uids
+        # If nothing is passed the uid must be extracted from the calculator
+        if not self.uids:
+            calculator = Calculator(self.uids)
+            self.uids = [calculator.uid]
+        logging.info(f"Visualizer initialized with UIDs: {self.uids}")
+
+        self.calculators = {uid: Calculator(uid) for uid in self.uids}
+
+    def get_common_metrics(self):
+        """
+        Get a list of common metrics for all calculators.
+        This is useful to ensure that the same metrics are available across different simulations.
+        """
+        common_metrics = set(self.calculators[self.uids[0]].extractor.get_all_metrics())
+        for uid in self.uids[1:]:
+            calculator = self.calculators[uid]
+            metrics = calculator.extractor.get_all_metrics()
+            common_metrics.intersection_update(metrics)
+        return list(common_metrics)
 
     def plot_metrics(self, metrics: list[str], save_png: bool = False):
         """
         Plots the selected metrics for each UID in a single figure per metric.
         """
-        # If nothing is passed the uid must be extracted from the calculator
-        if not self.uids:
-            calculator = Calculator(self.uids)
-            self.uids = [calculator.uid]
         logging.info(f"Plotting metrics {metrics} for simulations {self.uids}...")
 
         aggregated_data = {}
 
         # Retrieve the metrics data for each UID
         for uid in self.uids:
-            calculator = Calculator(uid)
+            calculator = self.calculators[uid]
             logging.info(f"Getting metrics for UID {uid}...")
             metrics_data = calculator.get_metrics(metrics)
 
