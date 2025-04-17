@@ -61,14 +61,17 @@ class WorldModel(nn.Module):
             self.world_model_config, self.num_agents, config.get("global_dim", 0)
         )
         self.world_dynamics_model = WorldDynamicsModel(
-            self.world_model_config, config["action_dim"], agents_scalar_dim
+            self.world_model_config,
+            config["action_dim"],
+            agents_scalar_dim,
+            config["global_dim"],
         )
         self.optimizer = Adam(
             self.parameters(),
             lr=self.world_model_config.get("lr", 1e-3),
             weight_decay=self.world_model_config.get("weight_decay", 0.0),
         )
-        self.loss = []
+        self.loss = None
 
     def forward(
         self,
@@ -205,7 +208,7 @@ class WorldModel(nn.Module):
         total_loss.backward()
         self.optimizer.step()
 
-        self.loss.append(total_loss.item())
+        self.loss = total_loss.item()
 
     def _reconstruct_state(self, state: dict, next_state: list[float]) -> dict:
         """

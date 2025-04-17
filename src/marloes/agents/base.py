@@ -65,11 +65,13 @@ class Agent(ABC):
 
         # Store the forecast if provided in an efficient format
         if forecast is not None:
-            self.forecast: np.ndarray = forecast.values.astype(np.float32)
+            self.forecast: np.ndarray = forecast.values.astype(np.float32)  # kW
             self.horizon = 1440  # 24 hours for now
 
             # Also add nomination based on forecast
-            self.nominated_volume: np.ndarray = convert_to_hourly_nomination(forecast)
+            self.nominated_volume: np.ndarray = convert_to_hourly_nomination(
+                forecast
+            )  # kW
         else:
             self.forecast = None
 
@@ -102,13 +104,33 @@ class Agent(ABC):
             state["forecast"] = self.forecast[
                 start_idx:end_idx
             ]  # Numpy slicing is O(1)
-            # TODO: MAR-142 Transform forecast to only relevant information
 
             # Also include nomination
             hour_idx = start_idx // 60  # 60 minutes in an hour
             hour_idx = min(hour_idx, len(self.nominated_volume) - 1)  # safety
+
+            current_minute = start_idx % 60
+            # only add the attribute to the agent if a forecast is present
+            if not hasattr(self, "nomination_fraction"):
+                self.nomination_fraction = 0.0
+
+            # reset the fraction at the first minute of the hour
+            if current_minute == 0:
+                self.nomination_fraction = 0.0
+
             # Add the current hour's nomination to the state
             state["nomination"] = float(self.nominated_volume[hour_idx])
+
+            # Asset has power - add this to the fraction of the hour
+            if state["nomination"] != 0:
+                self.nomination_fraction += (state["power"] / state["nomination"]) / 60
+            else:
+                logging.warning(
+                    "Nomination is zero; skipping fraction update to avoid division by zero."
+                )
+
+            # Add the current nomination fraction to the state
+            state["nomination_fraction"] = self.nomination_fraction
 
         # remove 'time' from the state since this is the same for all agents
         if "time" in state:

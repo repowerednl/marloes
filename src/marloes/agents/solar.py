@@ -16,7 +16,7 @@ class SolarAgent(Agent):
         series, forecast = self._get_production_series(config)
         super().__init__(Supply, config, start_time, series, forecast)
 
-    def _get_production_series(self, config: dict) -> pd.Series:
+    def _get_production_series(self, config: dict) -> tuple[pd.Series, pd.Series]:
         # Read in the right 1 MWp profile from the solar data
         series = read_series(f"Solar_{config.get('orientation')}.parquet")
 
@@ -32,7 +32,7 @@ class SolarAgent(Agent):
         )
         forecast = forecast * config["DC"] / 1000
 
-        return series, forecast
+        return series, forecast  # kW, kW
 
     def get_default_config(cls, config: dict, id: str) -> dict:
         """Each subclass must define its default configuration."""

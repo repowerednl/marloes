@@ -9,11 +9,14 @@ from PyQt6.QtWidgets import (
     QSpinBox,
     QVBoxLayout,
     QWidget,
+    QCheckBox,
+    QGroupBox,
+    QHBoxLayout,
 )
 from PyQt6.QtCore import QTimer
 
 from gui.success_screen import SuccessScreen
-from src.marloes.algorithms import MADDPG, BaseAlgorithm, Priorities, SimpleSetpoint
+from src.marloes.algorithms import BaseAlgorithm, Priorities, SimpleSetpoint
 from src.marloes.validation.validate_config import validate_config
 
 from .errors import ErrorScreen
@@ -42,13 +45,17 @@ class ExperimentSetupApp(QWidget):
         # DEFAULT CONFIG CHECKBOX
         layout.addWidget(QLabel("Select configuration:"))
         self.config_dropdown = QComboBox()
-        self.config_dropdown.addItems(["default_config", "simple_config"])
+        self.config_dropdown.addItems(
+            ["default_config", "simple_config", "dyna_config"]
+        )
         layout.addWidget(self.config_dropdown)
 
         # ALGORITHM SELECTION
         self.algorithm_label = QLabel("Select Algorithm:")
         self.algorithm_dropdown = QComboBox(self)
-        self.algorithm_dropdown.addItems(["Priorities", "SimpleSetpoint"])
+        self.algorithm_dropdown.addItems(
+            ["Priorities", "SimpleSetpoint", "Dyna", "Dreamer"]
+        )
         layout.addWidget(self.algorithm_label)
         layout.addWidget(self.algorithm_dropdown)
 
@@ -59,13 +66,44 @@ class ExperimentSetupApp(QWidget):
         layout.addWidget(self.extractor_type_label)
         layout.addWidget(self.extractor_type_dropdown)
 
+        # SUBREWARDS SELECTION WITH SCALING FACTORS
+        self.subreward_group = QGroupBox("Select Subrewards:")
+        self.subreward_layout = QVBoxLayout()
+
+        self.subreward_checkboxes = {}
+        self.subreward_scalings = {}
+
+        for name in ["CO2", "SS", "NC", "NB", "NE"]:
+            row = QHBoxLayout()
+
+            checkbox = QCheckBox(name)
+            checkbox.setChecked(name == "CO2")  # Default only CO2 selected
+            self.subreward_checkboxes[name] = checkbox
+
+            label = QLabel("Scaling:")
+            scaling_box = QDoubleSpinBox()
+            scaling_box.setRange(0.0, 1.0)
+            scaling_box.setValue(1.0)
+            scaling_box.setDecimals(2)
+            scaling_box.setSingleStep(0.01)
+            self.subreward_scalings[name] = scaling_box
+
+            row.addWidget(checkbox)
+            row.addWidget(label)
+            row.addWidget(scaling_box)
+
+            self.subreward_layout.addLayout(row)
+
+        self.subreward_group.setLayout(self.subreward_layout)
+        layout.addWidget(self.subreward_group)
+
         # EPOCHS
-        self.epochs_label = QLabel("Epochs:")  # Must be an integer
-        self.epochs = QSpinBox()
-        self.epochs.setRange(1000, 1000000)
-        self.epochs.setValue(100000)
-        layout.addWidget(self.epochs_label)
-        layout.addWidget(self.epochs)
+        self.training_steps_label = QLabel("Training Steps:")  # Must be an integer
+        self.training_steps = QSpinBox()
+        self.training_steps.setRange(1000, 1000000)
+        self.training_steps.setValue(100000)
+        layout.addWidget(self.training_steps_label)
+        layout.addWidget(self.training_steps)
 
         # Chunk size
         self.chunk_size_label = QLabel("Chunk Size:")  # Must be an integer
@@ -74,18 +112,6 @@ class ExperimentSetupApp(QWidget):
         self.chunk_size.setValue(10000)
         layout.addWidget(self.chunk_size_label)
         layout.addWidget(self.chunk_size)
-
-        # PARAMETER INPUT
-        self.learning_rate_label = QLabel("Learning Rate:")  # Must be a float
-        self.learning_rate = QDoubleSpinBox()
-        self.learning_rate.setDecimals(5)
-        self.learning_rate.setRange(0.00001, 0.1)
-        self.learning_rate.setValue(0.001)
-        self.learning_rate.setSingleStep(0.0001)
-        self.learning_rate_label.hide()
-        self.learning_rate.hide()
-        layout.addWidget(self.learning_rate_label)
-        layout.addWidget(self.learning_rate)
 
         # START BUTTON
         self.start_button = QPushButton("Start Experiment")
@@ -138,19 +164,33 @@ class ExperimentSetupApp(QWidget):
             config = {}
             print(f"Error loading default config: {e}")
 
-        if self.algorithm_dropdown.currentText():
-            config["algorithm"] = self.algorithm_dropdown.currentText()
+        algorithm_choice = self.algorithm_dropdown.currentText()
+        if algorithm_choice:
+            if not config.get("algorithm") or algorithm_choice != "Priorities":
+                config["algorithm"] = algorithm_choice
 
-        if self.epochs.isVisible():
-            config["epochs"] = self.epochs.value()
+        if self.training_steps.isVisible():
+            if (
+                not config.get("training_steps")
+                or self.training_steps.value() != 100000
+            ):
+                config["training_steps"] = self.training_steps.value()
 
-        if self.epochs.isVisible():
-            config["chunk_size"] = self.chunk_size.value()
-
-        if self.learning_rate.isVisible():
-            config["learning_rate"] = self.learning_rate.value()
+        if self.chunk_size.isVisible():
+            if not config.get("chunk_size") or self.chunk_size.value() != 10000:
+                config["chunk_size"] = self.chunk_size.value()
 
         config["extractor_type"] = self.extractor_type_dropdown.currentText()
+
+        selected_subrewards = {
+            name: {
+                "active": True,
+                "scaling_factor": self.subreward_scalings[name].value(),
+            }
+            for name, checkbox in self.subreward_checkboxes.items()
+            if checkbox.isChecked()
+        }
+        config["subrewards"] = selected_subrewards
 
         # TODO: add additional parameters as needed
         self.config = config

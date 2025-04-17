@@ -2,9 +2,7 @@ import torch
 import numpy as np
 
 
-def parse_state(
-    state_list: list[dict], device: str = "cpu"
-) -> dict[str, dict[str, dict[str, torch.Tensor]]]:
+def parse_state(state_list: list[dict], device: str = "cpu") -> dict[str, dict]:
     """
     Divide state into scalars and forecast per agent and convert to tensors.
 
@@ -25,8 +23,16 @@ def parse_state(
         "state_of_charge",
         "degradation",
     ]
+    global_context_list = []
+    global_keys = [
+        "month",
+        "day",
+        "hour",
+        "minute",
+    ]
 
     for state_dict in state_list:
+        # Add agent data
         for agent_name, agent_info in state_dict.items():
             if agent_name not in agent_data:
                 agent_data[agent_name] = {"scalars": [], "forecast": []}
@@ -48,6 +54,11 @@ def parse_state(
             agent_data[agent_name]["scalars"].append(scalars)
             agent_data[agent_name]["forecast"].append(forecast_array)
 
+        # Add global context
+        context = state_dict["global_context"]
+        vector = [float(context.get(key, 0.0)) for key in global_keys]
+        global_context_list.append(vector)
+
     # Now convert tensors; stack along batch dim
     final_dict = {"agents": {}}
 
@@ -68,7 +79,11 @@ def parse_state(
             "forecast": forecast_tensor,
         }
 
-    # TODO: add global context
+    # Convert global context to tensor
+    global_context_tensor = torch.tensor(
+        global_context_list, dtype=torch.float32, device=device
+    )
+    final_dict["global_context"] = global_context_tensor
 
     return final_dict
 

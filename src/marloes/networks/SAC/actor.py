@@ -33,7 +33,7 @@ class ActorNetwork(SACBaseNetwork):
         """
         state_dim = config["state_dim"]
         action_dim = config["action_dim"]
-        super(ActorNetwork, self).__init__(state_dim, config)
+        super(ActorNetwork, self).__init__(state_dim, config["SAC"])
 
         # Separate heads for mean and log_std
         self.mean_layer = nn.Linear(self.hidden_dim, action_dim)

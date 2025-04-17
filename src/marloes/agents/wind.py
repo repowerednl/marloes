@@ -16,7 +16,7 @@ class WindAgent(Agent):
         series, forecast = self._get_production_series(config)
         super().__init__(Supply, config, start_time, series, forecast)
 
-    def _get_production_series(self, config: dict):
+    def _get_production_series(self, config: dict) -> tuple[pd.Series, pd.Series]:
         # Read in the right 1 MWp profile from the wind data
         series = read_series(f"Wind_{config.get('location')}.parquet")
 
@@ -29,7 +29,7 @@ class WindAgent(Agent):
         forecast = read_series(f"Wind_{config.pop('location')}.parquet", forecast=True)
         forecast *= config["power"]
 
-        return series, forecast
+        return series, forecast  # kW, kW
 
     def get_default_config(cls, config: dict, id: str) -> dict:
         """Each subclass must define its default configuration."""

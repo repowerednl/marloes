@@ -3,6 +3,7 @@
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 from simon.assets.demand import Demand
 
 from marloes.data.util import read_series
@@ -15,7 +16,7 @@ class DemandAgent(Agent):
         series, forecast = self._get_demand_series(config)
         super().__init__(Demand, config, start_time, series, forecast)
 
-    def _get_demand_series(self, config: dict):
+    def _get_demand_series(self, config: dict) -> tuple[pd.Series, pd.Series]:
         # Read in the right demand profile
         series = read_series(f"Demand_{config.get('profile')}.parquet")
 
@@ -29,7 +30,7 @@ class DemandAgent(Agent):
         # To sum easily for summing forecasts return negative forecast
         forecast = -forecast
 
-        return series, forecast
+        return series, forecast  # kW, kW
 
     @classmethod
     def get_default_config(cls, config: dict, id: str) -> dict:

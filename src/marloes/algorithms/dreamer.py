@@ -10,6 +10,8 @@ class Dreamer(BaseAlgorithm):
     Dreamer algorithm implementation using the WorldModel and ActorCritic modules.
     """
 
+    __name__ = "Dreamer"
+
     def __init__(self, config: dict):
         """
         Initializes the Dreamer algorithm.

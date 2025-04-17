@@ -37,34 +37,37 @@ class Extractor:
         self.size = math.ceil(MINUTES_IN_A_YEAR / self.chunk_size)
 
         if from_model:
-            # Marl(oes) info
-            self.elapsed_time = np.zeros(self.size)
-            self.loss = np.zeros(self.size)
-            self.reward = np.zeros(self.size)
+            self._init_empty_arrays()
 
-            # Reward info
-            self.grid_state = np.zeros(self.size)
-            self.total_solar_production = np.zeros(self.size)
-            self.total_battery_production = np.zeros(self.size)
-            self.total_electrolyser_production = np.zeros(self.size)
-            self.total_wind_production = np.zeros(self.size)
-            self.total_grid_production = np.zeros(self.size)
+    def _init_empty_arrays(self):
+        # Marl(oes) info
+        self.elapsed_time = np.zeros(self.size)
+        self.reward = np.zeros(self.size)
 
-            # Observation info
-            self.total_solar_nomination = np.zeros(self.size)
-            self.total_wind_nomination = np.zeros(self.size)
-            self.total_demand_nomination = np.zeros(self.size)
-            self.total_nomination_fraction = np.zeros(self.size)
+        # Reward info
+        self.grid_state = np.zeros(self.size)
+        self.total_solar_production = np.zeros(self.size)
+        self.total_battery_production = np.zeros(self.size)
+        self.total_electrolyser_production = np.zeros(self.size)
+        self.total_wind_production = np.zeros(self.size)
+        self.total_grid_production = np.zeros(self.size)
+
+        # Observation info
+        self.total_solar_nomination = np.zeros(self.size)
+        self.total_wind_nomination = np.zeros(self.size)
+        self.total_demand_nomination = np.zeros(self.size)
+        self.total_nomination_fraction = np.zeros(self.size)
 
     def clear(self):
         """Reset the timestep index to zero."""
         self.i = 0
+        self._init_empty_arrays()
 
     def update(self):
         """Increment the timestep index by one."""
         self.i += 1
 
-    def save_reward(self, reward: float) -> None:
+    def store_reward(self, reward: float) -> None:
         """Save the reward for the current timestep."""
         self.reward[self.i] = reward
 
@@ -77,10 +80,6 @@ class Extractor:
 
         # Tracking
         self.elapsed_time[self.i] = time.time() - self.start_time
-
-        # Marl(oes) info
-        # TODO: Implement loss tracking
-        # self.loss[self.i] = loss
 
         # Metrics/Reward info
         output_power_data = self.get_current_power_by_type(model)
@@ -165,6 +164,19 @@ class Extractor:
             if "nomination_fraction" in value:
                 self.total_nomination_fraction[self.i] += value["nomination_fraction"]
 
+    def store_loss(self, loss_dict: dict) -> None:
+        """
+        Store each loss in a dedicated array. Dict can have random keys.
+        """
+        if self.i >= self.size:
+            raise IndexError("Extractor has reached its maximum capacity.")
+
+        for loss_key, loss_val in loss_dict.items():
+            # Check for attribute existence
+            if not hasattr(self, loss_key):
+                setattr(self, loss_key, np.zeros(self.size))
+            getattr(self, loss_key)[self.i] = loss_val
+
     @staticmethod
     def _get_total_nomination_by_type(observations: dict) -> dict[str, float]:
         """
@@ -220,6 +232,18 @@ class Extractor:
         Extract additional information from the model. Irrelevant for the base Extractor.
         """
         pass
+
+    def get_all_metrics(self):
+        """
+        Return list of names of all attributes that are a numpy array.
+        """
+        return [
+            attr
+            for attr in dir(self)
+            if isinstance(getattr(self, attr), np.ndarray)
+            and not attr.startswith("_")
+            and not attr.endswith("_data")
+        ]
 
 
 class ExtensiveExtractor(Extractor):
