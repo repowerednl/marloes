@@ -60,7 +60,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         # Demand
         self.assertEqual(self.demand_agent.id, "DemandAgent 0")
         self.assertEqual(self.demand_agent.asset.name, "Demand 0")
-        self.assertEqual(self.demand_agent.asset.max_power_in, float("inf"))
+        self.assertEqual(self.demand_agent.asset.max_power_in, 150)
         # Solar
         self.assertEqual(self.solar_agent.asset.name, "Solar 0")
         self.assertEqual(self.solar_agent.id, "SolarAgent 0")
@@ -144,7 +144,9 @@ class TestEnergyValleyEnv(unittest.TestCase):
         """
         # dummy actions
         actions = {self.demand_agent.id: 0, self.battery_agent.id: 0}
-        observation, reward, done, info = self.env.step(actions=actions)
+        observation, reward, done, info = self.env.step(
+            actions=actions, normalize=False
+        )
         # and if the state time is updated with self.env.time_step
         self.assertEqual(
             self.demand_agent.asset.state.time,
