@@ -14,6 +14,9 @@ class DemandAgent(Agent):
     def __init__(self, config: dict, start_time: datetime):
         series, forecast = self._get_demand_series(config)
         super().__init__(Demand, config, start_time, series, forecast)
+        # Set max_power_in to the max of the series
+        # TODO: Matthias, does restricting this have any unwanted side effects?
+        self.asset.max_power_in = series.abs().max()
 
     def _get_demand_series(self, config: dict):
         # Read in the right demand profile

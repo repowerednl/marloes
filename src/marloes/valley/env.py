@@ -22,6 +22,7 @@ from marloes.agents import (
     SolarAgent,
     WindAgent,
 )
+from marloes.data.util import encode_datetime
 from marloes.results.extractor import ExtensiveExtractor, Extractor
 from marloes.data.replaybuffer import ReplayBuffer
 
@@ -201,25 +202,29 @@ class EnergyValley(MultiAgentEnv):
             self._state_cache[agent.id] = relevant_state
         return self._state_cache
 
-    def _get_global_context(self) -> dict:
+    def _get_global_context(self, normalize: bool = True) -> dict:
         """Function to get additional global information (market prices, etc.)"""
-        current_month = self.time_stamp.month
-        current_day = self.time_stamp.day
-        current_hour = self.time_stamp.hour
-        current_minute = self.time_stamp.minute
-        return {
-            "global_context": {
-                "month": current_month,
-                "day": current_day,
-                "hour": current_hour,
-                "minute": current_minute,
+        if not normalize:
+            current_month = self.time_stamp.month
+            current_day = self.time_stamp.day
+            current_hour = self.time_stamp.hour
+            current_minute = self.time_stamp.minute
+            return {
+                "global_context": {
+                    "month": current_month,
+                    "day": current_day,
+                    "hour": current_hour,
+                    "minute": current_minute,
+                }
             }
-        }
+        else:
+            # Use cyclical normalization for time
+            return encode_datetime(self.time_stamp)
 
-    def _get_full_observation(self) -> dict:
+    def _get_full_observation(self, normalize: bool = True) -> dict:
         """Function to get the full observation (agent state + additional information)"""
         # TODO: Is the grid information added to the state?
-        return self._combine_states() | self._get_global_context()
+        return self._combine_states() | self._get_global_context(normalize)
 
     def _calculate_reward(self):
         """Function to calculate the reward"""
@@ -239,7 +244,7 @@ class EnergyValley(MultiAgentEnv):
         self.time_stamp = self.start_time
         return self._get_full_observation(), {agent.id: {} for agent in self.agents}
 
-    def step(self, actions: dict):
+    def step(self, actions: dict, normalize: bool = True):
         """Function should return the observation, reward, done, info"""
 
         # Set setpoints for agents based on actions
@@ -262,7 +267,7 @@ class EnergyValley(MultiAgentEnv):
             electrolyser._loss_discharge()
 
         # Get full observation
-        observations = self._get_full_observation()
+        observations = self._get_full_observation(normalize)
 
         # Extract results and calculate next states
         self.extractor.from_model(self.model)
@@ -278,4 +283,26 @@ class EnergyValley(MultiAgentEnv):
         # After the update, the ExtensiveExtractor needs the model again to save additional information
         self.extractor.add_additional_info_from_model(self.model)
 
+        if normalize:
+            observations = self._normalize_observations(observations)
+
         return observations, rewards, self._dones_cache, self._infos_cache
+
+    def _normalize_observations(self, observations: dict):
+        """
+        Normalize the agent observations to a range of 0 to max_power.
+        """
+        for agent_id, agent_dict in observations.items():
+            if agent_id.startswith("Global"):
+                continue  # Skip global observations
+            max_power = self.agent_dict[agent_id].asset.max_power_out
+            if max_power == 0:
+                # Demand agent; take max power in instead
+                max_power = self.agent_dict[agent_id].asset.max_power_in
+
+            for key, value in agent_dict.items():
+                if key in ["degradation", "state_of_charge"]:
+                    continue  # No need to normalize these values
+                agent_dict[key] = value / max_power
+
+        return observations
