@@ -43,7 +43,6 @@ jobs:
     with:
       python_version: "3.11.2"
       poetry_version: "1.8.4"
-      poetry_no_root: false
       # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
       # when configuring a working directory, make sure the cached paths are also up-to-date
       file_paths_to_cache: |
@@ -59,10 +58,11 @@ jobs:
   release:
     needs: pytest-simple-with-coverage
     if: contains('main', github.head_ref) || contains('main', github.ref_name)
-    uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
+    uses: repowerednl/.github/.github/workflows/release-pypi-package.yml@main
     with:
       python_version: "3.11.2"
       poetry_version: "1.8.4"
+      poetry_no_root: false
       # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
       # when configuring a working directory, make sure the cached paths are also up-to-date
       file_paths_to_cache: |
