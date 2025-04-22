@@ -4,7 +4,6 @@ import pandas as pd
 import pytest
 from marloes.algorithms.priorities import Priorities
 from marloes.agents.base import Agent
-from marloes.agents.battery import BatteryAgent
 
 from test.util import get_accurate_observation, get_mock_observation
 
@@ -49,6 +48,10 @@ class TestPriorities(unittest.TestCase):
             "marloes.results.saver.Saver._update_simulation_number", return_value=0
         ), patch("marloes.results.saver.Saver._validate_folder"), patch(
             "marloes.valley.env.EnergyValley._get_full_observation", return_value={}
+        ), patch(
+            "marloes.agents.base.Agent.get_state", return_value={}
+        ), patch(
+            "marloes.valley.env.Extractor.store_reward", return_value=None, create=True
         ):
             Agent._id_counters = {}
             self.alg = Priorities(config=get_new_config())
