@@ -61,6 +61,7 @@ class BaseAlgorithm(ABC):
 
         # Save losses
         self.losses = {}
+        self.normalize = True
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -90,7 +91,11 @@ class BaseAlgorithm(ABC):
                 # Get actions from the algorithm
                 actions = self.get_actions(state)
 
-            next_state, reward, dones, infos = self.environment.step(actions)
+            next_state, reward, dones, infos = self.environment.step(
+                actions=actions,
+                loss_dict=self.losses,
+                normalize=self.normalize,
+            )
 
             # Store (real) experiences
             self.real_RB.push(state, actions, reward, next_state)

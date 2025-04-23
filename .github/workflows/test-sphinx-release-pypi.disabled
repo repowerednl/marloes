@@ -31,6 +31,7 @@ jobs:
         .venv
         /home/runner/.local/
       # working_directory: # Optional, defaults to '.'
+      poetry_no_root: false
     secrets:
       private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
       private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}

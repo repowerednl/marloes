@@ -16,20 +16,7 @@ def parse_state(state_list: list[dict], device: str = "cpu") -> dict[str, dict]:
             scalars and forecasts.
     """
     agent_data = {}
-    SCALAR_KEYS = [
-        "power",
-        "available_power",
-        "nomination",
-        "state_of_charge",
-        "degradation",
-    ]
     global_context_list = []
-    global_keys = [
-        "month",
-        "day",
-        "hour",
-        "minute",
-    ]
 
     for state_dict in state_list:
         # Add agent data
@@ -39,24 +26,20 @@ def parse_state(state_list: list[dict], device: str = "cpu") -> dict[str, dict]:
             scalars = []
             forecast_array = None
 
-            for key in SCALAR_KEYS:
-                # If the agent has this key, convert it; else add default 0
-                if key in agent_info:
-                    scalars.append(float(agent_info[key]))
-
-            if "forecast" in agent_info:
-                # GRU expects (.., seq_length, num_features), not (.., num_features, seq_length)
-                # So we reshape
-                forecast_array = np.array(
-                    agent_info["forecast"], dtype=np.float32
-                ).reshape(-1, 1)
+            for k, v in agent_info.items():
+                if k == "forecast":
+                    # GRU expects (.., seq_length, num_features), not (.., num_features, seq_length)
+                    # So we reshape
+                    forecast_array = np.array(v, dtype=np.float32).reshape(-1, 1)
+                else:
+                    scalars.append(float(v))
 
             agent_data[agent_name]["scalars"].append(scalars)
             agent_data[agent_name]["forecast"].append(forecast_array)
 
         # Add global context
         context = state_dict["global_context"]
-        vector = [float(context.get(key, 0.0)) for key in global_keys]
+        vector = [float(v) for v in context.values()]
         global_context_list.append(vector)
 
     # Now convert tensors; stack along batch dim

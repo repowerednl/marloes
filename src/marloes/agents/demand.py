@@ -15,6 +15,8 @@ class DemandAgent(Agent):
     def __init__(self, config: dict, start_time: datetime):
         series, forecast = self._get_demand_series(config)
         super().__init__(Demand, config, start_time, series, forecast)
+        # Set max_power_in to the max of the series
+        self.asset.max_power_in = series.abs().max()
 
     def _get_demand_series(self, config: dict) -> tuple[pd.Series, pd.Series]:
         # Read in the right demand profile
