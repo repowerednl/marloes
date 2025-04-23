@@ -55,7 +55,9 @@ class NESubReward(SubReward):
         reward_array = self._calculate_intermediate_penalty(extractor, actual=False)
         full_penalty_indices = np.arange(60, len(reward_array), 60)
         full_penalties = [
-            self._calculate_penalty(extractor, slice(t - 60, t), actual=False)
+            self._calculate_penalty(
+                extractor, slice(t - 60, t), actual=True
+            )  # needs to be True to use the slices
             for t in full_penalty_indices
         ]
         reward_array[full_penalty_indices] = full_penalties
@@ -84,12 +86,15 @@ class NESubReward(SubReward):
         demand_nomination = self._get_target(
             extractor.total_demand_nomination, time_slice, actual
         )
-
+        print("TimeSlice:", time_slice)
         # add all production together
         total_production = solar_production + wind_production + demand
+        print(len(total_production))
+        print(total_production)
         # add all nominations together
         total_nomination = solar_nomination + wind_nomination + demand_nomination
-
+        print(len(total_nomination))
+        print(total_nomination)
         # calculate the penalty
         penalty = -(
             abs(sum(total_production) - sum(total_nomination)) * self.scaling_factor
