@@ -15,6 +15,7 @@ from marloes.agents import (
     SolarAgent,
     WindAgent,
     ElectrolyserAgent,
+    DemandAgent,
 )
 from marloes.agents.base import SupplyAgents, StorageAgents, DemandAgents
 from marloes.data.extensive_data import ExtensiveDataStore
@@ -50,6 +51,7 @@ class Extractor:
         self.total_battery_production = np.zeros(self.size)
         self.total_electrolyser_production = np.zeros(self.size)
         self.total_wind_production = np.zeros(self.size)
+        self.total_demand = np.zeros(self.size)
         self.total_grid_production = np.zeros(self.size)
 
         # Observation info
@@ -101,6 +103,7 @@ class Extractor:
         self.total_grid_production[self.i] = output_power_data.get(
             GridAgent.__name__, 0.0
         )
+        self.total_demand[self.i] = output_power_data.get(DemandAgent.__name__, 0.0)
 
     def from_files(self, uid: int | None = None, dir: str = "results") -> int:
         """
@@ -222,8 +225,11 @@ class Extractor:
         for asset in model.graph.nodes:
             power = asset.state.power
             asset_type = asset.name.split()[0]  # Take generic part of the name
-
-            output_power_data[asset_type] += max(0, power)
+            print(asset_type)
+            if asset_type == DemandAgents.DEMAND:
+                output_power_data[asset_type] += min(0, power)
+            else:
+                output_power_data[asset_type] += max(0, power)
 
         return dict(output_power_data)
 
