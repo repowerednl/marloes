@@ -80,11 +80,21 @@ class NESubReward(SubReward):
         wind_nomination = self._get_target(
             extractor.total_wind_nomination, time_slice, actual
         )
-        # TODO: Add all production and all nomination together (NB: demand nomination is negative)
-        solar_penalty = abs(np.mean(solar_production) - np.mean(solar_nomination))
-        wind_penalty = abs(np.mean(wind_production) - np.mean(wind_nomination))
+        demand = self._get_target(extractor.total_demand, time_slice, actual)
+        demand_nomination = self._get_target(
+            extractor.total_demand_nomination, time_slice, actual
+        )
 
-        return -(solar_penalty + wind_penalty)
+        # add all production together
+        total_production = solar_production + wind_production + demand
+        # add all nominations together
+        total_nomination = solar_nomination + wind_nomination + demand_nomination
+
+        # calculate the penalty
+        penalty = -(
+            abs(sum(total_production) - sum(total_nomination)) * self.scaling_factor
+        )
+        return penalty
 
     @staticmethod
     def _hour_has_passed(i: int) -> bool:
