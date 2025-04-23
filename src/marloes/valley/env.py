@@ -220,7 +220,7 @@ class EnergyValley(MultiAgentEnv):
             }
         else:
             # Use cyclical normalization for time
-            return encode_datetime(self.time_stamp)
+            return {"global_context": encode_datetime(self.time_stamp)}
 
     def _get_full_observation(self, normalize: bool = True) -> dict:
         """Function to get the full observation (agent state + additional information)"""
@@ -296,7 +296,7 @@ class EnergyValley(MultiAgentEnv):
         Normalize the agent observations to a range of 0 to max_power.
         """
         for agent_id, agent_dict in observations.items():
-            if agent_id.startswith("Global"):
+            if agent_id.startswith("global"):
                 continue  # Skip global observations
             max_power = self.agent_dict[agent_id].asset.max_power_out
             if max_power == 0:

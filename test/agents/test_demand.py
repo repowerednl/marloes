@@ -13,7 +13,6 @@ CONFIG = {
     "name": "DemandOne",
     "profile": "Farm",
     "scale": 1,
-    "max_power_in": 10.0,
     "constant_demand": 5.0,
     "curtailable_by_solver": True,
     "upward_dispatchable": False,
@@ -27,7 +26,6 @@ class TestDemandAgent(unittest.TestCase):
         demand_agent = DemandAgent(start_time=datetime.now(), config=CONFIG)
         self.assertIsInstance(demand_agent.asset, Demand)
         self.assertEqual(demand_agent.asset.name, "DemandOne")
-        self.assertEqual(demand_agent.asset.max_power_in, 10.0)
         self.assertIsInstance(demand_agent.asset.data_source, DummyDataSource)
         self.assertEqual(demand_agent.asset.data_source.value, 5.0)
         # also test the get_state() method
@@ -44,5 +42,4 @@ class TestDemandAgent(unittest.TestCase):
         }
         demand_agent = DemandAgent(start_time=datetime.now(), config=partial_config)
         self.assertIsInstance(demand_agent.asset, Demand)
-        self.assertEqual(demand_agent.asset.max_power_in, np.inf)
         self.assertFalse(demand_agent.asset.curtailable_by_solver)
