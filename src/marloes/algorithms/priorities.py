@@ -15,6 +15,7 @@ class Priorities(BaseAlgorithm):
         Initializes the Priorities algorithm.
         """
         super().__init__(config)
+        self.normalize = False  # No normalization needed for priorities
 
     @staticmethod
     def _determine_battery_actions(

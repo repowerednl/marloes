@@ -46,6 +46,13 @@ name = "repowered"
 url = "http://packages.repowered.nl/simple"
 priority = "explicit"
 
+
+[tool.poetry.group.dev.dependencies]
+coverage = "^7.8.0"
+
+[tool.coverage.run]
+source = ["marloes"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

@@ -221,3 +221,16 @@ def convert_to_hourly_nomination(series: pd.Series) -> pd.Series:
     hourly_nomination = series.resample("h").agg("mean")
 
     return hourly_nomination
+
+
+def encode_datetime(dt: datetime) -> dict:
+    return {
+        "month_sin": np.sin(2 * np.pi * dt.month / 12),
+        "month_cos": np.cos(2 * np.pi * dt.month / 12),
+        "day_sin": np.sin(2 * np.pi * dt.day / 31),
+        "day_cos": np.cos(2 * np.pi * dt.day / 31),
+        "hour_sin": np.sin(2 * np.pi * dt.hour / 24),
+        "hour_cos": np.cos(2 * np.pi * dt.hour / 24),
+        "minute_sin": np.sin(2 * np.pi * dt.minute / 60),
+        "minute_cos": np.cos(2 * np.pi * dt.minute / 60),
+    }
