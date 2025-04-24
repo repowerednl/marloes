@@ -1,6 +1,6 @@
 algorithm: Dyna
-chunk_size: 10000
-training_steps: 100000
+chunk_size: 1000
+training_steps: 10000
 num_initial_random_steps: 0
 batch_size: 32
 agents:
@@ -30,6 +30,10 @@ agents:
     power: 750
 grid:
   name: Grid
+subrewards:
+  CO2:
+    active: true
+    scaling_factor: 0.00002
 replay_buffers:
   real_capacity: 100000
   model_capacity: 100000
@@ -52,7 +56,7 @@ SAC:
   learning_rate: 0.0003
   eps: 0.0000001
   weight_decay: 0.0
-  hidden_dim: 128
+  hidden_dim: 256
   num_layers: 2
   log_std_min: -20
   log_std_max: 2
