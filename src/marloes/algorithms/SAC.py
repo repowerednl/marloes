@@ -6,6 +6,7 @@ from torch.optim import Adam
 from marloes.networks.SAC.actor import ActorNetwork
 from marloes.networks.SAC.critic import CriticNetwork
 from marloes.networks.SAC.value import ValueNetwork
+from marloes.util import timethis
 
 
 class SAC:
@@ -13,13 +14,15 @@ class SAC:
     Soft Actor-Critic (SAC) algorithm for reinforcement learning.
     """
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, device: str):
         self.SAC_config = config.get("SAC", {})
-        self.value_network = ValueNetwork(config)  # Parameterized by psi
-        self.target_value_network = ValueNetwork(config)  # Parameterized by psi'
-        self.critic_1_network = CriticNetwork(config)
-        self.critic_2_network = CriticNetwork(config)
-        self.actor_network = ActorNetwork(config)  # Parameterized by phi
+        self.value_network = ValueNetwork(config).to(device)  # Parameterized by psi
+        self.target_value_network = ValueNetwork(config).to(
+            device
+        )  # Parameterized by psi'
+        self.critic_1_network = CriticNetwork(config).to(device)
+        self.critic_2_network = CriticNetwork(config).to(device)
+        self.actor_network = ActorNetwork(config).to(device)  # Parameterized by phi
 
         # Initialize optimizers
         self._init_optimizers()

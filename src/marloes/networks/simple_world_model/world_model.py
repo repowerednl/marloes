@@ -13,6 +13,7 @@ from marloes.networks.simple_world_model.util import (
 )
 from marloes.networks.simple_world_model.world_dynamics import WorldDynamicsModel
 from marloes.networks.simple_world_model.world_state_encoder import WorldStateEncoder
+from marloes.util import timethis
 
 
 class WorldModel(nn.Module):
@@ -174,7 +175,7 @@ class WorldModel(nn.Module):
         self.train()
 
         # 1. Parse batch to fit world model expectations
-        parsed_batch = parse_batch(transitions_batch)
+        parsed_batch = parse_batch(transitions_batch, device)
         scalar_list = [
             agent["scalars"] for agent in parsed_batch["state"]["agents"].values()
         ]
@@ -198,7 +199,7 @@ class WorldModel(nn.Module):
             )
         ).to(device)
         reward_target = (
-            torch.from_numpy(np.array(rewards, dtype=np.float32))
+            torch.from_numpy(np.array(rewards.cpu(), dtype=np.float32))
             .unsqueeze(-1)
             .to(device)
         )
