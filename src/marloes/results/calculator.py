@@ -28,10 +28,25 @@ class Calculator:
         "NB": NBSubReward,
         "NE": NESubReward,
     }
+    EXTRA_METRICS = {
+        "grid_state": "cumulative_grid_state",
+    }
 
     def __init__(self, uid: int | None = None, dir: str = "results"):
         self.extractor = Extractor(from_model=False)
         self.uid = self.extractor.from_files(uid, dir)
+
+    def get_all_metrics(self) -> list[str]:
+        """
+        Returns a list of all available metrics.
+        This is useful to check which metrics are available for plotting or analysis.
+        """
+        base_metrics = self.extractor.get_all_metrics()
+        # Extract al extra metrics for which the key is in the base metrics
+        extra_metrics = [
+            self.EXTRA_METRICS[key] for key in self.EXTRA_METRICS if key in base_metrics
+        ]
+        return base_metrics + extra_metrics
 
     def get_metrics(self, metrics: list[str]) -> dict[str, np.ndarray | None]:
         """

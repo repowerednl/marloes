@@ -29,10 +29,10 @@ class Visualizer:
         Get a list of common metrics for all calculators.
         This is useful to ensure that the same metrics are available across different simulations.
         """
-        common_metrics = set(self.calculators[self.uids[0]].extractor.get_all_metrics())
+        common_metrics = set(self.calculators[self.uids[0]].get_all_metrics())
         for uid in self.uids[1:]:
             calculator = self.calculators[uid]
-            metrics = calculator.extractor.get_all_metrics()
+            metrics = calculator.get_all_metrics()
             common_metrics.intersection_update(metrics)
         return list(common_metrics)
 
