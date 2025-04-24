@@ -88,22 +88,14 @@ class Extractor:
         self.grid_state[self.i] = list(model.graph.nodes)[0].state.power
 
         # Emission info
-        self.total_solar_production[self.i] = output_power_data.get(
-            SolarAgent.__name__, 0.0
-        )
-        self.total_battery_production[self.i] = output_power_data.get(
-            BatteryAgent.__name__, 0.0
-        )
+        self.total_solar_production[self.i] = output_power_data.get("Solar", 0.0)
+        self.total_battery_production[self.i] = output_power_data.get("Battery", 0.0)
         self.total_electrolyser_production[self.i] = output_power_data.get(
-            ElectrolyserAgent.__name__, 0.0
+            "Electrolyser", 0.0
         )
-        self.total_wind_production[self.i] = output_power_data.get(
-            WindAgent.__name__, 0.0
-        )
-        self.total_grid_production[self.i] = output_power_data.get(
-            GridAgent.__name__, 0.0
-        )
-        self.total_demand[self.i] = output_power_data.get(DemandAgent.__name__, 0.0)
+        self.total_wind_production[self.i] = output_power_data.get("Wind", 0.0)
+        self.total_grid_production[self.i] = output_power_data.get("Grid", 0.0)
+        self.total_demand[self.i] = output_power_data.get("Demand", 0.0)
 
     def from_files(self, uid: int | None = None, dir: str = "results") -> int:
         """
