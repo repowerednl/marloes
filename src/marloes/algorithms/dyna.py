@@ -1,7 +1,8 @@
 import numpy as np
 import torch
 
-from marloes.algorithms import BaseAlgorithm, SAC
+from .base import BaseAlgorithm
+from .SAC import SAC
 from marloes.networks.simple_world_model.world_model import WorldModel
 
 
@@ -47,7 +48,7 @@ class Dyna(BaseAlgorithm):
             dict: Actions to take in the environment.
         """
         # Convert state to tensor
-        state_tensor = self.real_RB.convert_to_tensors([state])
+        state_tensor = torch.stack([self.real_RB.dict_to_tens(state)]).to(self.device)
 
         # Get actions from the SAC agent
         actions = self.sac.act(state_tensor)
@@ -114,7 +115,7 @@ class Dyna(BaseAlgorithm):
 
         # 3. Update the model (SAC) with real and synthetic experiences
         # --------------------
-        self.sac._init_losses()  # Reset loss tracking
+        self.sac._init_losses(self.model_updates_per_step)  # Reset loss tracking
         for _ in range(self.model_updates_per_step):
             # Sample from both real and synthetic experiences; SAC uses flattened batches
             real_batch = self.real_RB.sample(
