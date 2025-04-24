@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 import random
+import time
 import torch
 
 from marloes.results.saver import Saver
@@ -40,6 +41,7 @@ class BaseAlgorithm(ABC):
         self.device = torch.device(
             "mps" if torch.backends.mps.is_available() else "cpu"
         )
+        self.device = torch.device("cpu")
         if self.device.type == "cpu":
             logging.warning(
                 "MPS is not available. Using CPU for computations. Performance may be slower."
