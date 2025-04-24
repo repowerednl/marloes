@@ -225,7 +225,6 @@ class Extractor:
         for asset in model.graph.nodes:
             power = asset.state.power
             asset_type = asset.name.split()[0]  # Take generic part of the name
-            print(asset_type)
             if asset_type == DemandAgents.DEMAND:
                 output_power_data[asset_type] += min(0, power)
             else:
