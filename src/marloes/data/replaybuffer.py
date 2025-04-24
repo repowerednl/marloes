@@ -7,7 +7,7 @@ Transition = namedtuple("Transition", ["state", "actions", "rewards", "next_stat
 
 
 class ReplayBuffer:
-    def __init__(self, capacity: int = 10000, device="cpu"):
+    def __init__(self, capacity: int, device: str):
         """
         Initializes the replay buffer.
 
@@ -116,6 +116,9 @@ class ReplayBuffer:
         Returns:
             torch.Tensor or list of torch.Tensor: The transformed tensor(s).
         """
+        # if not a dictionary, convert to tensor
+        if not isinstance(data, dict):
+            return torch.tensor(data, dtype=torch.float32).unsqueeze(0)
 
         def recursive_tensor_extraction(value):
             """
