@@ -71,7 +71,7 @@ class Agent(ABC):
             # Also add nomination based on forecast
             self.nominated_volume: np.ndarray = convert_to_hourly_nomination(
                 forecast
-            )  # kW
+            ).values.astype(np.float32)
         else:
             self.forecast = None
 
