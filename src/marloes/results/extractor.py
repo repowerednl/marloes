@@ -15,8 +15,9 @@ from marloes.agents import (
     SolarAgent,
     WindAgent,
     ElectrolyserAgent,
+    DemandAgent,
 )
-from marloes.agents.base import SupplyAgents, StorageAgents
+from marloes.agents.base import SupplyAgents, StorageAgents, DemandAgents
 from marloes.data.extensive_data import ExtensiveDataStore
 
 MINUTES_IN_A_YEAR = 525600
@@ -50,11 +51,14 @@ class Extractor:
         self.total_battery_production = np.zeros(self.size)
         self.total_electrolyser_production = np.zeros(self.size)
         self.total_wind_production = np.zeros(self.size)
+        self.total_demand = np.zeros(self.size)
         self.total_grid_production = np.zeros(self.size)
 
         # Observation info
         self.total_solar_nomination = np.zeros(self.size)
         self.total_wind_nomination = np.zeros(self.size)
+        self.total_demand_nomination = np.zeros(self.size)
+        self.total_nomination_fraction = np.zeros(self.size)
 
     def clear(self):
         """Reset the timestep index to zero."""
@@ -99,6 +103,7 @@ class Extractor:
         self.total_grid_production[self.i] = output_power_data.get(
             GridAgent.__name__, 0.0
         )
+        self.total_demand[self.i] = output_power_data.get(DemandAgent.__name__, 0.0)
 
     def from_files(self, uid: int | None = None, dir: str = "results") -> int:
         """
@@ -155,6 +160,12 @@ class Extractor:
         nominations = self._get_total_nomination_by_type(observations)
         self.total_solar_nomination[self.i] = nominations["SolarAgent"]
         self.total_wind_nomination[self.i] = nominations["WindAgent"]
+        self.total_demand_nomination[self.i] = nominations["DemandAgent"]
+
+        # sum all nomination_fractions in observations together
+        for key, value in observations.items():
+            if "nomination_fraction" in value:
+                self.total_nomination_fraction[self.i] += value["nomination_fraction"]
 
     def store_loss(self, loss_dict: dict) -> None:
         """
@@ -172,21 +183,24 @@ class Extractor:
     @staticmethod
     def _get_total_nomination_by_type(observations: dict) -> dict[str, float]:
         """
-        At a timestep, sums the nomination of all assets of a specific (supply) type.
+        At a timestep, sums the nomination of all Supply and Demand agents
         - SolarAgent
         - WindAgent
-        TODO: demand has nominations (because they have a forecast), add it here or remove if from being created (marloes.agents.base)
+        - DemandAgent
         """
-        nominations = {agent.value: 0.0 for agent in SupplyAgents}
+        supply_nominations = {agent.value: 0.0 for agent in SupplyAgents}
+        demand_nominations = {agent.value: 0.0 for agent in DemandAgents}
 
         for agent_id, observation in observations.items():
             agent_type = agent_id.split(" ")[0]
-            if agent_type in nominations:
-                nominations[agent_type] += observation[
+            if agent_type in supply_nominations:
+                supply_nominations[agent_type] += observation[
                     "nomination"
                 ]  # TODO: what if no nomination?
+            if agent_type in demand_nominations:
+                demand_nominations[agent_type] += observation["nomination"]
 
-        return nominations
+        return supply_nominations | demand_nominations
 
     @staticmethod
     def _get_total_flow_between_types(model: Model, type1: Type, type2: Type) -> float:
@@ -211,8 +225,10 @@ class Extractor:
         for asset in model.graph.nodes:
             power = asset.state.power
             asset_type = asset.name.split()[0]  # Take generic part of the name
-
-            output_power_data[asset_type] += max(0, power)
+            if asset_type == DemandAgents.DEMAND:
+                output_power_data[asset_type] += min(0, power)
+            else:
+                output_power_data[asset_type] += max(0, power)
 
         return dict(output_power_data)
 

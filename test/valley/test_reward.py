@@ -126,25 +126,37 @@ class TestReward(unittest.TestCase):
         new_extractor.total_solar_nomination = np.array([20] * 61)
         new_extractor.total_wind_production = np.array([25] * 61)
         new_extractor.total_wind_nomination = np.array([30] * 61)
+        new_extractor.total_demand = np.array([-39] * 61)
+        new_extractor.total_demand_nomination = np.array([-40] * 61)
+        new_extractor.total_nomination_fraction = np.array([0.5] * 61)
         new_extractor.grid_state = np.array([10] * 61)
         new_extractor.i = 60
 
-        ## Test actual
+        ## Test actual (full hour)
         reward = Reward(actual=True, NE=self.default_scaling)
         result = reward.get(new_extractor)
-        # total solar production: mean(30 * 60) = 30, total solar nomination: for that hour at every timestep 20
-        # total wind production: mean(25 * 60) = 25, total wind nomination: for that hour at every timestep 30
-        expected_solar_penalty = abs(30 - 20)
-        expected_wind_penalty = abs(25 - 30)
-        expected = -(expected_solar_penalty + expected_wind_penalty)
+        # total production = 30 + 25 - 39 = 16 * 60 = 960
+        # total nomination = 20 + 30 - 40 = 10 * 60 = 600
+        expected = -(abs(960 - 600) * 1)
         self.assertEqual(result, expected)
+
+        # Test actual (intermediate)
+        new_extractor.i = 30
+        reward = Reward(actual=True, NE=self.default_scaling)
+        result = reward.get(new_extractor)
+        # total nomination = 30 + 20 - 40 = 10
+        # expected nomination fraction = 10 / 60 * (30 % 60) = 5
+        expected_nomination_fraction = 10 / 60 * (new_extractor.i % 60)
+        # intermediate scaling factor is default_scaling / 60 = 1/60
+        expected_penalty = -abs(expected_nomination_fraction - 0.5) * 1 / 60
+        self.assertAlmostEqual(result, expected_penalty, places=5)
 
         ## Test not actual
         reward = Reward(actual=False, NE=self.default_scaling)
         result = reward.get(new_extractor)
         # result should be np.array, with all zeros except for the hour where the penalty is calculated
         expected = np.zeros(61)
-        expected[60] = -(expected_solar_penalty + expected_wind_penalty)
+        expected[60] = -(abs(960 - 600) * 1)
         self.assertEqual(len(result), len(expected))
         self.assertEqual(result[60], expected[60])
 

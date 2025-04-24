@@ -16,6 +16,10 @@ class SupplyAgents(Enum):
     WIND = "WindAgent"
 
 
+class DemandAgents(Enum):
+    DEMAND = "DemandAgent"
+
+
 class StorageAgents(Enum):
     BATTERY = "BatteryAgent"
     ELECTROLYSER = "ElectrolyserAgent"
