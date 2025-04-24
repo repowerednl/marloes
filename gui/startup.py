@@ -16,7 +16,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QTimer
 
 from gui.success_screen import SuccessScreen
-from src.marloes.algorithms import BaseAlgorithm, Priorities, SimpleSetpoint
+from src.marloes.algorithms import BaseAlgorithm, Priorities, SimpleSetpoint, Dreamer
+from src.marloes.algorithms.dyna import Dyna
 from src.marloes.validation.validate_config import validate_config
 
 from .errors import ErrorScreen
@@ -46,7 +47,7 @@ class ExperimentSetupApp(QWidget):
         layout.addWidget(QLabel("Select configuration:"))
         self.config_dropdown = QComboBox()
         self.config_dropdown.addItems(
-            ["default_config", "simple_config", "dyna_config"]
+            ["default_config", "simple_config", "dyna_config", "test_config"]
         )
         layout.addWidget(self.config_dropdown)
 
