@@ -1,8 +1,8 @@
 algorithm: Dyna
 chunk_size: 10000
 training_steps: 100000
-num_initial_random_steps: 1000
-batch_size: 128
+num_initial_random_steps: 0
+batch_size: 32
 agents:
   - type: solar
     AC: 9000
@@ -34,25 +34,25 @@ replay_buffers:
   real_capacity: 100000
   model_capacity: 100000
 dyna:
-  world_model_update_frequency: 100
+  world_model_update_frequency: 10
   k: 10
-  model_updates_per_step: 10
+  model_updates_per_step: 1
   real_sample_ratio: 0.5
 WorldModel:
   lr: 0.001
   weight_decay: 0.0
-  forecast_hidden_size: 64
+  forecast_hidden_size: 32
   forecast_hidden_layers: 1
   agent_enc_dim: 16
-  agent_hidden_size: 64
-  world_enc_dim: 64
-  world_hidden_size: 128
-  world_dynamics_hidden_size: 128
+  agent_hidden_size: 32
+  world_enc_dim: 32
+  world_hidden_size: 64
+  world_dynamics_hidden_size: 64
 SAC:
-  learning_rate: 3e-4
-  eps: 1e-7
+  learning_rate: 0.0003
+  eps: 0.0000001
   weight_decay: 0.0
-  hidden_dim: 256
+  hidden_dim: 128
   num_layers: 2
   log_std_min: -20
   log_std_max: 2
