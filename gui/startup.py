@@ -191,7 +191,8 @@ class ExperimentSetupApp(QWidget):
             for name, checkbox in self.subreward_checkboxes.items()
             if checkbox.isChecked()
         }
-        config["subrewards"] = selected_subrewards
+        combined_rewards = selected_subrewards.update(config.get("subrewards", {}))
+        config["subrewards"] = combined_rewards
 
         # TODO: add additional parameters as needed
         self.config = config
