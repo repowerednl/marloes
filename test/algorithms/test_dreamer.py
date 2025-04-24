@@ -73,7 +73,7 @@ class DreamerTestCase(TestCase):
     def test_init(self):
         self.assertEqual(len(self.alg.environment.agents), 6)
         # environment should have state dim
-        self.assertEqual(self.alg.environment.state_dim, (7215,))
+        self.assertEqual(self.alg.environment.state_dim, (7228,))
         # environment should have action_space torch.Size([3])
         self.assertEqual(self.alg.environment.action_dim, (6,))
         # there should be a WorldModel and an ActorCritic
