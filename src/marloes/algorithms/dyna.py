@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 
+from marloes.util import timethis
+
 from .base import BaseAlgorithm
 from .SAC import SAC
 from marloes.networks.simple_world_model.world_model import WorldModel
@@ -25,8 +27,8 @@ class Dyna(BaseAlgorithm):
                 - "real_sample_ratio" (float): Ratio of real to synthetic samples.
         """
         super().__init__(config)
-        self.world_model = WorldModel(self.config)
-        self.sac = SAC(self.config)
+        self.world_model = WorldModel(self.config).to(self.device)
+        self.sac = SAC(self.config, device=self.device)
 
         # Dyna specific parameters
         dyna_config = config.get("dyna", {})
