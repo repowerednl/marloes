@@ -1,33 +1,33 @@
 algorithm: Dyna
 chunk_size: 1000
-training_steps: 10000
+training_steps: 5000
 num_initial_random_steps: 0
-batch_size: 32
+batch_size: 64
 agents:
-  - type: solar
-    AC: 9000
-    DC: 10000
-    orientation: EW
+  # - type: solar
+  #   AC: 9000
+  #   DC: 10000
+  #   orientation: EW
   - type: solar
     AC: 5000
     DC: 5500
     orientation: S
-  - type: wind
-    location: Onshore
-    power: 1000
-    AC: 900
-  - type: demand
-    scale: 4.5
-    profile: Farm
+  # - type: wind
+  #   location: Onshore
+  #   power: 1000
+  #   AC: 900
+  # - type: demand
+  #   scale: 4.5
+  #   profile: Farm
   - type: demand
     scale: 6
     profile: RealEstate
   - type: battery
     energy_capacity: 2000
     power: 1000
-  - type: battery
-    energy_capacity: 100
-    power: 750
+  # - type: battery
+  #   energy_capacity: 100
+  #   power: 750
 grid:
   name: Grid
 subrewards:
@@ -38,10 +38,10 @@ replay_buffers:
   real_capacity: 100000
   model_capacity: 100000
 dyna:
-  world_model_update_frequency: 10
-  k: 10
+  world_model_update_frequency: 5
+  k: 5
   model_updates_per_step: 1
-  real_sample_ratio: 0.5
+  real_sample_ratio: 0.7
 WorldModel:
   lr: 0.001
   weight_decay: 0.0
@@ -53,13 +53,17 @@ WorldModel:
   world_hidden_size: 64
   world_dynamics_hidden_size: 64
 SAC:
-  learning_rate: 0.0003
+  actor_lr: 0.0001
+  critic_lr: 0.0002
+  value_lr: 0.0003
+  alpha_lr: 0.0003
   eps: 0.0000001
   weight_decay: 0.0
   hidden_dim: 256
   num_layers: 2
-  log_std_min: -20
+  log_std_min: -5
   log_std_max: 2
   gamma: 0.99
-  alpha: 0.2
-  tau: 0.005
+  # alpha: 0.2
+  tau: 0.001
+  critic_actor_update_ratio: 6
