@@ -36,7 +36,9 @@ class Visualizer:
             common_metrics.intersection_update(metrics)
         return list(common_metrics)
 
-    def plot_metrics(self, metrics: list[str], save_png: bool = False):
+    def plot_metrics(
+        self, metrics: list[str], save_png: bool = False, rolling: bool = True
+    ):
         """
         Plots the selected metrics for each UID in a single figure per metric.
         """
@@ -70,10 +72,14 @@ class Visualizer:
                 for uid, df in data_by_uid.items():
                     self.plot_sankey(df, uid, save_png)
             else:
-                self.plot_default(metric, data_by_uid, save_png)
+                self.plot_default(metric, data_by_uid, save_png, rolling)
 
     def plot_default(
-        self, metric: str, data_by_uid: dict[int, np.ndarray], save_png: bool = False
+        self,
+        metric: str,
+        data_by_uid: dict[int, np.ndarray],
+        save_png: bool = False,
+        rolling: bool = True,
     ):
         """
         Plots the default metrics for each UID in a single figure per metric.
@@ -82,7 +88,25 @@ class Visualizer:
             start="1/1/2025", periods=len(next(iter(data_by_uid.values()))), freq="min"
         )
 
+        # Apply rolling median if requested
+        if rolling:
+            for uid, series in data_by_uid.items():
+                # Apply rolling median with a window of 60 minutes
+                data_by_uid[uid] = (
+                    pd.Series(series, index=index).rolling(window=60).median()
+                )
+
         fig = go.Figure()
+        # If metric contains "loss" set y-axis to log scale
+        if "loss" in metric.lower():
+            fig.update_yaxes(type="log")
+
+            # Actor loss is negative so shift it to just above 0
+            if "actor" in metric.lower():
+                min_y = min([series.min() for series in data_by_uid.values()])
+                for uid, series in data_by_uid.items():
+                    data_by_uid[uid] = series - min_y + 0.01
+
         for uid, series in data_by_uid.items():
             fig.add_trace(
                 go.Scatter(
