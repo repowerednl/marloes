@@ -94,10 +94,12 @@ class Dyna(BaseAlgorithm):
 
         for _ in range(self.k):
             # Generate synthetic actions TODO: decide if random or policy
-            synthetic_actions = [
-                self.sample_actions(self.environment.agent_dict)
-                for _ in range(self.batch_size)
-            ]
+            # synthetic_actions = [
+            #     self.sample_actions(self.environment.agent_dict)
+            #     for _ in range(self.batch_size)
+            # ]
+            # Use policy actions
+            synthetic_actions = [self.get_actions(state) for state in synthetic_states]
 
             # Use the world model to predict next state and reward
             synthetic_next_states, synthetic_rewards = self.world_model.predict(
@@ -123,12 +125,15 @@ class Dyna(BaseAlgorithm):
             real_batch = self.real_RB.sample(
                 int(self.batch_size * self.real_sample_ratio), flatten=True
             )
-            synthetic_batch = self.model_RB.sample(
-                int(self.batch_size * (1 - self.real_sample_ratio)), flatten=True
-            )
+            if self.real_sample_ratio != 1:
+                synthetic_batch = self.model_RB.sample(
+                    int(self.batch_size * (1 - self.real_sample_ratio)), flatten=True
+                )
 
-            # Combine batches
-            combined_batch = self._combine_batches(real_batch, synthetic_batch)
+                # Combine batches
+                combined_batch = self._combine_batches(real_batch, synthetic_batch)
+            else:
+                combined_batch = real_batch
 
             # Update the model (SAC) with the combined batch
             self.sac.update(combined_batch)

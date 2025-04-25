@@ -15,7 +15,16 @@ class SAC:
     """
 
     def __init__(self, config: dict, device: str):
+        # Hyperparameters
         self.SAC_config = config.get("SAC", {})
+        self.gamma = self.SAC_config.get("gamma", 0.99)  # Discount factor
+        self.tau = self.SAC_config.get("tau", 0.005)  # Target network update rate
+
+        # We introduce learnable alpha (Temperature parameter for entropy)
+        action_dim = config["action_dim"]
+        self.target_entropy = -action_dim  # Target entropy is -action_dim for now
+        self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
+
         self.value_network = ValueNetwork(config).to(device)  # Parameterized by psi
         self.target_value_network = ValueNetwork(config).to(
             device
@@ -31,12 +40,6 @@ class SAC:
         # Initialize losses
         self._init_losses(config.get("model_updates_per_step", 10))
 
-        self.gamma = self.SAC_config.get("gamma", 0.99)  # Discount factor
-        self.alpha = self.SAC_config.get(
-            "alpha", 0.2
-        )  # Temperature parameter for entropy
-        self.tau = self.SAC_config.get("tau", 0.005)  # Target network update rate
-
     def _init_losses(self, model_updates_per_step):
         self.i = 0
         self.loss_value = np.zeros(model_updates_per_step)
@@ -49,34 +52,39 @@ class SAC:
         Initialize the optimizers for the networks.
         """
         # Create optimizers here
-        learning_rate = self.SAC_config.get("learning_rate", 3e-4)
+        actor_lr = self.SAC_config.get("actor_lr", 3e-4)
+        critic_lr = self.SAC_config.get("critic_lr", 3e-4)
+        value_lr = self.SAC_config.get("value_lr", 3e-4)
+        alpha_lr = self.SAC_config.get("alpha_lr", 3e-4)
+
         eps = self.SAC_config.get("eps", 1e-7)
         weight_decay = self.SAC_config.get("weight_decay", 0.0)
 
         self.value_optimizer = Adam(
             self.value_network.parameters(),
-            lr=learning_rate,
+            lr=value_lr,
             eps=eps,
             weight_decay=weight_decay,
         )
         self.critic1_optimizer = Adam(
             self.critic_1_network.parameters(),
-            lr=learning_rate,
+            lr=critic_lr,
             eps=eps,
             weight_decay=weight_decay,
         )
         self.critic2_optimizer = Adam(
             self.critic_2_network.parameters(),
-            lr=learning_rate,
+            lr=critic_lr,
             eps=eps,
             weight_decay=weight_decay,
         )
         self.actor_optimizer = Adam(
             self.actor_network.parameters(),
-            lr=learning_rate,
+            lr=actor_lr,
             eps=eps,
             weight_decay=weight_decay,
         )
+        self.alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
 
     def act(self, state):
         """
@@ -94,10 +102,11 @@ class SAC:
         # 1. Update the value network
         self._update_value_network(batch)
 
-        # 2. Update the critic networks
-        self._update_critic_networks(batch)
+        # 2. Update the critic networks (using the critic:actor ratio)
+        for _ in range(self.SAC_config.get("critic_actor_update_ratio", 2)):
+            self._update_critic_networks(batch)
 
-        # 3. Update the actor network
+        # 3. Update the actor network (and with it the alpha parameter)
         self.actor_network.train()  # Set back to training mode
         self._update_actor_network(batch)
 
@@ -123,7 +132,8 @@ class SAC:
         Q_min = torch.min(Q_1, Q_2)
 
         # Calculate the target value
-        target_value = Q_min - self.alpha * log_pi
+        alpha = self.log_alpha.exp()
+        target_value = Q_min - alpha * log_pi
 
         # Calculate the value loss (0.5 scaling from the paper)
         value_loss = 0.5 * F.mse_loss(V, target_value.detach())
@@ -131,6 +141,7 @@ class SAC:
         # Back propagate the value loss and update the value network parameters
         self.value_optimizer.zero_grad()
         value_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.value_network.parameters(), 1.0)
         self.value_optimizer.step()
 
         self.loss_value[self.i] = value_loss.item()
@@ -152,16 +163,20 @@ class SAC:
             )  # No need to add dones as the environment is non-terminal
 
             # Calculate the critic loss (again, 0.5 scaling from the paper)
-            critic_loss = 0.5 * F.mse_loss(Q, target_value.detach())
+            # Use huber loss for stability
+            critic_loss = 0.5 * F.smooth_l1_loss(Q, target_value.detach())
+            # critic_loss = 0.5 * F.mse_loss(Q, target_value.detach())
 
             # Back propagate the critic loss and update the critic network parameters
             if i == 0:
                 self.critic1_optimizer.zero_grad()
                 critic_loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.critic_1_network.parameters(), 1.0)
                 self.critic1_optimizer.step()
             else:
                 self.critic2_optimizer.zero_grad()
                 critic_loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.critic_2_network.parameters(), 1.0)
                 self.critic2_optimizer.step()
 
             # Store the critic loss
@@ -183,12 +198,20 @@ class SAC:
         Q_min = torch.min(Q_1, Q_2)
 
         # Calculate the actor loss
-        actor_loss = (self.alpha * log_pi - Q_min).mean()
+        alpha = self.log_alpha.exp()
+        actor_loss = (alpha * log_pi - Q_min).mean()
 
         # Back propagate the loss and update parameters
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.actor_network.parameters(), 0.5)
         self.actor_optimizer.step()
+
+        # Update the alpha parameter; entropy -> target entropy
+        alpha_loss = -(self.log_alpha * (log_pi + self.target_entropy).detach()).mean()
+        self.alpha_optimizer.zero_grad()
+        alpha_loss.backward()
+        self.alpha_optimizer.step()
 
         self.loss_actor[self.i] = actor_loss.item()
 
