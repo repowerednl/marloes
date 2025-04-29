@@ -174,10 +174,10 @@ class BaseAlgorithm(ABC):
         return {agent_id: random.uniform(-1.0, 1.0) for agent_id in agent_dict.keys()}
 
     @staticmethod
-    def _get_net_forecasted_power(observations: dict, period: int = 60) -> float:
+    def _get_net_forecasted_power(observations: dict, period: int = 1) -> float:
         """
         Looks at the forecasts of each supply and demand agent to calculate the net power.
-        Sum the forecasts of the next period, period is in minutes, defaults to 60 min (1 hour).
+        Sum the forecasts of the next period, period is in minutes, defaults to 1.
         """
         forecasts = [
             observations[agent]["forecast"]
