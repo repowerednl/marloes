@@ -267,10 +267,33 @@ class ExtensiveExtractor(Extractor):
         # Complete flows/state dataframe
         self.extensive_data = ExtensiveDataStore()
 
+        # Forecasts
+        self.solar_forecast = np.zeros(self.size)
+        self.wind_forecast = np.zeros(self.size)
+        self.demand_forecast = np.zeros(self.size)
+
     def clear(self):
         # Stash the dataframe as part of the clear operation
         super().clear()
         self.extensive_data.stash_chunk()
+
+    def from_observations(self, observations):
+        super().from_observations(observations)
+
+        # Fill in the forecast data
+        # Since forecast does not change, we can just iteratively add the first value of the forecast series
+        # to the forecast array
+        for agent_id, observation in observations.items():
+            if "forecast" in observation:
+                forecast = observation["forecast"]
+                if isinstance(forecast, np.ndarray):
+                    forecast = forecast[0]
+                if agent_id.startswith("SolarAgent"):
+                    self.solar_forecast[self.i] = forecast
+                elif agent_id.startswith("WindAgent"):
+                    self.wind_forecast[self.i] = forecast
+                elif agent_id.startswith("DemandAgent"):
+                    self.demand_forecast[self.i] = forecast
 
     def add_additional_info_from_model(self, model: Model) -> None:
         """
