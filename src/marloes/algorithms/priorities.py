@@ -1,3 +1,4 @@
+from marloes.algorithms.util import get_net_forecasted_power
 from .base import BaseAlgorithm
 from collections import defaultdict
 import math
@@ -33,8 +34,8 @@ class Priorities(BaseAlgorithm):
         for key, battery in batteries.items():
             # Get share of the battery; weighted net power
             share = battery["energy_capacity"] / total_capacity
-            desired_action = net_power * share
-            battery_actions[key] = desired_action
+            desired_action = -net_power * share
+            battery_actions[key] = desired_action / battery["max_power_out"]
 
         return battery_actions
 
@@ -51,6 +52,11 @@ class Priorities(BaseAlgorithm):
                 for agent in self.environment.agents
                 if agent.id == key
             )
+            batteries[key]["max_power_out"] = next(
+                agent.asset.max_power_out
+                for agent in self.environment.agents
+                if agent.id == key
+            )
         return batteries
 
     def get_actions(self, observations: dict) -> dict:
@@ -61,7 +67,7 @@ class Priorities(BaseAlgorithm):
         If based on forecasts, the net power is negative, the battery should discharge.
         """
         return self._determine_battery_actions(
-            self._get_net_forecasted_power(observations=observations),
+            get_net_forecasted_power(observations=observations),
             self._get_batteries(observations),
         )
 
