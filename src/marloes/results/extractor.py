@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from simon.solver import Model
 from simon.assets.demand import Demand
+from simon.assets.battery import Battery
 
 from marloes.agents import (
     BatteryAgent,
@@ -54,6 +55,7 @@ class Extractor:
         self.total_wind_production = np.zeros(self.size)
         self.total_demand = np.zeros(self.size)
         self.total_grid_production = np.zeros(self.size)
+        self.total_battery_intake = np.zeros(self.size)
 
         # Observation info
         self.total_solar_nomination = np.zeros(self.size)
@@ -99,6 +101,7 @@ class Extractor:
 
         # Demand info (for nomination)
         self.total_demand[self.i] = self._get_total_flow_to_type(model, Demand)
+        self.total_battery_intake[self.i] = self._get_total_flow_to_type(model, Battery)
 
     def from_files(self, uid: int | None = None, dir: str = "results") -> int:
         """
@@ -217,6 +220,7 @@ class Extractor:
         for (asset1, asset2), flow in model.edge_flow_tracker.items():
             if isinstance(asset2, type1):
                 total_flow += flow
+        return total_flow
 
     @staticmethod
     def get_current_power_by_type(

@@ -99,7 +99,8 @@ class Calculator:
                 if len(value) > max_length:
                     issues.append(f"{key} is longer than a year.")
                 if isinstance(value, np.ndarray) and np.isnan(value).any():
-                    issues.append(f"{key} contains NaN values.")
+                    num_nan = np.isnan(value).sum()
+                    issues.append(f"{key} contains {num_nan} NaN values.")
                 if isinstance(value, pd.DataFrame) and value.isnull().values.any():
                     issues.append(f"{key} contains NaN values.")
             info[key] = issues
