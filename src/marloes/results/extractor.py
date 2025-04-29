@@ -218,7 +218,7 @@ class Extractor:
         """
         total_flow = 0.0
         for (asset1, asset2), flow in model.edge_flow_tracker.items():
-            if isinstance(asset2, type1):
+            if isinstance(asset2, type1) and asset2.name != "Curtailment":
                 total_flow += flow
         return total_flow
 
