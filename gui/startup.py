@@ -1,4 +1,5 @@
 import logging
+import time
 
 import yaml
 from PyQt6.QtWidgets import (
@@ -140,6 +141,7 @@ class ExperimentSetupApp(QWidget):
         algorithm: BaseAlgorithm = BaseAlgorithm.get_algorithm(
             self.config["algorithm"], self.config
         )
+        start_time = time.time()
         try:
             algorithm.train()
         except Exception as e:
@@ -148,6 +150,8 @@ class ExperimentSetupApp(QWidget):
             # self.error_screen.show()
             self.close()
             raise e
+        end_time = time.time()
+        logging.info(f"Training took {end_time - start_time:.2f} seconds")
 
         # Show success message after training has finished
         self.success_screen = SuccessScreen()
