@@ -31,6 +31,7 @@ class SolarAgent(Agent):
             f"Solar_{config.pop('orientation')}.parquet", forecast=True
         )
         forecast = forecast * config["DC"] / 1000
+        forecast[forecast > config["AC"]] = config["AC"]
 
         return series, forecast  # kW, kW
 
