@@ -17,7 +17,10 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QTimer
 
 from gui.success_screen import SuccessScreen
-from src.marloes.algorithms import BaseAlgorithm, Priorities, SimpleSetpoint, Dreamer
+from src.marloes.algorithms.dreamer import Dreamer
+from src.marloes.algorithms.base import BaseAlgorithm
+from src.marloes.algorithms.priorities import Priorities
+
 from src.marloes.algorithms.dyna import Dyna
 from src.marloes.validation.validate_config import validate_config
 
