@@ -20,6 +20,7 @@ from marloes.agents import (
     DemandAgent,
 )
 from marloes.agents.base import SupplyAgents, StorageAgents, DemandAgents
+from marloes.algorithms.util import get_net_forecasted_power
 from marloes.data.extensive_data import ExtensiveDataStore
 
 MINUTES_IN_A_YEAR = 525600
@@ -271,6 +272,7 @@ class ExtensiveExtractor(Extractor):
         self.solar_forecast = np.zeros(self.size)
         self.wind_forecast = np.zeros(self.size)
         self.demand_forecast = np.zeros(self.size)
+        self.net_forecasted_power = np.zeros(self.size)
 
     def clear(self):
         # Stash the dataframe as part of the clear operation
@@ -294,6 +296,8 @@ class ExtensiveExtractor(Extractor):
                     self.wind_forecast[self.i] = forecast
                 elif agent_id.startswith("DemandAgent"):
                     self.demand_forecast[self.i] = forecast
+
+        self.net_forecasted_power[self.i] = get_net_forecasted_power(observations)
 
     def add_additional_info_from_model(self, model: Model) -> None:
         """

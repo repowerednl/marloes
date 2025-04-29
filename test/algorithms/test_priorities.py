@@ -5,6 +5,7 @@ import pytest
 from marloes.algorithms.priorities import Priorities
 from marloes.agents.base import Agent
 
+from marloes.algorithms.util import get_net_forecasted_power
 from test.util import get_accurate_observation, get_mock_observation
 
 
@@ -83,17 +84,17 @@ class TestPriorities(unittest.TestCase):
         self.assertEqual(mock_reset.call_count, 1)
         self.assertEqual(mock_step.call_count, self.alg.training_steps)
 
-    def test__get_net_power(self):
+    def test_get_net_power(self):
         mock_obs = get_mock_observation(
             battery_soc=[0.5], solar_power=2.0, wind_power=1.0
         )
-        net_power = self.alg._get_net_forecasted_power(mock_obs)
+        net_power = get_net_forecasted_power(mock_obs)
         self.assertEqual(net_power, 0.0)
 
         mock_obs = get_mock_observation(
             battery_soc=[0.5], solar_power=3.0, wind_power=1.0
         )
-        net_power = self.alg._get_net_forecasted_power(mock_obs)
+        net_power = get_net_forecasted_power(mock_obs)
         self.assertEqual(net_power, 3.0)
 
     def test__determine_battery_actions_charge(self):
