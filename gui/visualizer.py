@@ -55,6 +55,10 @@ class VisualizerGUI(QWidget):
         self.apply_rolling_median_checkbox.setChecked(True)
         layout.addWidget(self.apply_rolling_median_checkbox)
 
+        # Give option for overlay
+        self.overlay_checkbox = QCheckBox("Overlay metrics")
+        layout.addWidget(self.overlay_checkbox)
+
         # Save PNG option
         self.save_png_checkbox = QCheckBox("Save graphs as PNG")
         layout.addWidget(self.save_png_checkbox)
@@ -116,6 +120,7 @@ class VisualizerGUI(QWidget):
         ]
         save_png = self.save_png_checkbox.isChecked()
         rolling_median = self.apply_rolling_median_checkbox.isChecked()
+        overlay = self.overlay_checkbox.isChecked()
 
         if not selected_metrics:
             self.error_screen = ErrorScreen("Please select at least one metric.", self)
@@ -124,5 +129,7 @@ class VisualizerGUI(QWidget):
             return
 
         # Plot the metrics using the Visualizer
-        self.visualizer.plot_metrics(selected_metrics, save_png, rolling_median)
+        self.visualizer.plot_metrics(
+            selected_metrics, save_png, rolling_median, overlay
+        )
         self.close()
