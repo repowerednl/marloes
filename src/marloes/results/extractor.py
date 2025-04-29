@@ -8,6 +8,7 @@ from typing import Type
 import numpy as np
 import pandas as pd
 from simon.solver import Model
+from simon.assets.demand import Demand
 
 from marloes.agents import (
     BatteryAgent,
@@ -95,7 +96,9 @@ class Extractor:
         )
         self.total_wind_production[self.i] = output_power_data.get("Wind", 0.0)
         self.total_grid_production[self.i] = output_power_data.get("Grid", 0.0)
-        self.total_demand[self.i] = output_power_data.get("Demand", 0.0)
+
+        # Demand info (for nomination)
+        self.total_demand[self.i] = self._get_total_flow_to_type(model, Demand)
 
     def from_files(self, uid: int | None = None, dir: str = "results") -> int:
         """
@@ -206,6 +209,16 @@ class Extractor:
         return total_flow
 
     @staticmethod
+    def _get_total_flow_to_type(model: Model, type1: Type) -> float:
+        """
+        Sum all flows to assets of type1 in the model.
+        """
+        total_flow = 0.0
+        for (asset1, asset2), flow in model.edge_flow_tracker.items():
+            if isinstance(asset2, type1):
+                total_flow += flow
+
+    @staticmethod
     def get_current_power_by_type(
         model: Model,
     ) -> dict[str, float]:
@@ -217,10 +230,7 @@ class Extractor:
         for asset in model.graph.nodes:
             power = asset.state.power
             asset_type = asset.name.split()[0]  # Take generic part of the name
-            if asset_type == DemandAgents.DEMAND:
-                output_power_data[asset_type] += min(0, power)
-            else:
-                output_power_data[asset_type] += max(0, power)
+            output_power_data[asset_type] += max(0, power)
 
         return dict(output_power_data)
 
