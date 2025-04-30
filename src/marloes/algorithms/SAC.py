@@ -46,6 +46,7 @@ class SAC:
         self.loss_critic_1 = np.zeros(model_updates_per_step)
         self.loss_critic_2 = np.zeros(model_updates_per_step)
         self.loss_actor = np.zeros(model_updates_per_step)
+        self.alphas = np.zeros(model_updates_per_step)
 
     def _init_optimizers(self):
         """
@@ -214,6 +215,7 @@ class SAC:
         self.alpha_optimizer.step()
 
         self.loss_actor[self.i] = actor_loss.item()
+        self.alphas[self.i] = self.log_alpha.exp().item()
 
     def _update_target_value_network(self):
         """

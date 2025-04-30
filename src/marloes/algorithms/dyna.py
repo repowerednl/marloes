@@ -144,6 +144,7 @@ class Dyna(BaseAlgorithm):
             "sac_critic_1_loss": np.mean(self.sac.loss_critic_1),
             "sac_critic_2_loss": np.mean(self.sac.loss_critic_2),
             "sac_actor_loss": np.mean(self.sac.loss_actor),
+            "sac_alpha": np.mean(self.sac.alphas),
         }
 
     @staticmethod
