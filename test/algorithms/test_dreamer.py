@@ -146,5 +146,5 @@ class DreamerTestCase(TestCase):
         results = self.alg.perform_training_steps(step=5)
         # Check if the results are a dictionary with expected keys
         self.assertIsInstance(results, dict)
-        expected_keys = ["world", "actorcritic"]
+        expected_keys = ["world", "actor", "critic"]
         self.assertTrue(all(key in results for key in expected_keys))
