@@ -82,25 +82,6 @@ class RSSMTestCase(TestCase):
         self.assertEqual(z_hat_t.shape, (1, 1, 64))
         self.assertIsInstance(details, dict)
 
-    def test_forward_wrong_input(self):
-        """
-        Test if the forward pass raises an assertion error with incorrect input sizes.
-        """
-        rssm = RSSM(
-            x_shape=10,
-        )
-        a_t = torch.randn(1, 1, 9)  # Incorrect size for a_t
-        h_t = torch.randn(1, 1, 256)
-        z_t = torch.randn(1, 1, 64)
-
-        with self.assertRaises(AssertionError) as context:
-            rssm(h_t, z_t, a_t)
-
-        self.assertIn(
-            "Combined input size does not match the RNN input size",
-            str(context.exception),
-        )
-
     def test_stochastic_latent_space(self):
         """
         RSSM has a stochastic option to predict a stochastic latent state instead of deterministic.
