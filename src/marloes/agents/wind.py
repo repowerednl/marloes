@@ -28,6 +28,7 @@ class WindAgent(Agent):
         # Get forecast
         forecast = read_series(f"Wind_{config.pop('location')}.parquet", forecast=True)
         forecast *= config["power"]
+        forecast[forecast > config["AC"]] = config["AC"]
 
         return series, forecast  # kW, kW
 

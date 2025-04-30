@@ -20,6 +20,7 @@ from marloes.agents import (
     DemandAgent,
 )
 from marloes.agents.base import SupplyAgents, StorageAgents, DemandAgents
+from marloes.algorithms.util import get_net_forecasted_power
 from marloes.data.extensive_data import ExtensiveDataStore
 
 MINUTES_IN_A_YEAR = 525600
@@ -218,7 +219,7 @@ class Extractor:
         """
         total_flow = 0.0
         for (asset1, asset2), flow in model.edge_flow_tracker.items():
-            if isinstance(asset2, type1):
+            if isinstance(asset2, type1) and asset2.name != "Curtailment":
                 total_flow += flow
         return total_flow
 
@@ -267,10 +268,36 @@ class ExtensiveExtractor(Extractor):
         # Complete flows/state dataframe
         self.extensive_data = ExtensiveDataStore()
 
+        # Forecasts
+        self.solar_forecast = np.zeros(self.size)
+        self.wind_forecast = np.zeros(self.size)
+        self.demand_forecast = np.zeros(self.size)
+        self.net_forecasted_power = np.zeros(self.size)
+
     def clear(self):
         # Stash the dataframe as part of the clear operation
         super().clear()
         self.extensive_data.stash_chunk()
+
+    def from_observations(self, observations):
+        super().from_observations(observations)
+
+        # Fill in the forecast data
+        # Since forecast does not change, we can just iteratively add the first value of the forecast series
+        # to the forecast array
+        for agent_id, observation in observations.items():
+            if "forecast" in observation:
+                forecast = observation["forecast"]
+                if isinstance(forecast, np.ndarray):
+                    forecast = forecast[0]
+                if agent_id.startswith("SolarAgent"):
+                    self.solar_forecast[self.i] = forecast
+                elif agent_id.startswith("WindAgent"):
+                    self.wind_forecast[self.i] = forecast
+                elif agent_id.startswith("DemandAgent"):
+                    self.demand_forecast[self.i] = forecast
+
+        self.net_forecasted_power[self.i] = get_net_forecasted_power(observations)
 
     def add_additional_info_from_model(self, model: Model) -> None:
         """
