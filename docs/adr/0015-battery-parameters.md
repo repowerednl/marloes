@@ -16,6 +16,7 @@ The following values are added to the default config in `BatteryAgent`.
 - `max_power_in`: 125 kW
 - `max_power_out`: 125 kW
 - `efficiency`: 0.98
+- `total_cycles`: 8000
 The following were not found but are likely values:
 - `max_state_of_charge`: 0.95
 - `min_state_of_charge`: 0.05
