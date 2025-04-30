@@ -48,6 +48,15 @@ class BatteryAgent(Agent):
         merged_config["max_power_out"] = min(
             merged_config.get("max_power_out", np.inf), merged_config.pop("power")
         )
+        # update ramp up/down rates, instant max power unless specified lower
+        merged_config["ramp_up_rate"] = min(
+            merged_config.get("ramp_up_rate", np.inf),
+            merged_config.get("max_power_in", np.inf),
+        )
+        merged_config["ramp_down_rate"] = min(
+            merged_config.get("ramp_down_rate", np.inf),
+            merged_config.get("max_power_out", np.inf),
+        )
 
         return merged_config
 
