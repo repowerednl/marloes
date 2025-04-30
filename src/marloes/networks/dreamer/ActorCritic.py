@@ -171,7 +171,6 @@ class ActorCritic:
         Returns:
             tuple: λ-returns tensor of shape (B, T, 1) and advantages tensor of shape (B, T, 1).
         """
-        print(f"Shapes: rewards: {rewards.shape}, values: {values.shape}")
         returns = compute_lambda_returns(rewards, values, self.gamma, self.lmbda)
         advantages = returns - values.detach()
         return returns, advantages
