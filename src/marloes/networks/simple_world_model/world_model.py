@@ -13,6 +13,7 @@ from marloes.networks.simple_world_model.util import (
 )
 from marloes.networks.simple_world_model.world_dynamics import WorldDynamicsModel
 from marloes.networks.simple_world_model.world_state_encoder import WorldStateEncoder
+from marloes.util import timethis
 
 
 class WorldModel(nn.Module):
@@ -57,14 +58,15 @@ class WorldModel(nn.Module):
                 for i in range(self.num_agents)
             ]
         )
+        global_dim = config.get("global_dim", 0)
         self.world_state_encoder = WorldStateEncoder(
-            self.world_model_config, self.num_agents, config.get("global_dim", 0)
+            self.world_model_config, self.num_agents, global_dim
         )
         self.world_dynamics_model = WorldDynamicsModel(
             self.world_model_config,
             config["action_dim"],
             agents_scalar_dim,
-            config["global_dim"],
+            global_dim,
         )
         self.optimizer = Adam(
             self.parameters(),
@@ -111,7 +113,7 @@ class WorldModel(nn.Module):
         return next_state, reward
 
     def predict(
-        self, states: list[dict], actions: list[dict], device: str = "cpu"
+        self, states: list[dict], actions: list[dict], device: str
     ) -> tuple[list[dict], list[float]]:
         """
         Given environment states and actions, predict the next state and reward.
@@ -161,7 +163,7 @@ class WorldModel(nn.Module):
 
         return reconstructed_next_states, rewards_list
 
-    def update(self, transitions_batch: list[dict], device: str = "cpu") -> None:
+    def update(self, transitions_batch: list[dict], device: str) -> None:
         """
         Update the world model using a batch of real transitions.
 
@@ -173,7 +175,7 @@ class WorldModel(nn.Module):
         self.train()
 
         # 1. Parse batch to fit world model expectations
-        parsed_batch = parse_batch(transitions_batch)
+        parsed_batch = parse_batch(transitions_batch, device)
         scalar_list = [
             agent["scalars"] for agent in parsed_batch["state"]["agents"].values()
         ]
@@ -196,7 +198,11 @@ class WorldModel(nn.Module):
                 dtype=np.float32,
             )
         ).to(device)
-        reward_target = torch.from_numpy(np.array(rewards, dtype=np.float32)).to(device)
+        reward_target = (
+            torch.from_numpy(np.array(rewards.cpu(), dtype=np.float32))
+            .unsqueeze(-1)
+            .to(device)
+        )
 
         # 4. Compute loss (for now simple MSE)
         next_state_loss = F.mse_loss(latent_next_state, next_state_target)

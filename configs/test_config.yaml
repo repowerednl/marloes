@@ -1,0 +1,7 @@
+algorithm: Priorities
+agents:
+  - type: battery
+    energy_capacity: 2000
+    power: 1800
+grid:
+  name: Grid

@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 
-def parse_state(state_list: list[dict], device: str = "cpu") -> dict[str, dict]:
+def parse_state(state_list: list[dict], device: str) -> dict[str, dict]:
     """
     Divide state into scalars and forecast per agent and convert to tensors.
 
@@ -71,9 +71,7 @@ def parse_state(state_list: list[dict], device: str = "cpu") -> dict[str, dict]:
     return final_dict
 
 
-def parse_actions(
-    action_list: list[dict[str, float]], device: str = "cpu"
-) -> torch.Tensor:
+def parse_actions(action_list: list[dict[str, float]], device: str) -> torch.Tensor:
     """
     Turn actions into a tensor.
 
@@ -101,7 +99,7 @@ def parse_actions(
     return final_actions
 
 
-def parse_rewards(reward_list: list[float], device: str = "cpu") -> torch.Tensor:
+def parse_rewards(reward_list: list[float], device: str) -> torch.Tensor:
     """
     Convert rewards to a tensor.
 
@@ -116,7 +114,7 @@ def parse_rewards(reward_list: list[float], device: str = "cpu") -> torch.Tensor
     return torch.from_numpy(rewards).to(device)
 
 
-def parse_batch(sample: list, device: str = "cpu") -> dict:
+def parse_batch(sample: list, device: str) -> dict:
     """
     Convert a batch of transitions into a workable dictionary of tensors.
 

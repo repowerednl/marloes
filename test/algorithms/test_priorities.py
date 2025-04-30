@@ -11,7 +11,7 @@ from test.util import get_accurate_observation, get_mock_observation
 def get_new_config() -> dict:
     return {
         "algorithm": "priorities",
-        "training_steps": 10,
+        "training_steps": 100,
         "agents": [
             {
                 "type": "demand",
@@ -57,7 +57,7 @@ class TestPriorities(unittest.TestCase):
             self.alg = Priorities(config=get_new_config())
 
     def test_init(self):
-        self.assertEqual(self.alg.training_steps, 10)
+        self.assertEqual(self.alg.training_steps, 100)
         self.assertEqual(len(self.alg.environment.agents), 3)
 
     def test_agent_types(self):
