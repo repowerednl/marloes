@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 import random
+import time
 import torch
 
 from marloes.results.saver import Saver
@@ -27,23 +28,33 @@ class BaseAlgorithm(ABC):
         # Initialize the Saver, environment, and device
         self.saver = Saver(config=config)
         self.environment = EnergyValley(config, self.__class__.__name__)
-        config["state_dim"] = self.environment.state_dim
-        config["action_dim"] = self.environment.action_dim
-        config["global_dim"] = self.environment.global_dim
+
+        # Update config with environment parameters
+        config["num_agents"] = len(self.environment.agent_dict)
+        config["state_dim"] = self.environment.state_dim[0]
+        config["action_dim"] = self.environment.action_dim[0]
+        config["global_dim"] = self.environment.global_dim[0]
         config["agents_scalar_dim"] = self.environment.agents_scalar_dim
         config["forecasts"] = self.environment.forecasts
+
         self.config = config
         self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )  # for future ticket, make sure this can run on GPU instead of CPU
-        # Set the device back to cpu
+            "mps" if torch.backends.mps.is_available() else "cpu"
+        )
         self.device = torch.device("cpu")
+        if self.device.type == "cpu":
+            logging.warning(
+                "MPS is not available. Using CPU for computations. Performance may be slower."
+            )
 
         # General settings
         self.chunk_size = config.get("chunk_size", 10000)
         self.training_steps = config.get("training_steps", 100000)
-        self.num_initial_random_steps = config.get("num_initial_random_steps", 0)
+        num_initial_random_steps = config.get("num_initial_random_steps", 0)
         self.batch_size = config.get("batch_size", 128)
+        self.num_initial_random_steps = max(
+            num_initial_random_steps, self.batch_size
+        )  # Ensure batch size is not larger than initial random steps
 
         # Initialize ReplayBuffers
         replay_buffer_config = config.get("replay_buffers", {})
@@ -79,7 +90,7 @@ class BaseAlgorithm(ABC):
 
         # Main training loop
         for step in range(self.training_steps):
-            if step % 1000 == 0:
+            if step % (self.training_steps // 100) == 0:
                 logging.info(f"Reached step {step}/{self.training_steps}...")
 
             # 1. Collect data from environment
@@ -104,7 +115,8 @@ class BaseAlgorithm(ABC):
 
             # 2. Perform algorithm-specific training steps
             # --------------------
-            self.losses = self.perform_training_steps(step)
+            if step > self.num_initial_random_steps:
+                self.losses = self.perform_training_steps(step)
 
             # Any time a chunk is "full", it should be saved
             if self.chunk_size != 0 and step % self.chunk_size == 0 and step != 0:

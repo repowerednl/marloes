@@ -12,11 +12,11 @@ class CO2SubReward(SubReward):
     name = "CO2"
 
     EMISSION_COEFFICIENTS = {
-        "solar": 0,
-        "wind": 0,
-        "battery": 0,
-        "electrolyser": 0,
-        "grid": 0,
+        "solar": 45.5,
+        "wind": 15.5,
+        "battery": 70.0,
+        "electrolyser": 15.25,  # PEMWE
+        "grid": 284.73,
     }
 
     def calculate(

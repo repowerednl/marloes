@@ -33,7 +33,8 @@ class ActorNetwork(SACBaseNetwork):
         """
         state_dim = config["state_dim"]
         action_dim = config["action_dim"]
-        super(ActorNetwork, self).__init__(state_dim, config["SAC"])
+        SAC_config = config.get("SAC", {})
+        super(ActorNetwork, self).__init__(state_dim, SAC_config)
 
         # Separate heads for mean and log_std
         self.mean_layer = nn.Linear(self.hidden_dim, action_dim)
@@ -42,8 +43,8 @@ class ActorNetwork(SACBaseNetwork):
         # Clamping range to prevent the policy from becoming too deterministic or too random
         # Extremely high or low log_std values mean either very wide or very narrow Gaussian distributions
         # So either almost deterministic (log_std -> -inf) or almost uniform (log_std -> inf)
-        self.log_std_min = config["SAC"].get("log_std_min", -20)
-        self.log_std_max = config["SAC"].get("log_std_max", 2)
+        self.log_std_min = SAC_config.get("log_std_min", -20)
+        self.log_std_max = SAC_config.get("log_std_max", 2)
 
     def forward(self, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """

@@ -1,7 +1,10 @@
 import numpy as np
 import torch
 
-from marloes.algorithms import BaseAlgorithm, SAC
+from marloes.util import timethis
+
+from .base import BaseAlgorithm
+from .SAC import SAC
 from marloes.networks.simple_world_model.world_model import WorldModel
 
 
@@ -24,8 +27,8 @@ class Dyna(BaseAlgorithm):
                 - "real_sample_ratio" (float): Ratio of real to synthetic samples.
         """
         super().__init__(config)
-        self.world_model = WorldModel(self.config)
-        self.sac = SAC(self.config)
+        self.world_model = WorldModel(self.config).to(self.device)
+        self.sac = SAC(self.config, device=self.device)
 
         # Dyna specific parameters
         dyna_config = config.get("dyna", {})
@@ -47,7 +50,7 @@ class Dyna(BaseAlgorithm):
             dict: Actions to take in the environment.
         """
         # Convert state to tensor
-        state_tensor = self.real_RB.convert_to_tensors([state])
+        state_tensor = torch.stack([self.real_RB.dict_to_tens(state)]).to(self.device)
 
         # Get actions from the SAC agent
         actions = self.sac.act(state_tensor)
@@ -91,10 +94,12 @@ class Dyna(BaseAlgorithm):
 
         for _ in range(self.k):
             # Generate synthetic actions TODO: decide if random or policy
-            synthetic_actions = [
-                self.sample_actions(self.environment.agent_dict)
-                for _ in range(self.batch_size)
-            ]
+            # synthetic_actions = [
+            #     self.sample_actions(self.environment.agent_dict)
+            #     for _ in range(self.batch_size)
+            # ]
+            # Use policy actions
+            synthetic_actions = [self.get_actions(state) for state in synthetic_states]
 
             # Use the world model to predict next state and reward
             synthetic_next_states, synthetic_rewards = self.world_model.predict(
@@ -114,18 +119,21 @@ class Dyna(BaseAlgorithm):
 
         # 3. Update the model (SAC) with real and synthetic experiences
         # --------------------
-        self.sac._init_losses()  # Reset loss tracking
+        self.sac._init_losses(self.model_updates_per_step)  # Reset loss tracking
         for _ in range(self.model_updates_per_step):
             # Sample from both real and synthetic experiences; SAC uses flattened batches
             real_batch = self.real_RB.sample(
                 int(self.batch_size * self.real_sample_ratio), flatten=True
             )
-            synthetic_batch = self.model_RB.sample(
-                int(self.batch_size * (1 - self.real_sample_ratio)), flatten=True
-            )
+            if self.real_sample_ratio != 1:
+                synthetic_batch = self.model_RB.sample(
+                    int(self.batch_size * (1 - self.real_sample_ratio)), flatten=True
+                )
 
-            # Combine batches
-            combined_batch = self._combine_batches(real_batch, synthetic_batch)
+                # Combine batches
+                combined_batch = self._combine_batches(real_batch, synthetic_batch)
+            else:
+                combined_batch = real_batch
 
             # Update the model (SAC) with the combined batch
             self.sac.update(combined_batch)

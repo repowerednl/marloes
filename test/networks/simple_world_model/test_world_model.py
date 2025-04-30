@@ -103,7 +103,7 @@ def test_world_model_update_executes(dummy_config, dummy_transition):
     # Just test for errors
     model = WorldModel(dummy_config)
     sample_batch = [dummy_transition]
-    model.update(sample_batch)
+    model.update(sample_batch, "cpu")
 
 
 def test_flatten_unflatten_consistency(dummy_transition):
@@ -126,7 +126,7 @@ def test_world_model_predict_executes(dummy_config, dummy_transition):
     states = [state, state]
     # Create corresponding dummy actions as a list of dicts.
     actions = [action, action]
-    next_state, rewards_list = model.predict(states, actions)
+    next_state, rewards_list = model.predict(states, actions, "cpu")
     assert len(next_state) == 2
     assert len(rewards_list) == 2
     # Check dimensions

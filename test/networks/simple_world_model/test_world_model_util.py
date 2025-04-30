@@ -49,7 +49,7 @@ def example_state():
 
 
 def test_parse_state(example_state):
-    parsed = parse_state(example_state)
+    parsed = parse_state(example_state, "cpu")
     assert "agents" in parsed
     assert "SolarAgent 0" in parsed["agents"]
     assert parsed["agents"]["SolarAgent 0"]["scalars"].shape == (1, 3)
@@ -58,7 +58,7 @@ def test_parse_state(example_state):
 
 def test_parse_actions():
     action_list = [{"SolarAgent 0": 1.0, "BatteryAgent 0": -0.5}]
-    parsed = parse_actions(action_list)
+    parsed = parse_actions(action_list, "cpu")
     assert isinstance(parsed, torch.Tensor)
     assert parsed.shape == (1, 2)  # 1 batch, 2 actions
     assert torch.allclose(parsed[0], torch.tensor([1.0, -0.5], dtype=torch.float32))
@@ -66,7 +66,7 @@ def test_parse_actions():
 
 def test_parse_rewards():
     rewards = [0.5, 1.2, -0.7]
-    parsed = parse_rewards(rewards)
+    parsed = parse_rewards(rewards, "cpu")
     assert torch.allclose(parsed, torch.tensor([0.5, 1.2, -0.7], dtype=torch.float32))
 
 
@@ -87,7 +87,7 @@ def test_parse_batch(example_state):
             next_state=example_state[0],
         )
     ]
-    parsed = parse_batch(sample)
+    parsed = parse_batch(sample, "cpu")
     assert "state" in parsed
     assert "actions" in parsed
     assert "rewards" in parsed

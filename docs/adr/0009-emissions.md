@@ -31,10 +31,10 @@ We will adopt the following lifecycle GHG emissions factors (in grams of CO₂-e
      - We choose **15.5 gCO₂eq/kWh** as a representative mid-range estimate.
 
 3. **Battery**
-   - **Value:** ~40–100 gCO₂eq/kWh
+   - **Value:** ~70 gCO₂eq/kWh
    - **Rationale:**
      - Production of lithium-ion batteries can vary widely, from 15–136 gCO₂eq/kWh for grid-scale systems [^2], and 61–106 gCO₂eq/kWh in [^3].
-     - Since there is a very broad range, we assume a value between 40-100 gCO₂eq/kWh depending on the battery configuration.
+     - Since there is a broad range, we assume a value around 70 gCO₂eq/kWh.
 
 4. **Electrolyser**
    - **Value:** Pending; determined by both the electrolyser technology and the source of electricity.

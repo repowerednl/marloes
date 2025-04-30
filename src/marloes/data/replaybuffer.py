@@ -7,7 +7,7 @@ Transition = namedtuple("Transition", ["state", "actions", "rewards", "next_stat
 
 
 class ReplayBuffer:
-    def __init__(self, capacity: int = 10000, device="cpu"):
+    def __init__(self, capacity: int, device: str):
         """
         Initializes the replay buffer.
 
