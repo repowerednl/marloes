@@ -1,3 +1,4 @@
+from marloes.algorithms.util import get_net_forecasted_power
 from .base import BaseAlgorithm
 from collections import defaultdict
 import math
@@ -25,13 +26,17 @@ class Priorities(BaseAlgorithm):
         Determines the action for all batteries based on the net power.
         Batteries will now always participate in charging or discharging, based on net power.
         """
-        num_batteries = len(batteries)
-        ratio = 1 / num_batteries if num_batteries > 0 else 0
+        total_capacity = (
+            sum(bat["energy_capacity"] for bat in batteries.values()) or 1.0
+        )
 
-        battery_actions = {
-            key: math.copysign(1.0, net_power) * ratio * battery["energy_capacity"]
-            for key, battery in batteries.items()
-        }
+        battery_actions = {}
+        for key, battery in batteries.items():
+            # Get share of the battery; weighted net power
+            share = battery["energy_capacity"] / total_capacity
+            desired_action = -net_power * share
+            battery_actions[key] = desired_action / battery["max_power_out"]
+
         return battery_actions
 
     def _get_batteries(self, observations: dict) -> dict:
@@ -40,11 +45,15 @@ class Priorities(BaseAlgorithm):
         """
         batteries = defaultdict()
         for key in [agent for agent in observations.keys() if "Battery" in agent]:
-            # we need state of charge and capacity for these batteries
+            # we need state of charge, capacity and max power out for these batteries
             batteries[key] = {}
-            batteries[key]["soc"] = observations[key]["state_of_charge"]
             batteries[key]["energy_capacity"] = next(
                 agent.asset.energy_capacity
+                for agent in self.environment.agents
+                if agent.id == key
+            )
+            batteries[key]["max_power_out"] = next(
+                agent.asset.max_power_out
                 for agent in self.environment.agents
                 if agent.id == key
             )
@@ -58,7 +67,7 @@ class Priorities(BaseAlgorithm):
         If based on forecasts, the net power is negative, the battery should discharge.
         """
         return self._determine_battery_actions(
-            self._get_net_forecasted_power(observations=observations),
+            get_net_forecasted_power(observations=observations),
             self._get_batteries(observations),
         )
 

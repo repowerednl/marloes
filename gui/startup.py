@@ -1,4 +1,5 @@
 import logging
+import time
 
 import yaml
 from PyQt6.QtWidgets import (
@@ -16,7 +17,10 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QTimer
 
 from gui.success_screen import SuccessScreen
-from src.marloes.algorithms import BaseAlgorithm, Priorities, SimpleSetpoint, Dreamer
+from src.marloes.algorithms.dreamer import Dreamer
+from src.marloes.algorithms.base import BaseAlgorithm
+from src.marloes.algorithms.priorities import Priorities
+
 from src.marloes.algorithms.dyna import Dyna
 from src.marloes.validation.validate_config import validate_config
 
@@ -140,6 +144,7 @@ class ExperimentSetupApp(QWidget):
         algorithm: BaseAlgorithm = BaseAlgorithm.get_algorithm(
             self.config["algorithm"], self.config
         )
+        start_time = time.time()
         try:
             algorithm.train()
         except Exception as e:
@@ -148,6 +153,8 @@ class ExperimentSetupApp(QWidget):
             # self.error_screen.show()
             self.close()
             raise e
+        end_time = time.time()
+        logging.info(f"Training took {end_time - start_time:.2f} seconds")
 
         # Show success message after training has finished
         self.success_screen = SuccessScreen()

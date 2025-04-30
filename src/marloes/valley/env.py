@@ -52,7 +52,6 @@ class EnergyValley(MultiAgentEnv):
         super().__init__()
         self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
         self.time_stamp = self.start_time
-        self.i = 0  # For efficiency, we keep track of the number of steps
         self.time_step = 60  # 1 minute in seconds
 
         self.agents: list[Agent] = []
@@ -192,7 +191,7 @@ class EnergyValley(MultiAgentEnv):
     def _combine_states(self, include_forecast: bool = True) -> dict:
         """Function to combine all agents states into one observation"""
         for agent in self.agents:
-            full_state = agent.get_state(self.i)
+            full_state = agent.get_state(self.time_stamp)
             # time is also in state, and is_fcr for battery is not relevant for now.
             relevant_state = {
                 key: value
@@ -252,7 +251,6 @@ class EnergyValley(MultiAgentEnv):
 
         # Update the time_stamp and i
         self.time_stamp += timedelta(seconds=self.time_step)
-        self.i += 1
 
         # Solve and step the model
         self.model.solve(self.time_step)

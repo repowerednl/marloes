@@ -33,15 +33,20 @@ def read_series(
     # Convert the DataFrame to a Series
     series = df.squeeze("columns")
 
+    if forecast:
+        # Bug fix for misaligned forecast data
+        series.index = series.index + pd.DateOffset(hours=1)
+
     # Shift the series to the year 2025 so all data aligns
     series = shift_series(
         series,
         datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC")),
         datetime(2025, 12, 31, 23, 59, tzinfo=ZoneInfo("UTC")),
     )
-    series = add_noise_to_series(series)
+    series = add_noise_to_series(series, 0)
     if not forecast:
         series = drop_out_series(series)
+
     return series
 
 
@@ -203,11 +208,11 @@ def convert_to_utc(series: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame
     return series
 
 
-def add_noise_to_series(series: pd.Series) -> pd.Series:
+def add_noise_to_series(series: pd.Series, noise: float) -> pd.Series:
     """
     Adds normally distributed noise (5% of the standard deviation) to a series.
     """
-    dev = series.std() * 0.05
+    dev = series.std() * noise
     return series + np.random.normal(0, dev, series.shape[0])
 
 
