@@ -99,17 +99,21 @@ class WorldModel:
                 }
                 x = x.unsqueeze(0)
                 # Obtain h_t
-                h_0 = self.rssm._init_state(x.shape[0])
-                h_0 = h_0[
-                    -1
-                ]  # take the last layer of the GRU, shape (batch=1, hidden_size)
+                h_0 = self.rssm._init_state(1)[-1]  # x_shape[0]
+                h_0 = h_0[-1].squeeze(0)
+                # take the last layer of the GRU, shape (batch=1, hidden_size)
                 # infer z_t
                 z_0, _ = self.rssm._get_latent_state(h_0)
+
                 # sample action from the actor with model state
                 # model state is the concatenation of h_t and z_t
                 s = torch.cat([h_0, z_0], dim=-1)
-                a_0 = actor(s).sample()  # shape (batch=1, action_dim)
 
+                a_0 = actor(s).sample()  # shape (batch=1, action_dim)
+                print("\nShapes:")
+                print(f"h_0: {h_0.shape}")
+                print(f"z_0: {z_0.shape}")
+                print(f"a_0: {a_0.shape}")
                 h_t, z_hat_t, _ = self.rssm.forward(h_0, z_0, a_0)
                 # form model state
                 x = torch.cat(
@@ -248,7 +252,6 @@ class WorldModel:
             z_logvar,
         )
         representation_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
-
         """
         Third loss function, the prediction loss is end-to-end training of the model
         trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression (not implemented)

@@ -82,7 +82,9 @@ class Dreamer(BaseAlgorithm):
             # Step 2: Get the latent state (based on current obs and h_t)  #
             # ------------------------------------------------------------ #
             x = torch.cat([observations, h_t], dim=-1)
+            print("Getting actions:")
             z_t, _ = self.world_model.rssm.encoder(x)
+            print(z_t)
 
             # Step 3: Get the action (based on the model state)  #
             # -------------------------------------------------- #
@@ -112,6 +114,7 @@ class Dreamer(BaseAlgorithm):
         """
         if step % self.update_interval != 0 and step > 0:
             return
+        print("\nTraining step:", step)
         # set world_model to train mode
         # set actor_critic to train mode
 

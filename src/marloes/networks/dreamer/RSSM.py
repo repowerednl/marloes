@@ -165,24 +165,34 @@ class RSSM(BaseNetwork):
             tuple: Latent state and its details (mean and log variance).
         """
         if self.stochastic:
+
             mu = self.fc_mu(h_t)
             logvar = self.fc_logvar(h_t)
+            # nan values with h_t initialized to 0
+            mu = torch.nan_to_num(mu, nan=0.0)
+            logvar = torch.nan_to_num(logvar, nan=0.0)
             z_t = dist(mu, logvar)
             return z_t, {"mean": mu, "logvar": logvar}
 
         z_t = self.fc(h_t)
         return z_t, {"mean": None, "logvar": None}
 
-    def _init_state(self, batch_size: int):
+    def _init_state(self, batch_size: int, random_init: bool = True):
         """
         Initializes the hidden state for the RNN.
 
         Args:
             batch_size (int): Batch size.
+            random_init (bool, optional): Whether to initialize with small random values. Defaults to True.
 
         Returns:
             torch.Tensor: Initialized hidden state.
         """
+        if random_init:
+            return (
+                torch.randn(self.rnn.num_layers, batch_size, self.rnn.hidden_size)
+                * 0.01
+            )
         return torch.zeros(self.rnn.num_layers, batch_size, self.rnn.hidden_size)
 
     def rollout(self, sample: list[dict]) -> dict:
@@ -262,6 +272,10 @@ class RSSM(BaseNetwork):
         h_ts = []
         for t in range(T):
             a_t = actions[t].unsqueeze(0)  # Add batch dimension
+
+            print(f"h_0: {h_t.shape}")
+            print(f"z_0: {z_t.shape}")
+            print(f"a_0: {a_t.shape}")
             # ------- STEP 1: Pass through RNN to get h_t and predicted latent state ---------#
             h_t, predicted, predicted_details = self.forward(h_t, z_t, a_t)
             h_ts.append(h_t)

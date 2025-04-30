@@ -118,7 +118,7 @@ class ReplayBuffer:
         """
         # if not a dictionary, convert to tensor
         if not isinstance(data, dict):
-            return torch.tensor(data, dtype=torch.float32)
+            return torch.tensor(data, dtype=torch.float32).unsqueeze(0)
 
         def recursive_tensor_extraction(value):
             """
