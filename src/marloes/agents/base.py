@@ -117,9 +117,10 @@ class Agent(ABC):
             if state["nomination"] != 0:
                 self.nomination_fraction += (state["power"] / state["nomination"]) / 60
             else:
-                logging.warning(
-                    "Nomination is zero; skipping fraction update to avoid division by zero."
-                )
+                # logging.warning(
+                #     "Nomination is zero; skipping fraction update to avoid division by zero."
+                # )
+                pass
 
             # Add the current nomination fraction to the state
             state["nomination_fraction"] = self.nomination_fraction
