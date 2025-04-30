@@ -120,12 +120,7 @@ class RSSM(BaseNetwork):
         Returns:
             tuple: Updated hidden state, predicted latent state, and latent state details.
         """
-        assert (
-            torch.cat([h_t, z_t, a_t], dim=-1).shape[-1] == self.rnn.input_size
-        ), "RSSM_LD is not configured correctly. Combined input size does not match the RNN input size."
-
         _, hidden = self._get_recurrent_state(h_t, z_t, a_t)
-
         # h_t should have the right shape to be passed to the next step
         h_t = hidden[-1].unsqueeze(0)
         # Predict the latent state from the hidden state
@@ -152,6 +147,8 @@ class RSSM(BaseNetwork):
             tuple: Output and hidden state from the RNN.
         """
         x = torch.cat([h_t, z_t, a_t], dim=-1).float()
+        # protect rnn by clamping
+        x = torch.clamp(x, min=-10, max=10)
         return self.rnn(x)
 
     def _get_latent_state(self, h_t: torch.Tensor) -> tuple[torch.Tensor, dict]:
@@ -170,7 +167,7 @@ class RSSM(BaseNetwork):
             logvar = self.fc_logvar(h_t)
             # nan values with h_t initialized to 0
             mu = torch.nan_to_num(mu, nan=0.0)
-            logvar = torch.nan_to_num(logvar, nan=0.0)
+            logvar = torch.clamp(torch.nan_to_num(logvar, nan=0.0), min=-10, max=10)
             z_t = dist(mu, logvar)
             return z_t, {"mean": mu, "logvar": logvar}
 
@@ -273,9 +270,6 @@ class RSSM(BaseNetwork):
         for t in range(T):
             a_t = actions[t].unsqueeze(0)  # Add batch dimension
 
-            print(f"h_0: {h_t.shape}")
-            print(f"z_0: {z_t.shape}")
-            print(f"a_0: {a_t.shape}")
             # ------- STEP 1: Pass through RNN to get h_t and predicted latent state ---------#
             h_t, predicted, predicted_details = self.forward(h_t, z_t, a_t)
             h_ts.append(h_t)
@@ -341,7 +335,7 @@ class Encoder(BaseNetwork):
             self.fc1(x.float())
         )  # float() added to ensure compatibility with torch.tensor float32
         mu = self.fc_mu(x)
-        logvar = self.fc_logvar(x)
+        logvar = torch.clamp(self.fc_logvar(x), min=-10, max=10)
         return dist(mu, logvar), {
             "mean": mu,
             "logvar": logvar,

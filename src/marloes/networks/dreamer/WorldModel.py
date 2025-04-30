@@ -12,6 +12,8 @@ from marloes.networks.util import (
     kl_free_bits,
 )
 
+import logging
+
 
 class WorldModel:
     """
@@ -60,7 +62,7 @@ class WorldModel:
             self.decoder,
             self.reward_predictor,
             self.continue_predictor,
-        ]
+        ]  # TODO: change WorldModel to a nn.Module
         # Optimizer
         self.optim = torch.optim.Adam(
             params=[param for mod in self.modules for param in mod.parameters()],
@@ -88,6 +90,10 @@ class WorldModel:
         Returns:
             list[dict]: List of imagined trajectories containing states, actions, and rewards.
         """
+        print("Imagination step:")
+        logging.info(
+            f"Imagining trajectories with horizon {horizon} and batch size {starting_points.shape[0]}"
+        )
         with torch.no_grad():
             batch = []
             # we have a batch of starting points
@@ -99,8 +105,8 @@ class WorldModel:
                 }
                 x = x.unsqueeze(0)
                 # Obtain h_t
-                h_0 = self.rssm._init_state(1)[-1]  # x_shape[0]
-                h_0 = h_0[-1].squeeze(0)
+                h_0 = self.rssm._init_state(1)
+                h_0 = h_0[-1]
                 # take the last layer of the GRU, shape (batch=1, hidden_size)
                 # infer z_t
                 z_0, _ = self.rssm._get_latent_state(h_0)
@@ -110,21 +116,17 @@ class WorldModel:
                 s = torch.cat([h_0, z_0], dim=-1)
 
                 a_0 = actor(s).sample()  # shape (batch=1, action_dim)
-                print("\nShapes:")
-                print(f"h_0: {h_0.shape}")
-                print(f"z_0: {z_0.shape}")
-                print(f"a_0: {a_0.shape}")
+
+                # should be of shapes [1, length] before passing to rssm
                 h_t, z_hat_t, _ = self.rssm.forward(h_0, z_0, a_0)
+
                 # form model state
                 x = torch.cat(
                     [x, h_t], dim=-1
                 )  # shape (batch=1, obs_dim + hidden_size)
                 z_t, _ = self.rssm.encoder(x)
                 a_t = a_0
-                # Store the initial state (?) TODO: yes or no?
-                # imagined["states"].append(z_t)
-                # imagined["actions"].append(a_t)
-                # imagined["rewards"].append(self.reward_predictor(h_t, z_t))
+                # Store the initial state/action/reward (?) TODO: yes or no?
                 """
                 At each starting point, we imagine trajectories of length horizon.
                 """
@@ -151,6 +153,7 @@ class WorldModel:
                 imagined["rewards"] = torch.stack(imagined["rewards"], dim=0)
                 # Append the imagined sequence to the batch
                 batch.append(imagined)
+        logging.info("Imagination done")
         return batch
 
     def learn(self, sample: list[dict]) -> dict:
@@ -163,6 +166,8 @@ class WorldModel:
         Returns:
             dict: Dictionary containing dynamics, representation, prediction, and total losses.
         """
+        print("Learning step:")
+        logging.info(f"Learning from real trajectories with batch size {len(sample)}")
         # extract the to be predicted states (next_states) as tensors into x
         x = torch.stack([sequence["state"] for sequence in sample], dim=0)
         # extract the rewards and done signals as tensors into rew
@@ -269,11 +274,18 @@ class WorldModel:
         # Backpropagate the total loss
         self.optim.zero_grad()
         total_loss.backward()
+        # add gradient clipping # TODO: change WorldModel to a nn.Module
+        torch.nn.utils.clip_grad_norm_(
+            [param for mod in self.modules for param in mod.parameters()], max_norm=1.0
+        )
         self.optim.step()
 
         # Store the loss in the list
         self.loss.append(total_loss.item())
 
+        logging.info(
+            f"World Model Losses: Dynamics: {dynamic_loss.item()}, Representation: {representation_loss.item()}, Prediction: {prediction_loss.item()}, Total: {total_loss.item()}"
+        )
         return {
             "dynamics_loss": dynamic_loss,
             "representation_loss": representation_loss,

@@ -67,6 +67,7 @@ class Dreamer(BaseAlgorithm):
         Returns:
             dict: Dictionary mapping agent IDs to actions.
         """
+        print("Getting actions:")
         if not self.previous:
             self._init_previous()
         # set world_model to eval mode
@@ -82,9 +83,7 @@ class Dreamer(BaseAlgorithm):
             # Step 2: Get the latent state (based on current obs and h_t)  #
             # ------------------------------------------------------------ #
             x = torch.cat([observations, h_t], dim=-1)
-            print("Getting actions:")
             z_t, _ = self.world_model.rssm.encoder(x)
-            print(z_t)
 
             # Step 3: Get the action (based on the model state)  #
             # -------------------------------------------------- #
@@ -112,9 +111,9 @@ class Dreamer(BaseAlgorithm):
         Returns:
             dict: Dictionary containing world model and actor-critic losses.
         """
-        if step % self.update_interval != 0 and step > 0:
+        # only update when step % update_interval == 0
+        if step % self.update_interval != 0 or step == 0:
             return
-        print("\nTraining step:", step)
         # set world_model to train mode
         # set actor_critic to train mode
 
@@ -157,6 +156,7 @@ class Dreamer(BaseAlgorithm):
         # to Extractor here?
         # returning losses to Base Algorithm might be cleaner
         return {
-            "world": worldmodel_losses,
-            "actorcritic": actorcritic_losses,
+            "world": worldmodel_losses["total_loss"],
+            "actor": actorcritic_losses["actor_loss"],
+            "critic": actorcritic_losses["critic_loss"],
         }
