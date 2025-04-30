@@ -32,7 +32,7 @@ class BatteryAgent(Agent):
             "energy_capacity": config["energy_capacity"],
             "ramp_up_rate": config["power"],  # instant
             "ramp_down_rate": config["power"],  # instant
-            "efficiency": 0.85,
+            "efficiency": 0.98,
             "degradation_function": degradation_function,
         }
 
