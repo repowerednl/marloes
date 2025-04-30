@@ -57,13 +57,13 @@ class ActorCritic:
         Returns:
             dict: Dictionary containing actor, critic, and total losses.
         """
+        # TODO: not ideal to squeeze() afterwards, but stack adds a dimension.
         # Unpack the states into a batched tensor for the critic
-        states = torch.stack([t["states"] for t in trajectories], dim=0)
+        states = torch.stack([t["states"] for t in trajectories], dim=0).squeeze()
         # Unpack the actions into a batched tensor for the loss computing
-        actions = torch.stack([t["actions"] for t in trajectories], dim=0)
+        actions = torch.stack([t["actions"] for t in trajectories], dim=0).squeeze()
         # Unpack the rewards into a batched tensor for the loss computing
-        rewards = torch.stack([t["rewards"] for t in trajectories], dim=0)
-
+        rewards = torch.stack([t["rewards"] for t in trajectories], dim=0).squeeze(-1)
         # Critic Evaluation
         values = self.critic(states)
 
@@ -80,6 +80,8 @@ class ActorCritic:
         # Actor loss
         self.actor_optim.zero_grad()
         actor_loss.backward()
+        # add gradient clipping
+        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), 0.5)
         self.actor_optim.step()
 
         self.actor_loss.append(actor_loss.item())
@@ -87,6 +89,8 @@ class ActorCritic:
         # Critic loss
         self.critic_optim.zero_grad()
         critic_loss.backward()
+        # add gradient clipping
+        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
         self.critic_optim.step()
 
         self.critic_loss.append(critic_loss.item())

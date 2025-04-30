@@ -67,7 +67,6 @@ class Dreamer(BaseAlgorithm):
         Returns:
             dict: Dictionary mapping agent IDs to actions.
         """
-        print("Getting actions:")
         if not self.previous:
             self._init_previous()
         # set world_model to eval mode

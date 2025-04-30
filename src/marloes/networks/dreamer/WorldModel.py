@@ -90,10 +90,6 @@ class WorldModel:
         Returns:
             list[dict]: List of imagined trajectories containing states, actions, and rewards.
         """
-        print("Imagination step:")
-        logging.info(
-            f"Imagining trajectories with horizon {horizon} and batch size {starting_points.shape[0]}"
-        )
         with torch.no_grad():
             batch = []
             # we have a batch of starting points
@@ -153,7 +149,6 @@ class WorldModel:
                 imagined["rewards"] = torch.stack(imagined["rewards"], dim=0)
                 # Append the imagined sequence to the batch
                 batch.append(imagined)
-        logging.info("Imagination done")
         return batch
 
     def learn(self, sample: list[dict]) -> dict:
@@ -166,8 +161,6 @@ class WorldModel:
         Returns:
             dict: Dictionary containing dynamics, representation, prediction, and total losses.
         """
-        print("Learning step:")
-        logging.info(f"Learning from real trajectories with batch size {len(sample)}")
         # extract the to be predicted states (next_states) as tensors into x
         x = torch.stack([sequence["state"] for sequence in sample], dim=0)
         # extract the rewards and done signals as tensors into rew
@@ -283,9 +276,6 @@ class WorldModel:
         # Store the loss in the list
         self.loss.append(total_loss.item())
 
-        logging.info(
-            f"World Model Losses: Dynamics: {dynamic_loss.item()}, Representation: {representation_loss.item()}, Prediction: {prediction_loss.item()}, Total: {total_loss.item()}"
-        )
         return {
             "dynamics_loss": dynamic_loss,
             "representation_loss": representation_loss,
