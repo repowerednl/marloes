@@ -26,6 +26,7 @@ from src.marloes.validation.validate_config import validate_config
 
 from .errors import ErrorScreen
 from .img import LogoWindow
+import os
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -50,9 +51,12 @@ class ExperimentSetupApp(QWidget):
         # DEFAULT CONFIG CHECKBOX
         layout.addWidget(QLabel("Select configuration:"))
         self.config_dropdown = QComboBox()
-        self.config_dropdown.addItems(
-            ["default_config", "simple_config", "dyna_config", "test_config"]
-        )
+        config_files = [
+            f.replace(".yaml", "")
+            for f in os.listdir("configs/")
+            if f.endswith(".yaml")
+        ]
+        self.config_dropdown.addItems(config_files)
         layout.addWidget(self.config_dropdown)
 
         # ALGORITHM SELECTION
