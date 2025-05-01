@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 
 from marloes.networks.util import compute_lambda_returns
+import copy
 
 
 class ActorCritic:
@@ -22,6 +23,10 @@ class ActorCritic:
         """
         self.actor = Actor(input, output, hidden_size)
         self.critic = Critic(input, hidden_size)
+        self.critic_target = copy.deepcopy(self.critic)
+        self.critic_ema_decay = 0.98  # DreamerV3 uses 0.98
+        for param in self.critic_target.parameters():
+            param.requires_grad = False  # Freeze the target network
 
         self.actor_optim = Adam(self.actor.parameters(), lr=1e-4)
         self.critic_optim = Adam(self.critic.parameters(), lr=1e-4)
@@ -74,9 +79,6 @@ class ActorCritic:
         actor_loss = self._compute_actor_loss(states, actions, advantages, returns)
         critic_loss = self._compute_critic_loss(values, returns)
 
-        # Backpropagate the losses
-        total_loss = actor_loss + critic_loss
-
         # Actor loss
         self.actor_optim.zero_grad()
         actor_loss.backward()
@@ -93,13 +95,10 @@ class ActorCritic:
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
         self.critic_optim.step()
 
-        self.critic_loss.append(critic_loss.item())
+        # Update the network with EMA
+        self.update_critic_target()
 
-        return {
-            "actor_loss": actor_loss,
-            "critic_loss": critic_loss,
-            "total_loss": total_loss,
-        }
+        self.critic_loss.append(critic_loss.item())
 
     def _compute_actor_loss(self, states, actions, advantages, returns) -> torch.Tensor:
         """
@@ -132,7 +131,6 @@ class ActorCritic:
             quantile_95 - quantile_5,
             min=0.99,
         )
-        # TODO: EMA is the exponential moving average.
 
         actor_loss = (
             -((advantages.detach() / S) * log_probs).mean()
@@ -171,9 +169,19 @@ class ActorCritic:
         Returns:
             tuple: λ-returns tensor of shape (B, T, 1) and advantages tensor of shape (B, T, 1).
         """
+        # TODO: returns are too high because Rewards are not normalized, (no tanh activation)
         returns = compute_lambda_returns(rewards, values, self.gamma, self.lmbda)
         advantages = returns - values.detach()
         return returns, advantages
+
+    @torch.no_grad()
+    def update_critic_target(self):
+        for target_param, param in zip(
+            self.critic_target.parameters(), self.critic.parameters()
+        ):
+            target_param.data.mul_(self.critic_ema_decay).add_(
+                param.data * (1.0 - self.critic_ema_decay)
+            )
 
 
 class Actor(nn.Module):

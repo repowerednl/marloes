@@ -1,6 +1,6 @@
 algorithm: Dreamer
 chunk_size: 1000
-training_steps: 5000
+training_steps: 2000
 update_interval: 50
 batch_size: 64
 agents:

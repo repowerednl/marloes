@@ -274,14 +274,21 @@ class WorldModel:
         self.optim.step()
 
         # Store the loss in the list
-        self.loss.append(total_loss.item())
+        # self.loss.append(total_loss.item())
 
-        return {
-            "dynamics_loss": dynamic_loss,
-            "representation_loss": representation_loss,
-            "prediction_loss": prediction_loss,
-            "total_loss": total_loss,
+        self.loss = {
+            "dynamics_loss": dynamic_loss.item(),
+            "representation_loss": representation_loss.item(),
+            "prediction_loss": prediction_loss.item(),
+            "total_world_loss": total_loss.item(),
         }
+
+        # return {
+        #     "dynamics_loss": dynamic_loss.item(),
+        #     "representation_loss": representation_loss.item(),
+        #     "prediction_loss": prediction_loss.item(),
+        #     "total_world_loss": total_loss.item(),
+        # }
 
 
 class Decoder(BaseNetwork):

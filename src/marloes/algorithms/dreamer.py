@@ -3,6 +3,7 @@ from marloes.networks.dreamer.WorldModel import WorldModel
 from marloes.networks.dreamer.ActorCritic import ActorCritic
 
 import torch
+import numpy as np
 
 
 class Dreamer(BaseAlgorithm):
@@ -134,7 +135,7 @@ class Dreamer(BaseAlgorithm):
         # | ----------------------------------------------------- |#
         # | Step 2: Update the world model with real interactions |#
         # | ----------------------------------------------------- |#
-        worldmodel_losses = self.world_model.learn(real_sample)
+        self.world_model.learn(real_sample)
 
         # | ----------------------------------------------------- |#
         # | Step 3: Imagine trajectories for ActorCritic learning |#
@@ -154,15 +155,13 @@ class Dreamer(BaseAlgorithm):
         # (updating with real trajectories should be implemented for:
         # - environments where the reward is tricky to predict)
 
-        actorcritic_losses = self.actor_critic.learn(imagined_sequences)
+        self.actor_critic.learn(imagined_sequences)
 
         # | ----------------------------------------------------- |#
         # | Step 5: Save the losses                               |#
         # | ----------------------------------------------------- |#
-        # to Extractor here?
-        # returning losses to Base Algorithm might be cleaner
-        return {
-            "worldmodel_loss": worldmodel_losses["total_loss"],
-            "actor_loss": actorcritic_losses["actor_loss"],
-            "critic_loss": actorcritic_losses["critic_loss"],
+        # Returning is not correct yet, plots do not show
+        return self.world_model.loss | {
+            "actor_loss": np.mean(self.actor_critic.actor_loss),
+            "critic_loss": np.mean(self.actor_critic.critic_loss),
         }
