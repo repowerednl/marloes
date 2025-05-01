@@ -4,7 +4,7 @@ RSSM_LD = LayerDetails(
     input={},
     hidden={
         "recurrent": {
-            "input_size": 326,  # h_t (256), z_t (64), a_t (number of agents = 6)
+            "input_size": 323,  # h_t (256), z_t (64), a_t (number of agents = 6)
             "hidden_size": 256,
             "num_layers": 2,
             "bias": True,

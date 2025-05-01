@@ -57,18 +57,23 @@ class Dreamer(BaseAlgorithm):
             "a_t": torch.zeros(1, self.environment.action_dim[0]),
         }
 
-    def get_actions(self, observations):
+    def get_actions(self, observations: dict):
         """
         Computes actions based on the current observations and model state.
 
         Args:
-            observations (torch.Tensor): Current observations.
+            observations (dict): Current observations.
 
         Returns:
             dict: Dictionary mapping agent IDs to actions.
         """
         if not self.previous:
             self._init_previous()
+        # convert observations to tensor
+        observations = torch.stack([self.real_RB.dict_to_tens(observations)]).to(
+            self.device
+        )
+
         # set world_model to eval mode
         # set actor_critic to eval mode
         with torch.no_grad():
@@ -77,7 +82,7 @@ class Dreamer(BaseAlgorithm):
             h_t, _, _ = self.world_model.rssm.forward(
                 self.previous["h_t"], self.previous["z_t"], self.previous["a_t"]
             )
-            h_t = h_t[-1].squeeze(0)
+            h_t = h_t[-1].unsqueeze(0)  # get the last hidden state
 
             # Step 2: Get the latent state (based on current obs and h_t)  #
             # ------------------------------------------------------------ #
@@ -95,10 +100,12 @@ class Dreamer(BaseAlgorithm):
             self.previous["z_t"] = z_t
             self.previous["a_t"] = actions
 
-            return {
-                agent_id: actions[i]
-                for i, agent_id in enumerate(self.environment.agent_dict.keys())
-            }
+        action_list = actions.squeeze(0).tolist()
+
+        return {
+            agent_id: action_list[i]
+            for i, agent_id in enumerate(self.environment.agent_dict.keys())
+        }
 
     def perform_training_steps(self, step: int):
         """

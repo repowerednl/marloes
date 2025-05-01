@@ -63,7 +63,7 @@ class ExperimentSetupApp(QWidget):
         self.algorithm_label = QLabel("Select Algorithm:")
         self.algorithm_dropdown = QComboBox(self)
         self.algorithm_dropdown.addItems(
-            ["Priorities", "SimpleSetpoint", "Dyna", "Dreamer"]
+            ["Dreamer", "Priorities", "SimpleSetpoint", "Dyna"]
         )
         layout.addWidget(self.algorithm_label)
         layout.addWidget(self.algorithm_dropdown)
