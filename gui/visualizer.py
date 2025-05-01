@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QGroupBox,
 )
-from PyQt6.QtCore import QTimer
 
 from gui.errors import ErrorScreen
 from marloes.results.visualizer import Visualizer
@@ -129,5 +128,4 @@ class VisualizerGUI(QWidget):
         self.visualizer.plot_metrics(
             selected_metrics, save_png, rolling_median, overlay
         )
-        # close the GUI after 2 seconds
-        QTimer.singleShot(2000, self.close)
+        self.close()
