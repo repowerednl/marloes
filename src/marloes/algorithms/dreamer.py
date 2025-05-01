@@ -162,7 +162,7 @@ class Dreamer(BaseAlgorithm):
         # to Extractor here?
         # returning losses to Base Algorithm might be cleaner
         return {
-            "world": worldmodel_losses["total_loss"],
-            "actor": actorcritic_losses["actor_loss"],
-            "critic": actorcritic_losses["critic_loss"],
+            "worldmodel_loss": worldmodel_losses["total_loss"],
+            "actor_loss": actorcritic_losses["actor_loss"],
+            "critic_loss": actorcritic_losses["critic_loss"],
         }
