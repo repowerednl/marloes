@@ -30,6 +30,7 @@ class Calculator:
     }
     EXTRA_METRICS = {
         "grid_state": "cumulative_grid_state",
+        "reward": "cumulative_reward",
     }
 
     def __init__(self, uid: int | None = None, dir: str = "results"):
@@ -80,6 +81,12 @@ class Calculator:
         Calculates the cumulative grid state.
         """
         return np.cumsum(self.extractor.grid_state)
+
+    def cumulative_reward(self) -> np.ndarray:
+        """
+        Calculates the cumulative reward.
+        """
+        return np.cumsum(self.extractor.reward)
 
     def _get_reward_model(self, metric: str) -> SubReward | None:
         reward_class = self.REWARD_CLASSES.get(metric)
