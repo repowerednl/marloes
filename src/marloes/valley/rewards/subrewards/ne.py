@@ -16,6 +16,7 @@ class NESubReward(SubReward):
 
     def __init__(
         self,
+        config: dict,
         active: bool = False,
         scaling_factor: float = 1.0,
         intermediate_scaling_factor: float = None,
@@ -25,7 +26,7 @@ class NESubReward(SubReward):
         Initializes allows for a different scaling factor for the intermediate penalty;
         - defaults to 1/60 of the normal scaling factor.
         """
-        super().__init__(active, scaling_factor)
+        super().__init__(config, active, scaling_factor)
         if intermediate_scaling_factor is None:
             self.intermediate_scaling_factor = scaling_factor / 60
         else:

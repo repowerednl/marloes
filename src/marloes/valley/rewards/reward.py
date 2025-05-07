@@ -26,13 +26,13 @@ class Reward:
         "NE": NESubReward,
     }
 
-    def __init__(self, actual: bool = True, **kwargs):
+    def __init__(self, config: dict, actual: bool = True, **kwargs):
         """
         Initializes the Reward instance with specified sub-penalties/rewards.
         """
         self.actual = actual
         self.sub_rewards: dict[str, SubReward] = {
-            key.upper(): self.VALID_SUB_REWARDS[key.upper()](**value)
+            key.upper(): self.VALID_SUB_REWARDS[key.upper()](config, **value)
             for key, value in kwargs.items()
             if key.upper() in self.VALID_SUB_REWARDS
         }

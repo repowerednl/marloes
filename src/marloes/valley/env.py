@@ -60,7 +60,7 @@ class EnergyValley(MultiAgentEnv):
         self.extractor: Extractor = self.EXTRACTOR_MAP[
             config.pop("extractor_type", "default")
         ]()
-        self.reward = Reward(actual=True, **config.get("subrewards", {}))
+        self.reward = Reward(config, actual=True, **config.get("subrewards", {}))
 
         self._initialize_agents(config, algorithm_type)
         self._initialize_model(
