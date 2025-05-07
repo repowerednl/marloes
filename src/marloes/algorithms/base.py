@@ -101,7 +101,6 @@ class BaseAlgorithm(ABC):
             else:
                 # Get actions from the algorithm
                 actions = self.get_actions(state)
-
             next_state, reward, dones, infos = self.environment.step(
                 actions=actions,
                 loss_dict=self.losses,
@@ -117,7 +116,6 @@ class BaseAlgorithm(ABC):
             # --------------------
             if step > self.num_initial_random_steps:
                 self.losses = self.perform_training_steps(step)
-
             # Any time a chunk is "full", it should be saved
             if self.chunk_size != 0 and step % self.chunk_size == 0 and step != 0:
                 logging.info("Saving intermediate results and resetting extractor...")

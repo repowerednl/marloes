@@ -166,9 +166,9 @@ class Extractor:
             if "nomination_fraction" in value:
                 self.total_nomination_fraction[self.i] += value["nomination_fraction"]
 
-    def store_loss(self, loss_dict: dict) -> None:
+    def store_loss(self, loss_dict: dict | None) -> None:
         """
-        Store each loss in a dedicated array. Dict can have random keys.
+        Store each loss in a dedicated array. If loss_dict is None.
         """
         if self.i >= self.size:
             raise IndexError("Extractor has reached its maximum capacity.")

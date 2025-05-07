@@ -5,6 +5,8 @@ from marloes.networks.dreamer.ActorCritic import ActorCritic
 import torch
 import numpy as np
 
+import logging
+
 
 class Dreamer(BaseAlgorithm):
     """
@@ -26,6 +28,7 @@ class Dreamer(BaseAlgorithm):
         self.update_interval = self.config.get("update_interval", 100)
         self.previous = None
         self.horizon = 16
+        self.losses = None
 
     def _initialize_world_model(self):
         """
@@ -102,7 +105,6 @@ class Dreamer(BaseAlgorithm):
             self.previous["a_t"] = actions
 
         action_list = actions.squeeze(0).tolist()
-
         return {
             agent_id: action_list[i]
             for i, agent_id in enumerate(self.environment.agent_dict.keys())
@@ -118,12 +120,12 @@ class Dreamer(BaseAlgorithm):
         Returns:
             dict: Dictionary containing world model and actor-critic losses.
         """
-        # only update when step % update_interval == 0
-        if step % self.update_interval != 0 or step == 0:
-            return
+        # only update when step % update_interval == 0, early return with the (previous) losses
+        if step % self.update_interval != 0 or step == 0:  # TODO: uncomment
+            return self.losses
         # set world_model to train mode
         # set actor_critic to train mode
-
+        logging.info(f"Training step {step}.")
         # | --------------------------------------------------- |#
         # | Step 1: Get a sample from the replay buffer         |#
         # |  - should be a sample of sequences (size=horizon)   |#
@@ -161,7 +163,14 @@ class Dreamer(BaseAlgorithm):
         # | Step 5: Save the losses                               |#
         # | ----------------------------------------------------- |#
         # Returning is not correct yet, plots do not show
-        return self.world_model.loss | {
+        self.losses = self.world_model.loss | {
             "actor_loss": np.mean(self.actor_critic.actor_loss),
             "critic_loss": np.mean(self.actor_critic.critic_loss),
         }
+
+        # raise valueerror if not dict[str,float]
+        if not all(isinstance(v, float) for v in self.losses.values()):
+            raise ValueError(
+                "Losses should be a dictionary of string keys and float values."
+            )
+        return self.losses

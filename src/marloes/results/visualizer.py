@@ -115,7 +115,6 @@ class Visualizer:
                 min_y = min([series.min() for series in data_by_uid.values()])
                 for uid, series in data_by_uid.items():
                     data_by_uid[uid] = series - min_y + 0.01
-
         for uid, series in data_by_uid.items():
             fig.add_trace(
                 go.Scatter(
@@ -125,7 +124,6 @@ class Visualizer:
                     name=f"UID {uid}",
                 )
             )
-
         fig.update_layout(
             title=f"{metric.replace('_', ' ').title()} Across Simulation(s): {self.uids}",
             xaxis_title="Time",
