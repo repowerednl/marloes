@@ -125,7 +125,6 @@ class Dreamer(BaseAlgorithm):
             return self.losses
         # set world_model to train mode
         # set actor_critic to train mode
-        logging.info(f"Training step {step}.")
         # | --------------------------------------------------- |#
         # | Step 1: Get a sample from the replay buffer         |#
         # |  - should be a sample of sequences (size=horizon)   |#
