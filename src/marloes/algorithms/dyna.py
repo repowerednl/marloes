@@ -94,10 +94,10 @@ class Dyna(BaseAlgorithm):
 
         for _ in range(self.k):
             # Generate synthetic actions TODO: decide if random or policy
-            # synthetic_actions = [
-            #     self.sample_actions(self.environment.agent_dict)
-            #     for _ in range(self.batch_size)
-            # ]
+            synthetic_actions = [
+                self.sample_actions(self.environment.agent_dict)
+                for _ in range(self.batch_size)
+            ]
             # Use policy actions
             synthetic_actions = [self.get_actions(state) for state in synthetic_states]
 
