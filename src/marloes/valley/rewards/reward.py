@@ -52,9 +52,16 @@ class Reward:
         """
         if self.actual:
             total_reward = 0
+
+            # For the SS subreward
             self.net_grid_state += extractor.grid_state[extractor.i]
-            self.net_demand += extractor.total_demand[extractor.i]
-            self.net_battery_intake += extractor.total_battery_intake[extractor.i]
+            input_dict = {
+                "net_grid_state": self.net_grid_state,
+                "grid_state": extractor.grid_state[extractor.i],
+                "total_demand": extractor.total_demand[extractor.i],
+                "total_battery_intake": extractor.total_battery_intake[extractor.i],
+            }
+
         else:
             total_reward = np.zeros(len(extractor.grid_state))
 
@@ -63,9 +70,7 @@ class Reward:
                 total_reward += sub_reward.scaling_factor * sub_reward.calculate(
                     extractor,
                     actual=self.actual,
-                    net_grid_state=self.net_grid_state,
-                    net_demand=self.net_demand,
-                    net_battery_intake=self.net_battery_intake,
+                    input_dict=input_dict if self.actual else None,
                     time_stamp=time_stamp,
                 )
 
