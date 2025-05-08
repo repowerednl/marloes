@@ -43,8 +43,6 @@ class Reward:
 
         # Track the net grid state if ss or nb is active and actual is True
         self.net_grid_state = 0
-        self.net_demand = 0
-        self.net_battery_intake = 0
 
     def get(self, extractor: Extractor, time_stamp: datetime) -> float | np.ndarray:
         """
