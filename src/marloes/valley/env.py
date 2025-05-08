@@ -228,7 +228,7 @@ class EnergyValley(MultiAgentEnv):
 
     def _calculate_reward(self):
         """Function to calculate the reward"""
-        reward = self.reward.get(self.extractor)
+        reward = self.reward.get(self.extractor, self.time_stamp)
         return reward
 
     def reset(self) -> tuple[dict, dict]:
