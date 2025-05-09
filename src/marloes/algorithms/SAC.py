@@ -142,7 +142,7 @@ class SAC:
         # Back propagate the value loss and update the value network parameters
         self.value_optimizer.zero_grad()
         value_loss.backward()
-        # torch.nn.utils.clip_grad_norm_(self.value_network.parameters(), 1.0)
+        torch.nn.utils.clip_grad_norm_(self.value_network.parameters(), 1.0)
         self.value_optimizer.step()
 
         self.loss_value[self.i] = value_loss.item()
@@ -172,12 +172,12 @@ class SAC:
             if i == 0:
                 self.critic1_optimizer.zero_grad()
                 critic_loss.backward()
-                # torch.nn.utils.clip_grad_norm_(self.critic_1_network.parameters(), 1.0)
+                torch.nn.utils.clip_grad_norm_(self.critic_1_network.parameters(), 1.0)
                 self.critic1_optimizer.step()
             else:
                 self.critic2_optimizer.zero_grad()
                 critic_loss.backward()
-                # torch.nn.utils.clip_grad_norm_(self.critic_2_network.parameters(), 1.0)
+                torch.nn.utils.clip_grad_norm_(self.critic_2_network.parameters(), 1.0)
                 self.critic2_optimizer.step()
 
             # Store the critic loss
@@ -205,7 +205,7 @@ class SAC:
         # Back propagate the loss and update parameters
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
-        # torch.nn.utils.clip_grad_norm_(self.actor_network.parameters(), 0.5)
+        torch.nn.utils.clip_grad_norm_(self.actor_network.parameters(), 0.5)
         self.actor_optimizer.step()
 
         # Update the alpha parameter; entropy -> target entropy
