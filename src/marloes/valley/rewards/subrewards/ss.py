@@ -5,6 +5,8 @@ from marloes.valley.rewards.subrewards.base import SubReward
 
 BUFFER = 2000
 ALPHA = 0.999  # running-mean decay
+MAX_DEMAND = 30
+BATTERY_SCALE = 0.2
 
 
 class SSSubReward(SubReward):
@@ -25,6 +27,17 @@ class SSSubReward(SubReward):
         """
         super().__init__(config, active, scaling_factor)
         self.r_mean = 0
+        max_demand = sum(
+            agent.get("scale", 1) * MAX_DEMAND
+            for agent in self.config["agents"]
+            if agent.get("type") == "demand"
+        )
+        max_battery = sum(
+            agent.get("power") * BATTERY_SCALE
+            for agent in self.config["agents"]
+            if agent.get("type") == "battery"
+        )
+        self.max_intake = max_demand + max_battery
 
     def calculate(
         self,
@@ -34,13 +47,10 @@ class SSSubReward(SubReward):
         **kwargs
     ) -> float | np.ndarray:
         if actual:
-            total_demand = max(
-                input_dict["total_demand"] + input_dict["total_battery_intake"], 1e-6
-            )
             grid_kw = input_dict["grid_state"]
 
-            import_frac = max(grid_kw, 0) / total_demand  # 0..1
-            export_frac = max(-grid_kw, 0) / total_demand  # 0..1
+            import_frac = max(grid_kw, 0) / self.max_intake  # 0..1
+            export_frac = max(-grid_kw, 0) / self.max_intake  # 0..1
 
             # Only penalize taking too much from the grid if net_grid_state is positive,
             # otherwise we are self-sufficient, so no penalty, but to not zero reward gradient (with flat reward)
