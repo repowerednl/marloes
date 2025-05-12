@@ -340,7 +340,6 @@ class RewardPredictor(BaseNetwork):
         super(RewardPredictor, self).__init__()
         # simple MLP
         self.fc = nn.Linear(hidden_dim + latent_dim, 1)
-        # activation function may be added, using unrestricted output for now
 
     def forward(self, h_t: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
         """
@@ -355,6 +354,8 @@ class RewardPredictor(BaseNetwork):
         """
         x = torch.cat([h_t, z_t], dim=-1)
         r_t = self.fc(x)
+        # (v2) bind returns with tanh activation
+        r_t = torch.tanh(r_t)
         return r_t
 
 
