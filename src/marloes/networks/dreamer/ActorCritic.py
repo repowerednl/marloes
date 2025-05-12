@@ -69,8 +69,10 @@ class ActorCritic:
         actions = torch.stack([t["actions"] for t in trajectories], dim=0).squeeze()
         # Unpack the rewards into a batched tensor for the loss computing
         rewards = torch.stack([t["rewards"] for t in trajectories], dim=0).squeeze(-1)
-        # Critic Evaluation
-        values = self.critic(states)
+
+        # Critic Evaluation with frozen target network (v3)
+        with torch.no_grad():
+            values = self.critic(states)
 
         # Compute the advantages (lambda-returns)
         returns, advantages = self._compute_advantages(rewards, values)
