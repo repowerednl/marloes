@@ -27,7 +27,7 @@ class Visualizer:
 
     def get_common_metrics(self):
         """
-        Get a list of common metrics for all calculators.
+        Get an ordered list (alphabetically) of common metrics for all calculators.
         This is useful to ensure that the same metrics are available across different simulations.
         """
         common_metrics = set(self.calculators[self.uids[0]].get_all_metrics())
@@ -35,7 +35,7 @@ class Visualizer:
             calculator = self.calculators[uid]
             metrics = calculator.get_all_metrics()
             common_metrics.intersection_update(metrics)
-        return list(common_metrics)
+        return sorted(list(common_metrics))
 
     def plot_metrics(
         self,

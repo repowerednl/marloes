@@ -124,7 +124,9 @@ class BaseAlgorithm(ABC):
                 self.environment.extractor.clear()
 
         # Save the final results and TODO: model
-        logging.info("Training finished. Saving results...")
+        logging.info(
+            f"Training finished at {self.environment.agents[0].asset.state.time}. Saving results..."
+        )
         self.saver.final_save(self.environment.extractor)
 
         logging.info("Training process completed.")
