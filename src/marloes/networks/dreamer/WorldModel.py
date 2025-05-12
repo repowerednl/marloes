@@ -180,14 +180,14 @@ class WorldModel:
         # |  - Obtain Continue signal [h_t,z_t] -> c_t    #TODO or TOREMOVE              |#
         # | ---------------------------------------------------------------------------- |#
         h = results["recurrent_states"]
-        z = results["actual"]
-        r_ts = self.reward_predictor(h, z)
+        z_hat = results["predicted"]
+        r_ts = self.reward_predictor(h, z_hat)
 
         # | -----------------------------------------------------------------------------|#
         # | Step 3: Decode the predicted latent state to the observations                |#
         # |  - Obtain predicted observations [z] -> x_hat_t                              |#
         # | ---------------------------------------------------------------------------- |#
-        x_hat_t = self.decoder(z)
+        x_hat_t = self.decoder(z_hat)
 
         # | -----------------------------------------------------------------------------|#
         # | Step 4: Compute the loss functions                                           |#

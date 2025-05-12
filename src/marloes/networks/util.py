@@ -65,7 +65,6 @@ def gaussian_kl_divergence(
 ) -> torch.Tensor:
     """
     Computes the KL divergence between two Gaussians with parameters (mu, logvar).
-    All should be tensors of shape.
     """
     kl = 0.5 * (
         logvar_p
@@ -80,5 +79,5 @@ def kl_free_bits(kl: torch.Tensor, free_bits: float = 1.0) -> torch.Tensor:
     """
     Adjusts the kl-divergence penalizing KL values above the threshold.
     """
-    adjusted = torch.clamp(kl, min=free_bits)
+    adjusted = torch.clamp(kl - free_bits, min=0.0)
     return adjusted.sum(dim=-1).mean()
