@@ -355,6 +355,8 @@ class RewardPredictor(BaseNetwork):
         """
         x = torch.cat([h_t, z_t], dim=-1)
         r_t = self.fc(x)
+        # v2: use tanh activation function to restrict the output to [-1, 1]
+        r_t = torch.tanh(r_t)
         return r_t
 
 

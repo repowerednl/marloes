@@ -69,8 +69,9 @@ class ActorCritic:
         actions = torch.stack([t["actions"] for t in trajectories], dim=0).squeeze()
         # Unpack the rewards into a batched tensor for the loss computing
         rewards = torch.stack([t["rewards"] for t in trajectories], dim=0).squeeze(-1)
-        # Critic Evaluation
-        values = self.critic(states)
+        with torch.no_grad():
+            # Critic Evaluation with frozen target (v3)
+            values = self.critic(states)
 
         # Compute the advantages (lambda-returns)
         returns, advantages = self._compute_advantages(rewards, values)
@@ -169,7 +170,6 @@ class ActorCritic:
         Returns:
             tuple: λ-returns tensor of shape (B, T, 1) and advantages tensor of shape (B, T, 1).
         """
-        # TODO: returns are too high because Rewards are not normalized, (no tanh activation)
         returns = compute_lambda_returns(rewards, values, self.gamma, self.lmbda)
         advantages = returns - values.detach()
         return returns, advantages
