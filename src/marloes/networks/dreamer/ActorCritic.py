@@ -70,12 +70,13 @@ class ActorCritic:
         # Unpack the rewards into a batched tensor for the loss computing
         rewards = torch.stack([t["rewards"] for t in trajectories], dim=0).squeeze(-1)
 
-        # Critic Evaluation with frozen target network (v3)
+        # Obtaining the values from the frozen critic target (v3)
         with torch.no_grad():
-            values = self.critic(states)
+            # Use the critic target to compute the values
+            values = self.critic_target(states)
 
-        # Compute the advantages (lambda-returns)
-        returns, advantages = self._compute_advantages(rewards, values)
+            # Compute the advantages (lambda-returns)
+            returns, advantages = self._compute_advantages(rewards, values)
 
         # Compute the actor and critic losses
         actor_loss = self._compute_actor_loss(states, actions, advantages, returns)
