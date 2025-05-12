@@ -51,7 +51,6 @@ class BaseAlgorithm(ABC):
         self.chunk_size = config.get("chunk_size", 10000)
         self.training_steps = config.get("training_steps", 100000)
         num_initial_random_steps = config.get("num_initial_random_steps", 0)
-        logging.info(f"Number of initial random steps: {num_initial_random_steps}")
         self.batch_size = config.get("batch_size", 128)
         self.num_initial_random_steps = max(
             num_initial_random_steps, self.batch_size
