@@ -181,13 +181,13 @@ class WorldModel:
         # | ---------------------------------------------------------------------------- |#
         h = results["recurrent_states"]
         z = results["actual"]
-        r_ts = self.reward_predictor(h, z)
+        r_ts = self.reward_predictor(h, z.detach())
 
         # | -----------------------------------------------------------------------------|#
         # | Step 3: Decode the predicted latent state to the observations                |#
         # |  - Obtain predicted observations [z] -> x_hat_t                              |#
         # | ---------------------------------------------------------------------------- |#
-        x_hat_t = self.decoder(z)
+        x_hat_t = self.decoder(z.detach())
 
         # | -----------------------------------------------------------------------------|#
         # | Step 4: Compute the loss functions                                           |#
