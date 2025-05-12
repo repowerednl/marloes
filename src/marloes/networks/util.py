@@ -80,5 +80,5 @@ def kl_free_bits(kl: torch.Tensor, free_bits: float = 1.0) -> torch.Tensor:
     """
     Adjusts the kl-divergence penalizing KL values above the threshold.
     """
-    adjusted = torch.clamp(kl - free_bits, min=0.0)
+    adjusted = torch.clamp(kl, min=free_bits)
     return adjusted.sum(dim=-1).mean()
