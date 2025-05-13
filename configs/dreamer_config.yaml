@@ -1,6 +1,6 @@
 algorithm: Dreamer
 chunk_size: 1000
-training_steps: 20000
+training_steps: 30000
 num_initial_random_steps: 200
 update_interval: 50
 batch_size: 32
