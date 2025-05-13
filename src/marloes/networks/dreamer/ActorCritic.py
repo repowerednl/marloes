@@ -24,14 +24,14 @@ class ActorCritic:
         self.actor = Actor(input, output, hidden_size)
         self.critic = Critic(input, hidden_size)
         self.critic_target = copy.deepcopy(self.critic)
-        self.critic_ema_decay = 0.98  # DreamerV3 uses 0.98
+        self.critic_ema_decay = 0.99  # DreamerV3 uses 0.98
         for param in self.critic_target.parameters():
             param.requires_grad = False  # Freeze the target network
 
-        self.actor_optim = Adam(self.actor.parameters(), lr=1e-4)
-        self.critic_optim = Adam(self.critic.parameters(), lr=1e-4)
+        self.actor_optim = Adam(self.actor.parameters(), lr=1e-5)
+        self.critic_optim = Adam(self.critic.parameters(), lr=1e-5)
 
-        self.gamma = 0.997
+        self.gamma = 0.98
         self.lmbda = 0.95
         self.entropy_coef = 0.0003
         self.beta_weights = {"val": 1.0, "repval": 0.3}
@@ -137,7 +137,7 @@ class ActorCritic:
             quantile_95 - quantile_5,
             min=0.99,
         )
-
+        print("Entropy: ", entropy.item())
         actor_loss = (
             -((advantages.detach() / S) * log_probs).mean()
             - self.entropy_coef * entropy
@@ -159,7 +159,7 @@ class ActorCritic:
         Returns:
             torch.Tensor: Computed critic loss.
         """
-        critic_loss = F.mse_loss(values, returns.detach())
+        critic_loss = F.mse_loss(values, returns)
         return critic_loss
 
     def _compute_advantages(
@@ -175,9 +175,8 @@ class ActorCritic:
         Returns:
             tuple: λ-returns tensor of shape (B, T, 1) and advantages tensor of shape (B, T, 1).
         """
-        # TODO: returns are too high because Rewards are not normalized, (no tanh activation)
         returns = compute_lambda_returns(rewards, values, self.gamma, self.lmbda)
-        advantages = returns - values.detach()
+        advantages = returns - values
         return returns, advantages
 
     @torch.no_grad()
@@ -210,7 +209,7 @@ class Actor(nn.Module):
         self.fc_mean = nn.Linear(hidden_size, output_size)
         self.log_std = nn.Parameter(torch.zeros(output_size))
         # initialize the weights of log_std with a small negative value to encourage exploration
-        nn.init.constant_(self.log_std, -0.5)
+        nn.init.constant_(self.log_std, -0.8)
 
     def forward(self, x):
         """

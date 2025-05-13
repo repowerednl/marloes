@@ -66,7 +66,7 @@ class WorldModel:
         # Optimizer
         self.optim = torch.optim.Adam(
             params=[param for mod in self.modules for param in mod.parameters()],
-            lr=0.001,
+            lr=0.0001,
             weight_decay=1e-4,
         )
         self.beta_weights = {
@@ -180,6 +180,7 @@ class WorldModel:
         # |  - Obtain Continue signal [h_t,z_t] -> c_t    #TODO or TOREMOVE              |#
         # | ---------------------------------------------------------------------------- |#
         h = results["recurrent_states"]
+        # z = results["actual"]
         z_hat = results["predicted"]
         r_ts = self.reward_predictor(h, z_hat)
 
