@@ -35,7 +35,7 @@ class Visualizer:
             calculator = self.calculators[uid]
             metrics = calculator.get_all_metrics()
             common_metrics.intersection_update(metrics)
-        return list(common_metrics)
+        return sorted(list(common_metrics))
 
     def plot_metrics(
         self,
