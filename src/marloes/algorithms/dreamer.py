@@ -27,7 +27,7 @@ class Dreamer(BaseAlgorithm):
         self._initialize_actor_critic()
         self.update_interval = self.config.get("update_interval", 100)
         self.previous = None
-        self.horizon = 16
+        self.horizon = 8
         self.losses = None
 
     def _initialize_world_model(self):

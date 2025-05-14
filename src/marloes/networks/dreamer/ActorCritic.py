@@ -130,6 +130,12 @@ class ActorCritic:
         # Scale factor S=EMA( Per(returns, 95) - Per(returns, 5) )
         # where Per(x, p) is the p-th percentile of x (detaching to prevent gradient flow)
         flat_returns = returns.detach().view(-1)
+
+        # # Standardize returns
+        flat_returns = (flat_returns - flat_returns.mean()) / (
+            flat_returns.std() + 1e-8
+        )
+
         # Compute the 95th and 5th percentiles
         quantile_95 = torch.quantile(flat_returns, 0.95)
         quantile_5 = torch.quantile(flat_returns, 0.05)
@@ -137,7 +143,6 @@ class ActorCritic:
             quantile_95 - quantile_5,
             min=0.99,
         )
-        print("Entropy: ", entropy.item())
         actor_loss = (
             -((advantages.detach() / S) * log_probs).mean()
             - self.entropy_coef * entropy

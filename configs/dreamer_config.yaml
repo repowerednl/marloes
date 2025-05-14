@@ -1,25 +1,26 @@
 algorithm: Dreamer
 chunk_size: 1000
-training_steps: 30000
+training_steps: 40000
 num_initial_random_steps: 200
 update_interval: 50
-batch_size: 32
+batch_size: 64
 agents:
   # - type: solar
   #   AC: 9000
   #   DC: 10000
   #   orientation: S
   - type: solar
-    AC: 5000
-    DC: 5500
+    AC: 2000
+    DC: 2000
+    orientation: EW
+  - type: solar
+    AC: 1000
+    DC: 1000
     orientation: EW
   # - type: wind
   #   location: Onshore
   #   power: 1000
   #   AC: 900
-  # - type: demand
-  #   scale: 4.5
-  #   profile: Farm
   - type: demand
     scale: 15
     profile: Farm

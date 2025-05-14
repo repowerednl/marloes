@@ -245,17 +245,17 @@ class WorldModel:
         # )
         # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
         pre_kl = gaussian_kl_divergence(
-            z_hat_mean.detach(),
-            z_hat_logvar.detach(),
             z_mean,
             z_logvar,
+            z_hat_mean.detach(),
+            z_hat_logvar.detach(),
         )
         representation_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
         """
         Third loss function, the prediction loss is end-to-end training of the model
         trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression (not implemented)
         """
-        prediction_loss = -symlog_squared_loss(x_hat_t, x) - symlog_squared_loss(
+        prediction_loss = symlog_squared_loss(x_hat_t, x) + symlog_squared_loss(
             r_ts, rew
         )
 
