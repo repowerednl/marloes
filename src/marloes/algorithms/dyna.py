@@ -42,8 +42,9 @@ class Dyna(BaseAlgorithm):
             "world_model_update_frequency", 100
         )
         self.k = dyna_config.get("k", 10)  # Model rollout horizon; planning steps
-        self.model_updates_per_step = dyna_config.get("model_updates_per_step", 10)
+        self.updates_per_step = dyna_config.get("updates_per_step", 10)
         self.real_sample_ratio = dyna_config.get("real_sample_ratio", 0.5)
+        self.update_interval = dyna_config.get("update_interval", 100)
 
     def get_actions(self, state: dict) -> dict:
         """
@@ -55,20 +56,31 @@ class Dyna(BaseAlgorithm):
         Returns:
             dict: Actions to take in the environment.
         """
+        # Handle single and multiple states
+        single = False
+        if isinstance(state, dict):
+            states = [state]
+            single = True
+        else:
+            states = state
+
         # Convert state to tensor
-        state_tensor = torch.stack([self.real_RB.dict_to_tens(state)]).to(self.device)
+        state_tensors = torch.stack(
+            [self.real_RB.dict_to_tens(state) for state in states]
+        ).to(self.device)
 
         # Get actions from the SAC agent
-        actions = self.sac.act(state_tensor)
+        actions = self.sac.act(state_tensors)
 
         # Convert actions back to the original format
-        action_list = actions.squeeze(0).tolist()
-        action_dict = {
-            key: action_list[i]
-            for i, key in enumerate(self.environment.agent_dict.keys())
-        }
+        action_list = actions.cpu().tolist()
+        keys = list(self.environment.agent_dict.keys())
+        batched = [
+            {keys[i]: action_list[b][i] for i in range(len(keys))}
+            for b in range(len(action_list))
+        ]
 
-        return action_dict
+        return batched[0] if single else batched
 
     def perform_training_steps(self, step: int) -> dict[str, float]:
         """
@@ -83,6 +95,17 @@ class Dyna(BaseAlgorithm):
         Returns:
             dict: Dictionary containing the losses of SAC and world model.
         """
+        # Check if the update interval is reached
+        if step % self.update_interval != 0 and step > 0:
+            return {
+                "world_model_loss": self.world_model.loss,
+                "sac_value_loss": np.mean(self.sac.loss_value),
+                "sac_critic_1_loss": np.mean(self.sac.loss_critic_1),
+                "sac_critic_2_loss": np.mean(self.sac.loss_critic_2),
+                "sac_actor_loss": np.mean(self.sac.loss_actor),
+                "sac_alpha": np.mean(self.sac.alphas),
+            }
+
         # 1. Update world model (with real experiences only)
         # --------------------
         if step % self.world_model_update_frequency == 0 and step != 0:
@@ -105,7 +128,7 @@ class Dyna(BaseAlgorithm):
             #     for _ in range(self.batch_size)
             # ]
             # Use policy actions
-            synthetic_actions = [self.get_actions(state) for state in synthetic_states]
+            synthetic_actions = self.get_actions(synthetic_states)
 
             # Use the world model to predict next state and reward
             synthetic_next_states, synthetic_rewards = self.world_model.predict(
@@ -125,8 +148,8 @@ class Dyna(BaseAlgorithm):
 
         # 3. Update the model (SAC) with real and synthetic experiences
         # --------------------
-        self.sac._init_losses(self.model_updates_per_step)  # Reset loss tracking
-        for _ in range(self.model_updates_per_step):
+        self.sac._init_losses(self.updates_per_step)  # Reset loss tracking
+        for _ in range(self.updates_per_step):
             # Sample from both real and synthetic experiences; SAC uses flattened batches
             real_batch = self.real_RB.sample(
                 int(self.batch_size * self.real_sample_ratio), flatten=True
