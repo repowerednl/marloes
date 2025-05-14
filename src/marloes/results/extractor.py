@@ -20,7 +20,7 @@ from marloes.agents import (
     DemandAgent,
 )
 from marloes.agents.base import SupplyAgents, StorageAgents, DemandAgents
-from marloes.algorithms.util import get_net_forecasted_power
+from marloes.algorithms.util import get_net_forecasted_power, get_net_power
 from marloes.data.extensive_data import ExtensiveDataStore
 
 MINUTES_IN_A_YEAR = 525600
@@ -102,7 +102,9 @@ class Extractor:
 
         # Demand info (for nomination)
         self.total_demand[self.i] = self._get_total_flow_to_type(model, Demand)
-        self.total_battery_intake[self.i] = self._get_total_flow_to_type(model, Battery)
+        self.total_battery_intake[self.i] = -self._get_total_flow_to_type(
+            model, Battery
+        )
 
     def from_files(self, uid: int | None = None, dir: str = "results") -> int:
         """
@@ -273,6 +275,7 @@ class ExtensiveExtractor(Extractor):
         self.wind_forecast = np.zeros(self.size)
         self.demand_forecast = np.zeros(self.size)
         self.net_forecasted_power = np.zeros(self.size)
+        self.net_power = np.zeros(self.size)
 
     def clear(self):
         # Stash the dataframe as part of the clear operation
@@ -298,6 +301,7 @@ class ExtensiveExtractor(Extractor):
                     self.demand_forecast[self.i] = forecast
 
         self.net_forecasted_power[self.i] = get_net_forecasted_power(observations)
+        self.net_power[self.i] = get_net_power(observations)
 
     def add_additional_info_from_model(self, model: Model) -> None:
         """
