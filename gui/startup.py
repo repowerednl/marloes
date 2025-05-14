@@ -21,6 +21,7 @@ from src.marloes.algorithms.dreamer import Dreamer
 from src.marloes.algorithms.base import BaseAlgorithm
 from src.marloes.algorithms.priorities import Priorities
 from src.marloes.algorithms.simplesetpoint import SimpleSetpoint
+
 from src.marloes.algorithms.dyna import Dyna
 from src.marloes.validation.validate_config import validate_config
 

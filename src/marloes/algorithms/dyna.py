@@ -5,6 +5,7 @@ from marloes.util import timethis
 
 from .base import BaseAlgorithm
 from .SAC import SAC
+from .MASAC import MultiAgentSAC
 from marloes.networks.simple_world_model.world_model import WorldModel
 
 
@@ -28,10 +29,15 @@ class Dyna(BaseAlgorithm):
         """
         super().__init__(config)
         self.world_model = WorldModel(self.config).to(self.device)
-        self.sac = SAC(self.config, device=self.device)
+        dyna_config = config.get("dyna", {})
+
+        # Use MultiAgentSAC if sCTCE is enabled
+        if dyna_config.get("sCTCE", False):
+            self.sac = MultiAgentSAC(self.config, device=self.device)
+        else:
+            self.sac = SAC(self.config, device=self.device)
 
         # Dyna specific parameters
-        dyna_config = config.get("dyna", {})
         self.world_model_update_frequency = dyna_config.get(
             "world_model_update_frequency", 100
         )
@@ -144,6 +150,7 @@ class Dyna(BaseAlgorithm):
             "sac_critic_1_loss": np.mean(self.sac.loss_critic_1),
             "sac_critic_2_loss": np.mean(self.sac.loss_critic_2),
             "sac_actor_loss": np.mean(self.sac.loss_actor),
+            "sac_alpha": np.mean(self.sac.alphas),
         }
 
     @staticmethod

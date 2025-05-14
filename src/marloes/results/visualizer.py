@@ -112,9 +112,10 @@ class Visualizer:
 
             # Actor loss is negative so shift it to just above 0
             if "actor" in metric.lower():
-                min_y = min([series.min() for series in data_by_uid.values()])
+                # min_y = min([series.min() for series in data_by_uid.values()])
                 for uid, series in data_by_uid.items():
-                    data_by_uid[uid] = series - min_y + 0.01
+                    data_by_uid[uid] = -series
+
         for uid, series in data_by_uid.items():
             fig.add_trace(
                 go.Scatter(
