@@ -74,7 +74,7 @@ class WorldModel:
             "dyn": 1.0,
             "rep": 0.1,
         }
-        self.loss = []
+        self.loss = self.reset_loss()
 
     def imagine(
         self, starting_points: torch.Tensor, actor: Actor, horizon: int = 16
@@ -245,10 +245,10 @@ class WorldModel:
         # )
         # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
         pre_kl = gaussian_kl_divergence(
-            z_mean,
-            z_logvar,
             z_hat_mean.detach(),
             z_hat_logvar.detach(),
+            z_mean,
+            z_logvar,
         )
         representation_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
         """
@@ -270,26 +270,29 @@ class WorldModel:
         total_loss.backward()
         # add gradient clipping # TODO: change WorldModel to a nn.Module
         torch.nn.utils.clip_grad_norm_(
-            [param for mod in self.modules for param in mod.parameters()], max_norm=1.0
+            [param for mod in self.modules for param in mod.parameters()], max_norm=0.5
         )
         self.optim.step()
 
-        # Store the loss in the list
-        # self.loss.append(total_loss.item())
+        # Store the losses in the loss dictionary
+        self.loss["dynamics_loss"].append(dynamic_loss.item())
+        self.loss["representation_loss"].append(representation_loss.item())
+        self.loss["prediction_loss"].append(prediction_loss.item())
+        self.loss["total_world_loss"].append(total_loss.item())
 
-        self.loss = {
-            "dynamics_loss": dynamic_loss.item(),
-            "representation_loss": representation_loss.item(),
-            "prediction_loss": prediction_loss.item(),
-            "total_world_loss": total_loss.item(),
+    def reset_loss(self) -> dict:
+        """
+        Resets the loss dictionary to zero.
+
+        Returns:
+            dict: Dictionary with empty lists.
+        """
+        return {
+            "dynamics_loss": [],
+            "representation_loss": [],
+            "prediction_loss": [],
+            "total_world_loss": [],
         }
-
-        # return {
-        #     "dynamics_loss": dynamic_loss.item(),
-        #     "representation_loss": representation_loss.item(),
-        #     "prediction_loss": prediction_loss.item(),
-        #     "total_world_loss": total_loss.item(),
-        # }
 
 
 class Decoder(BaseNetwork):

@@ -66,7 +66,7 @@ class Agent(ABC):
         # Store the forecast if provided in an efficient format
         if forecast is not None:
             self.forecast = forecast
-            self.horizon = 120  # 24 hours for now
+            self.horizon = 1440  # 24 hours for now
 
             # Also add nomination based on forecast
             self.nominated_volume = convert_to_hourly_nomination(forecast)

@@ -17,7 +17,7 @@ class CO2SubReward(SubReward):
     EMISSION_COEFFICIENTS = {
         "solar": 45.5,
         "wind": 15.5,
-        "battery": 70.0,
+        "battery": 70.0,  # 70.0
         "electrolyser": 15.25,  # PEMWE
         "grid": 284.73,
     }

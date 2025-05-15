@@ -28,15 +28,21 @@ class ActorCritic:
         for param in self.critic_target.parameters():
             param.requires_grad = False  # Freeze the target network
 
-        self.actor_optim = Adam(self.actor.parameters(), lr=1e-5)
-        self.critic_optim = Adam(self.critic.parameters(), lr=1e-5)
+        self.actor_optim = Adam(self.actor.parameters(), lr=1e-6)
+        self.critic_optim = Adam(self.critic.parameters(), lr=1e-6)
 
-        self.gamma = 0.98
+        self.gamma = 0.97
         self.lmbda = 0.95
         self.entropy_coef = 0.0003
         self.beta_weights = {"val": 1.0, "repval": 0.3}
 
         # Store losses
+        self.reset_losses()
+
+    def reset_losses(self):
+        """
+        Resets the actor and critic losses.
+        """
         self.actor_loss = []
         self.critic_loss = []
 
@@ -214,7 +220,7 @@ class Actor(nn.Module):
         self.fc_mean = nn.Linear(hidden_size, output_size)
         self.log_std = nn.Parameter(torch.zeros(output_size))
         # initialize the weights of log_std with a small negative value to encourage exploration
-        nn.init.constant_(self.log_std, -0.8)
+        nn.init.constant_(self.log_std, -0.5)
 
     def forward(self, x):
         """

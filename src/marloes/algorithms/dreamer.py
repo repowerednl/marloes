@@ -27,8 +27,9 @@ class Dreamer(BaseAlgorithm):
         self._initialize_actor_critic()
         self.update_interval = self.config.get("update_interval", 100)
         self.previous = None
-        self.horizon = 8
+        self.horizon = self.config.get("horizon", 16)
         self.losses = None
+        self.update_steps = self.config.get("update_steps", 1)
 
     def _initialize_world_model(self):
         """
@@ -123,53 +124,60 @@ class Dreamer(BaseAlgorithm):
         # only update when step % update_interval == 0, early return with the (previous) losses
         if step % self.update_interval != 0 or step == 0:  # TODO: uncomment
             return self.losses
-        # set world_model to train mode
-        # set actor_critic to train mode
-        # | --------------------------------------------------- |#
-        # | Step 1: Get a sample from the replay buffer         |#
-        # |  - should be a sample of sequences (size=horizon)   |#
-        # | --------------------------------------------------- |#
-        real_sample = self.real_RB.sample(
-            self.batch_size, self.horizon
-        )  # sequence = size horizon
 
-        # | ----------------------------------------------------- |#
-        # | Step 2: Update the world model with real interactions |#
-        # | ----------------------------------------------------- |#
-        self.world_model.learn(real_sample)
+        for _ in range(self.update_steps):
+            # set world_model to train mode
+            # set actor_critic to train mode
+            # | --------------------------------------------------- |#
+            # | Step 1: Get a sample from the replay buffer         |#
+            # |  - should be a sample of sequences (size=horizon)   |#
+            # | --------------------------------------------------- |#
+            real_sample = self.real_RB.sample(
+                self.batch_size, self.horizon
+            )  # sequence = size horizon
 
-        # | ----------------------------------------------------- |#
-        # | Step 3: Imagine trajectories for ActorCritic learning |#
-        # |  - Sample starting point from the replay buffer       |#
-        # |  - Pass Actor to the imagine function in WorldModel   |#
-        # |  - Should return a batch of imagined sequences        |#
-        # | ----------------------------------------------------- |#
-        starting_points = self.real_RB.sample(self.batch_size)
-        imagined_sequences = self.world_model.imagine(
-            starting_points["state"], self.actor_critic.actor, self.horizon
-        )
+            # | ----------------------------------------------------- |#
+            # | Step 2: Update the world model with real interactions |#
+            # | ----------------------------------------------------- |#
+            self.world_model.learn(real_sample)
 
-        # | ------------------------------------- |#
-        # | Step 4: Update the actor-critic model |#
-        # | ------------------------------------- |#
-        # Only update with imagined trajectories
-        # (updating with real trajectories should be implemented for:
-        # - environments where the reward is tricky to predict)
+            # | ----------------------------------------------------- |#
+            # | Step 3: Imagine trajectories for ActorCritic learning |#
+            # |  - Sample starting point from the replay buffer       |#
+            # |  - Pass Actor to the imagine function in WorldModel   |#
+            # |  - Should return a batch of imagined sequences        |#
+            # | ----------------------------------------------------- |#
+            starting_points = self.real_RB.sample(self.batch_size)
+            imagined_sequences = self.world_model.imagine(
+                starting_points["state"], self.actor_critic.actor, self.horizon
+            )
 
-        self.actor_critic.learn(imagined_sequences)
+            # | ------------------------------------- |#
+            # | Step 4: Update the actor-critic model |#
+            # | ------------------------------------- |#
+            # Only update with imagined trajectories
+            # (updating with real trajectories should be implemented for:
+            # - environments where the reward is tricky to predict)
+
+            self.actor_critic.learn(imagined_sequences)
 
         # | ----------------------------------------------------- |#
         # | Step 5: Save the losses                               |#
         # | ----------------------------------------------------- |#
         # Returning is not correct yet, plots do not show
-        self.losses = self.world_model.loss | {
+        self.losses = {
+            key: np.mean(value) for key, value in self.world_model.loss.items()
+        } | {
             "actor_loss": np.mean(self.actor_critic.actor_loss),
             "critic_loss": np.mean(self.actor_critic.critic_loss),
         }
-
         # raise valueerror if not dict[str,float]
         if not all(isinstance(v, float) for v in self.losses.values()):
             raise ValueError(
                 "Losses should be a dictionary of string keys and float values."
             )
+        # reset the actor and critic losses
+        self.actor_critic.reset_losses()
+        self.world_model.reset_loss()
+
         return self.losses
