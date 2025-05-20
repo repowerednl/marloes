@@ -1,11 +1,11 @@
-algorithm: Dreamer
+algorithm: Priorities
 chunk_size: 1000
-training_steps: 20000
-num_initial_random_steps: 600
+training_steps: 15000
+num_initial_random_steps: 400
 update_interval: 50
 horizon: 8
 batch_size: 64
-update_steps: 5
+update_steps: 1
 agents:
   # - type: solar
   #   AC: 9000
@@ -38,6 +38,33 @@ subrewards:
   CO2:
     active: true
     scaling_factor: 1
+  # NE:
+  #   active: true
+  #   scaling_factor: 1
 replay_buffers:
   real_capacity: 10000
   model_capacity: 10000
+WorldModel:
+  lr: 0.00001
+  weight_decay: 0.001
+  beta_weights:
+    pred: 1.0
+    dyn: 1.0
+    rep: 0.1
+  gradient_clipping: 0.5
+  free_bits: 1.0
+  RSSM:
+    clamp_lower: -5.0
+    clamp_upper: 5.0
+    Encoder:
+      clamp_lower: -10.0
+      clamp_upper: 10.0
+ActorCritic:
+  actor_lr: 0.0001
+  critic_lr: 0.0001
+  actor_weight_decay: 0.001
+  critic_weight_decay: 0.001
+  gamma: 0.9
+  lambda: 0.95
+  ema_decay: 0.8
+  entropy_coef: 0.001

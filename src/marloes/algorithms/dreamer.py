@@ -23,24 +23,25 @@ class Dreamer(BaseAlgorithm):
             config (dict): Configuration dictionary for the algorithm.
         """
         super().__init__(config)
-        self._initialize_world_model()
-        self._initialize_actor_critic()
+        self._initialize_world_model(self.config.get("WorldModel", {}))
+        self._initialize_actor_critic(self.config.get("ActorCritic", {}))
         self.update_interval = self.config.get("update_interval", 100)
         self.previous = None
         self.horizon = self.config.get("horizon", 16)
         self.losses = None
         self.update_steps = self.config.get("update_steps", 1)
 
-    def _initialize_world_model(self):
+    def _initialize_world_model(self, config: dict):
         """
         Initializes the WorldModel with observation and action shapes.
         """
         self.world_model = WorldModel(
             state_dim=self.environment.state_dim,
             action_dim=self.environment.action_dim,
+            config=config,
         )
 
-    def _initialize_actor_critic(self):
+    def _initialize_actor_critic(self, config: dict):
         """
         Initializes the actor and critic networks.
         """
@@ -50,6 +51,7 @@ class Dreamer(BaseAlgorithm):
         self.actor_critic = ActorCritic(
             input=input_size,
             output=self.environment.action_dim[0],
+            config=config,
         )
 
     def _init_previous(self):

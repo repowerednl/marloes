@@ -171,6 +171,8 @@ class Visualizer:
                     secondary_y=True,
                 )
             else:
+                if "intake" in metric.lower():  # battery
+                    series = -series
                 fig.add_trace(
                     go.Scatter(
                         x=series.index,

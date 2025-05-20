@@ -12,7 +12,9 @@ class ActorCritic:
     Combines the Actor and Critic networks for learning from abstract trajectories.
     """
 
-    def __init__(self, input: int, output: int, hidden_size: int = 64):
+    def __init__(
+        self, input: int, output: int, hidden_size: int = 64, config: dict = {}
+    ):
         """
         Initializes the ActorCritic module.
 
@@ -24,16 +26,24 @@ class ActorCritic:
         self.actor = Actor(input, output, hidden_size)
         self.critic = Critic(input, hidden_size)
         self.critic_target = copy.deepcopy(self.critic)
-        self.critic_ema_decay = 0.99  # DreamerV3 uses 0.98
+        self.critic_ema_decay = config.get("ema_decay", 0.98)  # DreamerV3 uses 0.98
         for param in self.critic_target.parameters():
             param.requires_grad = False  # Freeze the target network
 
-        self.actor_optim = Adam(self.actor.parameters(), lr=1e-6)
-        self.critic_optim = Adam(self.critic.parameters(), lr=1e-6)
+        self.actor_optim = Adam(
+            self.actor.parameters(),
+            lr=config.get("actor_lr", 1e-4),
+            weight_decay=config.get("actor_weight_decay", 0.0),
+        )
+        self.critic_optim = Adam(
+            self.critic.parameters(),
+            lr=config.get("critic_lr", 1e-4),
+            weight_decay=config.get("critic_weight_decay", 0.0),
+        )
 
-        self.gamma = 0.97
-        self.lmbda = 0.95
-        self.entropy_coef = 0.0003
+        self.gamma = config.get("gamma", 0.99)  # Discount factor
+        self.lmbda = config.get("lambda", 0.95)  # GAE lambda
+        self.entropy_coef = config.get("entropy_coef", 0.01)  # Entropy coefficient
         self.beta_weights = {"val": 1.0, "repval": 0.3}
 
         # Store losses

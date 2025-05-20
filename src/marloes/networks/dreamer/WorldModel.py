@@ -30,6 +30,7 @@ class WorldModel:
         self,
         state_dim: tuple,
         action_dim: tuple,  # Unused now, but added if we want init more dynamically.
+        config: dict = {},
         params: dict = None,
         hyper_params: HyperParams = None,
     ):
@@ -44,6 +45,7 @@ class WorldModel:
         """
         self.rssm = RSSM(
             x_shape=state_dim[0],
+            config=config.get("RSSM", {}),
             params=params,
             hyper_params=hyper_params,
             stochastic=True,
@@ -64,16 +66,21 @@ class WorldModel:
             self.continue_predictor,
         ]  # TODO: change WorldModel to a nn.Module
         # Optimizer
-        self.optim = torch.optim.Adam(
+        self.optim = torch.optim.AdamW(
             params=[param for mod in self.modules for param in mod.parameters()],
-            lr=0.0001,
-            weight_decay=1e-4,
+            lr=config.get("lr", 1e-5),
+            weight_decay=config.get("weight_decay", 1e-4),
         )
-        self.beta_weights = {
-            "pred": 1.0,
-            "dyn": 1.0,
-            "rep": 0.1,
-        }
+        self.beta_weights = config.get(
+            "beta_weights",
+            {
+                "pred": 1.0,
+                "dyn": 1.0,
+                "rep": 0.1,
+            },
+        )
+        self.gradient_clipping = config.get("gradient_clipping", 0.5)
+        self.free_bits = config.get("free_bits", 1.0)
         self.loss = self.reset_loss()
 
     def imagine(
@@ -232,7 +239,7 @@ class WorldModel:
             z_hat_mean,
             z_hat_logvar,
         )
-        dynamic_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
+        dynamic_loss = kl_free_bits(kl=pre_kl, free_bits=self.free_bits)
 
         """
         Second loss function, the representation loss trains the representations to be more predictable
@@ -250,7 +257,7 @@ class WorldModel:
             z_mean,
             z_logvar,
         )
-        representation_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
+        representation_loss = kl_free_bits(kl=pre_kl, free_bits=self.free_bits)
         """
         Third loss function, the prediction loss is end-to-end training of the model
         trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression (not implemented)
@@ -270,7 +277,8 @@ class WorldModel:
         total_loss.backward()
         # add gradient clipping # TODO: change WorldModel to a nn.Module
         torch.nn.utils.clip_grad_norm_(
-            [param for mod in self.modules for param in mod.parameters()], max_norm=0.5
+            [param for mod in self.modules for param in mod.parameters()],
+            max_norm=self.gradient_clipping,
         )
         self.optim.step()
 
