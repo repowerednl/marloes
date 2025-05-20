@@ -10,6 +10,7 @@ import pandas as pd
 from simon.solver import Model
 from simon.assets.demand import Demand
 from simon.assets.battery import Battery
+from simon.assets.supply import Supply
 
 from marloes.agents import (
     BatteryAgent,
@@ -64,6 +65,10 @@ class Extractor:
         self.total_demand_nomination = np.zeros(self.size)
         self.total_nomination_fraction = np.zeros(self.size)
 
+        # Setpoint info
+        self.battery_setpoints = np.zeros(self.size)
+        self.solar_setpoints = np.zeros(self.size)
+
     def clear(self):
         """Reset the timestep index to zero."""
         self.i = 0
@@ -105,6 +110,15 @@ class Extractor:
         self.total_battery_intake[self.i] = -self._get_total_flow_to_type(
             model, Battery
         )
+
+        # Save the setpoints for the battery and solar agents
+        for asset in model.graph.nodes:
+            if isinstance(asset, Battery):
+                if asset.setpoint is not None:
+                    self.battery_setpoints[self.i] = asset.setpoint.value
+            elif isinstance(asset, Supply):
+                if asset.setpoint is not None:
+                    self.solar_setpoints[self.i] = asset.setpoint.value
 
     def from_files(self, uid: int | None = None, dir: str = "results") -> int:
         """
