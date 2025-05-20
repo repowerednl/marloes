@@ -46,7 +46,7 @@ class WorldModel(nn.Module):
         """
         super(WorldModel, self).__init__()
         self.world_model_config = config.get("WorldModel", {})
-        self.num_agents = config["num_agents"]
+        self.num_agents = config["action_dim"]
         agents_scalar_dim = config["agents_scalar_dim"]
         forecasts = config["forecasts"]
 

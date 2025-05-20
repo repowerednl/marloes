@@ -4,6 +4,7 @@ import random
 import time
 import torch
 
+from marloes.agents.battery import BatteryAgent
 from marloes.results.saver import Saver
 from marloes.valley.env import EnergyValley
 from marloes.data.replaybuffer import ReplayBuffer
@@ -30,7 +31,6 @@ class BaseAlgorithm(ABC):
         self.environment = EnergyValley(config, self.__class__.__name__)
 
         # Update config with environment parameters
-        config["num_agents"] = len(self.environment.agent_dict)
         config["state_dim"] = self.environment.state_dim[0]
         config["action_dim"] = self.environment.action_dim[0]
         config["global_dim"] = self.environment.global_dim[0]
@@ -97,7 +97,7 @@ class BaseAlgorithm(ABC):
             # --------------------
             if step < self.num_initial_random_steps:
                 # Initially do random actions for exploration
-                actions = self.sample_actions(self.environment.agent_dict)
+                actions = self.sample_actions(self.environment.trainable_agent_dict)
             else:
                 # Get actions from the algorithm
                 actions = self.get_actions(state)

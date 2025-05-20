@@ -17,7 +17,9 @@ class MultiAgentSAC:
     """
 
     def __init__(self, config: dict, device: str):
-        self.n = config["num_agents"]  # Number of agents
+        self.n = config[
+            "action_dim"
+        ]  # Number of agents is equal to action_dim, because continuous
         self.action_dim = config["action_dim"]
 
         # Hyperparameters
@@ -56,6 +58,7 @@ class MultiAgentSAC:
         self.loss_critic_2 = np.zeros(model_updates_per_step)
         self.loss_actor = np.zeros((model_updates_per_step, self.n))
         self.alphas = np.zeros(model_updates_per_step)
+        self.mean_q = np.zeros(model_updates_per_step)
 
     def _init_optimizers(self):
         """
@@ -140,6 +143,7 @@ class MultiAgentSAC:
         Q_1 = self.critic_1_network(batch["state"], actions)
         Q_2 = self.critic_2_network(batch["state"], actions)
         Q_min = torch.min(Q_1, Q_2)
+        self.mean_q[self.i] = Q_min.mean().item()
 
         # Calculate the target value
         alpha = self.log_alpha.exp()

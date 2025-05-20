@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+from marloes.agents.battery import BatteryAgent
 from marloes.util import timethis
 
 from .base import BaseAlgorithm
@@ -74,7 +75,7 @@ class Dyna(BaseAlgorithm):
 
         # Convert actions back to the original format
         action_list = actions.cpu().tolist()
-        keys = list(self.environment.agent_dict.keys())
+        keys = list(self.environment.trainable_agent_dict.keys())
         batched = [
             {keys[i]: action_list[b][i] for i in range(len(keys))}
             for b in range(len(action_list))
@@ -103,7 +104,8 @@ class Dyna(BaseAlgorithm):
                 "sac_critic_1_loss": np.mean(self.sac.loss_critic_1),
                 "sac_critic_2_loss": np.mean(self.sac.loss_critic_2),
                 "sac_actor_loss": np.mean(self.sac.loss_actor),
-                "sac_alpha": np.mean(self.sac.alphas),
+                "mean_q": np.mean(self.sac.mean_q),
+                # "sac_alpha": np.mean(self.sac.alphas),
             }
 
         # 1. Update world model (with real experiences only)
@@ -123,12 +125,12 @@ class Dyna(BaseAlgorithm):
 
         for _ in range(self.k):
             # Generate synthetic actions TODO: decide if random or policy
-            # synthetic_actions = [
-            #     self.sample_actions(self.environment.agent_dict)
-            #     for _ in range(self.batch_size)
-            # ]
+            synthetic_actions = [
+                self.sample_actions(self.environment.trainable_agent_dict)
+                for _ in range(self.batch_size)
+            ]
             # Use policy actions
-            synthetic_actions = self.get_actions(synthetic_states)
+            # synthetic_actions = self.get_actions(synthetic_states)
 
             # Use the world model to predict next state and reward
             synthetic_next_states, synthetic_rewards = self.world_model.predict(
@@ -173,7 +175,8 @@ class Dyna(BaseAlgorithm):
             "sac_critic_1_loss": np.mean(self.sac.loss_critic_1),
             "sac_critic_2_loss": np.mean(self.sac.loss_critic_2),
             "sac_actor_loss": np.mean(self.sac.loss_actor),
-            "sac_alpha": np.mean(self.sac.alphas),
+            "mean_q": np.mean(self.sac.mean_q),
+            # "sac_alpha": np.mean(self.sac.alphas),
         }
 
     @staticmethod
