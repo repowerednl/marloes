@@ -54,7 +54,7 @@ WorldModel:
     pred: 1.0
     dyn: 1.0
     rep: 0.1
-  gradient_clipping: 0.5
+  clip_grad: 5
   free_bits: 1.0
   RSSM:
     clamp_lower: -5.0
@@ -67,9 +67,10 @@ ActorCritic:
   critic_lr: 0.0001
   actor_weight_decay: 0.01
   critic_weight_decay: 0.01
-  actor_clip_grad: 0.5
-  critic_clip_grad: 0.5
+  actor_clip_grad: 5
+  critic_clip_grad: 5
   gamma: 0.997
   lambda: 0.95
-  ema_decay: 0.95
+  ema_update: 0.98
+  s_ema_alpha: 0.98
   entropy_coef: 0.05

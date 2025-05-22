@@ -73,7 +73,7 @@ class WorldModel(nn.Module):
                 "rep": 0.1,
             },
         )
-        self.gradient_clipping = config.get("gradient_clipping", 0.5)
+        self.clip_grad = config.get("clip_grad", 0.5)
         self.free_bits = config.get("free_bits", 1.0)
         self.loss = self.reset_loss()
 
@@ -272,7 +272,7 @@ class WorldModel(nn.Module):
         # add gradient clipping # TODO: change WorldModel to a nn.Module
         torch.nn.utils.clip_grad_norm_(
             self.parameters(),
-            max_norm=self.gradient_clipping,
+            max_norm=self.clip_grad,
         )
         self.optim.step()
 

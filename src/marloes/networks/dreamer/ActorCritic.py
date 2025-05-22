@@ -27,7 +27,7 @@ class ActorCritic(nn.Module):
         self.actor = Actor(input, output, hidden_size)
         self.critic = Critic(input, hidden_size)
         self.critic_target = copy.deepcopy(self.critic)
-        self.critic_ema_decay = config.get("ema_decay", 0.98)  # DreamerV3 uses 0.98
+        self.critic_ema_update = config.get("ema_update", 0.98)  # DreamerV3 uses 0.98
         for param in self.critic_target.parameters():
             param.requires_grad = False  # Freeze the target network
 
@@ -48,6 +48,10 @@ class ActorCritic(nn.Module):
         self.actor_clip_grad = config.get("actor_clip_grad", 0.5)
         self.critic_clip_grad = config.get("critic_clip_grad", 0.5)
         self.beta_weights = {"val": 1.0, "repval": 0.3}
+
+        # EMA for S
+        self.register_buffer("s_ema", torch.tensor(0.0))
+        self.s_ema_alpha = config.get("s_ema_alpha", 0.98)  # EMA decay for S
 
         # Store losses
         self.reset_losses()
@@ -162,6 +166,11 @@ class ActorCritic(nn.Module):
             quantile_95 - quantile_5,
             min=0.99,
         )
+        if self.s_ema == 0.0:
+            self.s_ema = S
+        else:
+            self.s_ema = self.s_ema_alpha * S + (1 - self.s_ema_alpha) * self.s_ema
+
         actor_loss = (
             -((advantages.detach() / S) * log_probs).mean()
             - self.entropy_coef * entropy
@@ -208,8 +217,8 @@ class ActorCritic(nn.Module):
         for target_param, param in zip(
             self.critic_target.parameters(), self.critic.parameters()
         ):
-            target_param.data.mul_(self.critic_ema_decay).add_(
-                param.data * (1.0 - self.critic_ema_decay)
+            target_param.data.mul_(self.critic_ema_update).add_(
+                param.data * (1.0 - self.critic_ema_update)
             )
 
 
