@@ -1,10 +1,10 @@
 algorithm: Priorities
 chunk_size: 1000
-training_steps: 15000
-num_initial_random_steps: 400
+training_steps: 20000
+num_initial_random_steps: 500
 update_interval: 50
-horizon: 8
-batch_size: 64
+horizon: 16
+batch_size: 32
 update_steps: 1
 agents:
   # - type: solar
@@ -36,17 +36,20 @@ grid:
   name: Grid
 subrewards:
   CO2:
+    active: false
+    scaling_factor: 1
+  NE:
+    active: false
+    scaling_factor: 1
+  TEST:
     active: true
     scaling_factor: 1
-  # NE:
-  #   active: true
-  #   scaling_factor: 1
 replay_buffers:
   real_capacity: 10000
   model_capacity: 10000
 WorldModel:
-  lr: 0.00001
-  weight_decay: 0.001
+  lr: 0.0001
+  weight_decay: 0.01
   beta_weights:
     pred: 1.0
     dyn: 1.0
@@ -57,14 +60,14 @@ WorldModel:
     clamp_lower: -5.0
     clamp_upper: 5.0
     Encoder:
-      clamp_lower: -10.0
-      clamp_upper: 10.0
+      clamp_lower: -5.0
+      clamp_upper: 5.0
 ActorCritic:
   actor_lr: 0.0001
   critic_lr: 0.0001
-  actor_weight_decay: 0.001
-  critic_weight_decay: 0.001
-  gamma: 0.9
+  actor_weight_decay: 0.01
+  critic_weight_decay: 0.01
+  gamma: 0.997
   lambda: 0.95
-  ema_decay: 0.8
-  entropy_coef: 0.001
+  ema_decay: 0.95
+  entropy_coef: 0.05

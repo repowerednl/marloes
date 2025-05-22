@@ -57,6 +57,9 @@ class ExperimentSetupApp(QWidget):
             for f in os.listdir("configs/")
             if f.endswith(".yaml")
         ]
+        # if config files has a file with 'dreamer in the name' it should be the first element in the list
+        config_files.sort(key=lambda x: "dreamer" not in x.lower())
+
         self.config_dropdown.addItems(config_files)
         layout.addWidget(self.config_dropdown)
 
@@ -83,7 +86,7 @@ class ExperimentSetupApp(QWidget):
         self.subreward_checkboxes = {}
         self.subreward_scalings = {}
 
-        for name in ["CO2", "SS", "NC", "NB", "NE"]:
+        for name in ["CO2", "SS", "NC", "NB", "NE"]:  # TODO: dynamically load this
             row = QHBoxLayout()
 
             checkbox = QCheckBox(name)
