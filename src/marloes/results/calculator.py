@@ -29,8 +29,8 @@ class Calculator:
         "NE": NESubReward,
     }
     EXTRA_METRICS = {
-        "grid_state": "cumulative_grid_state",
-        "reward": "cumulative_reward",
+        "grid_state": ["cumulative_grid_state"],
+        "reward": ["cumulative_reward", "reward_daily"],
     }
 
     def __init__(self, uid: int | None = None, dir: str = "results"):
@@ -44,9 +44,10 @@ class Calculator:
         """
         base_metrics = self.extractor.get_all_metrics()
         # Extract al extra metrics for which the key is in the base metrics
-        extra_metrics = [
-            self.EXTRA_METRICS[key] for key in self.EXTRA_METRICS if key in base_metrics
-        ]
+        extra_metrics = []
+        for key in self.EXTRA_METRICS:
+            if key in base_metrics:
+                extra_metrics.extend(self.EXTRA_METRICS[key])
         return base_metrics + extra_metrics
 
     def get_metrics(self, metrics: list[str]) -> dict[str, np.ndarray | None]:
@@ -87,6 +88,20 @@ class Calculator:
         Calculates the cumulative reward.
         """
         return np.cumsum(self.extractor.reward)
+
+    def reward_daily(self) -> np.ndarray:
+        """
+        Shows the daily improvement of the reward.
+        """
+        series = pd.Series(self.extractor.reward)
+        index = pd.date_range(
+            start="2025-01-01",
+            periods=len(series),
+            freq="min",
+        )
+        series.index = index
+        series = series.resample("D").sum()
+        return series.values
 
     def _get_reward_model(self, metric: str) -> SubReward | None:
         reward_class = self.REWARD_CLASSES.get(metric)
