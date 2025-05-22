@@ -7,7 +7,7 @@ from marloes.networks.util import compute_lambda_returns
 import copy
 
 
-class ActorCritic:
+class ActorCritic(nn.Module):
     """
     Combines the Actor and Critic networks for learning from abstract trajectories.
     """
@@ -23,6 +23,7 @@ class ActorCritic:
             output (int): Dimension of the output (action space).
             hidden_size (int, optional): Dimension of the hidden layers. Defaults to 64.
         """
+        super(ActorCritic, self).__init__()
         self.actor = Actor(input, output, hidden_size)
         self.critic = Critic(input, hidden_size)
         self.critic_target = copy.deepcopy(self.critic)
@@ -44,6 +45,8 @@ class ActorCritic:
         self.gamma = config.get("gamma", 0.99)  # Discount factor
         self.lmbda = config.get("lambda", 0.95)  # GAE lambda
         self.entropy_coef = config.get("entropy_coef", 0.01)  # Entropy coefficient
+        self.actor_clip_grad = config.get("actor_clip_grad", 0.5)
+        self.critic_clip_grad = config.get("critic_clip_grad", 0.5)
         self.beta_weights = {"val": 1.0, "repval": 0.3}
 
         # Store losses
@@ -105,7 +108,7 @@ class ActorCritic:
         self.actor_optim.zero_grad()
         actor_loss.backward()
         # add gradient clipping
-        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), 0.5)
+        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), self.actor_clip_grad)
         self.actor_optim.step()
 
         self.actor_loss.append(actor_loss.item())
@@ -114,7 +117,7 @@ class ActorCritic:
         self.critic_optim.zero_grad()
         critic_loss.backward()
         # add gradient clipping
-        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
+        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), self.critic_clip_grad)
         self.critic_optim.step()
 
         # Update the network with EMA

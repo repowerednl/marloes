@@ -82,7 +82,9 @@ class Dreamer(BaseAlgorithm):
         )
 
         # set world_model to eval mode
+        self.world_model.eval()
         # set actor_critic to eval mode
+        self.actor_critic.eval()
         with torch.no_grad():
             # Step 1: Get the recurrent state (based on previous state)  #
             # ---------------------------------------------------------- #
@@ -129,7 +131,9 @@ class Dreamer(BaseAlgorithm):
 
         for _ in range(self.update_steps):
             # set world_model to train mode
+            self.world_model.train()
             # set actor_critic to train mode
+            self.actor_critic.train()
             # | --------------------------------------------------- |#
             # | Step 1: Get a sample from the replay buffer         |#
             # |  - should be a sample of sequences (size=horizon)   |#

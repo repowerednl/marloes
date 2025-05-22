@@ -15,7 +15,7 @@ from marloes.networks.util import (
 import logging
 
 
-class WorldModel:
+class WorldModel(nn.Module):
     """
     World model using simple MLP Encoder and Decoder for an RSSM network, based on the DreamerV3 architecture.
     Requires:
@@ -43,6 +43,7 @@ class WorldModel:
             params (dict, optional): Dictionary with network parameters.
             hyper_params (HyperParams, optional): Hyperparameters for the network.
         """
+        super(WorldModel, self).__init__()
         self.rssm = RSSM(
             x_shape=state_dim[0],
             config=config.get("RSSM", {}),
@@ -55,19 +56,12 @@ class WorldModel:
         self.reward_predictor = RewardPredictor(
             self.rssm.rnn.hidden_size, self.rssm.fc.out_features
         )
-        self.continue_predictor = ContinuePredictor(
-            self.rssm.rnn.hidden_size, self.rssm.fc.out_features
-        )
-
-        self.modules = [
-            self.rssm,
-            self.decoder,
-            self.reward_predictor,
-            self.continue_predictor,
-        ]  # TODO: change WorldModel to a nn.Module
+        # self.continue_predictor = ContinuePredictor(
+        #     self.rssm.rnn.hidden_size, self.rssm.fc.out_features
+        # )
         # Optimizer
         self.optim = torch.optim.AdamW(
-            params=[param for mod in self.modules for param in mod.parameters()],
+            params=self.parameters(),
             lr=config.get("lr", 1e-5),
             weight_decay=config.get("weight_decay", 1e-4),
         )
@@ -277,7 +271,7 @@ class WorldModel:
         total_loss.backward()
         # add gradient clipping # TODO: change WorldModel to a nn.Module
         torch.nn.utils.clip_grad_norm_(
-            [param for mod in self.modules for param in mod.parameters()],
+            self.parameters(),
             max_norm=self.gradient_clipping,
         )
         self.optim.step()
