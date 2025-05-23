@@ -12,13 +12,17 @@ from .base import Agent
 
 
 class SolarAgent(Agent):
-    def __init__(self, config: dict, start_time: datetime):
-        series, forecast = self._get_production_series(config)
+    def __init__(self, config: dict, start_time: datetime, data_config: dict = {}):
+        series, forecast = self._get_production_series(config, data_config)
         super().__init__(Supply, config, start_time, series, forecast)
 
-    def _get_production_series(self, config: dict) -> tuple[pd.Series, pd.Series]:
+    def _get_production_series(
+        self, config: dict, data_config: dict
+    ) -> tuple[pd.Series, pd.Series]:
         # Read in the right 1 MWp profile from the solar data
-        series = read_series(f"Solar_{config.get('orientation')}.parquet")
+        series = read_series(
+            f"Solar_{config.get('orientation')}.parquet", data_config=data_config
+        )
 
         # Scale to the right size
         series = series * config["DC"] / 1000  # from kWp to MWp
@@ -28,7 +32,9 @@ class SolarAgent(Agent):
 
         # Get forecast
         forecast = read_series(
-            f"Solar_{config.pop('orientation')}.parquet", forecast=True
+            f"Solar_{config.pop('orientation')}.parquet",
+            forecast=True,
+            data_config=data_config,
         )
         forecast = forecast * config["DC"] / 1000
         forecast[forecast > config["AC"]] = config["AC"]

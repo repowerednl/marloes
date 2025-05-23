@@ -6,7 +6,11 @@ import numpy as np
 
 
 def read_series(
-    filepath: str, in_kw: bool = True, filetype: str = "parquet", forecast: bool = False
+    filepath: str,
+    in_kw: bool = True,
+    filetype: str = "parquet",
+    forecast: bool = False,
+    data_config: dict = None,
 ) -> pd.Series:
     """
     Reads a Parquet file and returns it as a minutely kW series.
@@ -39,9 +43,17 @@ def read_series(
         datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC")),
         datetime(2025, 12, 31, 23, 59, tzinfo=ZoneInfo("UTC")),
     )
-    series = add_noise_to_series(series, 0)
+    series = add_noise_to_series(
+        series, noise=data_config.get("noise")
+    )  # Add noise to the series
     if not forecast:
-        series = drop_out_series(series)
+        # Simulate dropouts in the series
+        series = drop_out_series(
+            series,
+            drop_prob=data_config.get("drop_prob"),
+            long_drop_prob=data_config.get("long_drop_prob"),
+            max_long_drop_days=data_config.get("max_long_drop_days"),
+        )
 
     return series
 
