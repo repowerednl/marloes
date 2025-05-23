@@ -25,7 +25,7 @@ class SAC:
 
         # We introduce learnable alpha (Temperature parameter for entropy)
         action_dim: float = config["action_dim"]
-        self.target_entropy = -action_dim - 4  # Target entropy is -action_dim for now
+        self.target_entropy = -action_dim  # Target entropy is -action_dim for now
         self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
 
         self.value_network = ValueNetwork(config).to(device)  # Parameterized by psi
@@ -38,7 +38,8 @@ class SAC:
 
         # Initialize optimizers
         self._init_optimizers()
-        self.target_value_network.load_state_dict(self.value_network.state_dict())
+        if not self.target_value_network.was_loaded:
+            self.target_value_network.load_state_dict(self.value_network.state_dict())
 
         # Initialize losses
         self._init_losses(config.get("model_updates_per_step", 10))

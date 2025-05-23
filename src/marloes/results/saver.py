@@ -1,7 +1,12 @@
+import logging
 import os
 
 import numpy as np
+import torch
 import yaml
+from torch import nn
+
+from marloes.results.util import get_latest_uid
 
 from .extractor import ExtensiveExtractor, Extractor
 
@@ -11,12 +16,29 @@ class Saver:
     Class that saves the data extracted by the Extractor
     """
 
-    def __init__(self, config: dict, test: bool = False) -> None:
+    def __init__(
+        self, config: dict, test: bool = False, evaluate: bool = False
+    ) -> None:
         self.name = "Saver"
         # allows testing with different filenames
-        self.base_file_path = "results" if not test else "test"
+        if test:
+            self.base_file_path = "test"
+        elif evaluate:
+            self.base_file_path = "evaluate"
+            scenario_name = config["data_config"].get("name")
+            self.base_file_path = os.path.join(self.base_file_path, scenario_name)
+        else:
+            # default path for saving results
+            self.base_file_path = "results"
+
         self.id_name = "uid.txt" if not test else "test_uid.txt"
-        self.uid = self._update_simulation_number()
+        uid = config.get("uid", None)
+        if uid:
+            self.uid = uid
+        elif not evaluate:
+            self.uid = self._update_simulation_number()
+        else:
+            self.uid = get_latest_uid(self.base_file_path)
         self._save_config_to_yaml(config)
 
     def save(self, extractor: Extractor | ExtensiveExtractor) -> None:
@@ -29,17 +51,30 @@ class Saver:
                     attr, value[: extractor.i]
                 )  # change to save only the data up to the current iteration
 
-    def final_save(self, extractor: Extractor | ExtensiveExtractor, alg=None) -> None:
+    def final_save(
+        self, extractor: Extractor | ExtensiveExtractor, networks: list[nn.Module]
+    ) -> None:
         """
         Should access the 'model' in the algorithm and save the weights/parameters into a file.
         In case of extensive extractor, the data from the results attribute should be saved here as well.
         """
+        self.save(extractor)
         models_folder = os.path.join(self.base_file_path, "models")
         os.makedirs(models_folder, exist_ok=True)
 
-        # Save the model from alg to a file
-        if alg is not None:
-            pass
+        # Save the networks
+        for network in networks:
+            try:
+                network_name = network.name
+            except AttributeError:
+                logging.warning(
+                    f"Network {network} does not have a name attribute. Skipping saving."
+                )
+                continue
+            network_folder = os.path.join(models_folder, network_name)
+            os.makedirs(network_folder, exist_ok=True)
+            network_filename = os.path.join(network_folder, f"{self.uid}.pt")
+            torch.save(network.state_dict(), network_filename)
 
         # Save the results from the extensive extractor
         # First check if the extensive data attribute is present

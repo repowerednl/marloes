@@ -17,7 +17,7 @@ class Dyna(BaseAlgorithm):
 
     __name__ = "Dyna"
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: dict, evaluate: bool = False):
         """
         Initializes the Dyna algorithm.
 
@@ -28,7 +28,7 @@ class Dyna(BaseAlgorithm):
                 - "model_updates_per_step" (int): Number of model updates per step.
                 - "real_sample_ratio" (float): Ratio of real to synthetic samples.
         """
-        super().__init__(config)
+        super().__init__(config, evaluate)
         self.world_model = WorldModel(self.config).to(self.device)
         dyna_config = config.get("dyna", {})
 
@@ -47,7 +47,17 @@ class Dyna(BaseAlgorithm):
         self.real_sample_ratio = dyna_config.get("real_sample_ratio", 0.5)
         self.update_interval = dyna_config.get("update_interval", 100)
 
-    def get_actions(self, state: dict) -> dict:
+        # Specify networks to be saved
+        self.networks = [
+            self.sac.actor_network,
+            self.sac.critic_1_network,
+            self.sac.critic_2_network,
+            self.sac.value_network,
+            self.sac.target_value_network,
+            self.world_model,
+        ]
+
+    def get_actions(self, state: dict, deterministic: bool = False) -> dict:
         """
         Generates actions based on the current observation using the SAC agent.
 
@@ -71,7 +81,7 @@ class Dyna(BaseAlgorithm):
         ).to(self.device)
 
         # Get actions from the SAC agent
-        actions = self.sac.act(state_tensors)
+        actions = self.sac.act(state_tensors, deterministic=deterministic)
 
         # Convert actions back to the original format
         action_list = actions.cpu().tolist()
@@ -105,7 +115,7 @@ class Dyna(BaseAlgorithm):
                 "sac_critic_2_loss": np.mean(self.sac.loss_critic_2),
                 "sac_actor_loss": np.mean(self.sac.loss_actor),
                 "mean_q": np.mean(self.sac.mean_q),
-                # "sac_alpha": np.mean(self.sac.alphas),
+                "sac_alpha": np.mean(self.sac.alphas),
             }
 
         # 1. Update world model (with real experiences only)
@@ -176,7 +186,7 @@ class Dyna(BaseAlgorithm):
             "sac_critic_2_loss": np.mean(self.sac.loss_critic_2),
             "sac_actor_loss": np.mean(self.sac.loss_actor),
             "mean_q": np.mean(self.sac.mean_q),
-            # "sac_alpha": np.mean(self.sac.alphas),
+            "sac_alpha": np.mean(self.sac.alphas),
         }
 
     @staticmethod

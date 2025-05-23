@@ -10,13 +10,13 @@ class SimpleSetpoint(BaseAlgorithm):
 
     __name__ = "SimpleSetpoint"
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, evaluate: bool = False):
         """
         Initializes the SimpleSetpoint algorithm.
         """
-        super().__init__(config)
+        super().__init__(config, evaluate)
 
-    def get_actions(self, observations) -> dict:
+    def get_actions(self, observations, deterministic: bool = False) -> dict:
         """
         Generates random actions for each agent in the environment.
         """
