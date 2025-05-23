@@ -45,6 +45,7 @@ class WorldModel(nn.Module):
                 - "global_dim" (int, optional): Dimension of the global context (default: 0).
         """
         super(WorldModel, self).__init__()
+        self.name = "WorldModel"
         self.world_model_config = config.get("WorldModel", {})
         self.num_agents = config["action_dim"]
         agents_scalar_dim = config["agents_scalar_dim"]
@@ -74,6 +75,25 @@ class WorldModel(nn.Module):
             weight_decay=self.world_model_config.get("weight_decay", 0.0),
         )
         self.loss = None
+
+        # Load weights if uid is provided
+        self.try_to_load_weights(config.get("uid", None))
+
+    def try_to_load_weights(self, uid: int) -> None:
+        """
+        Load the network weights from a folder if the uid is provided.
+
+        Args:
+            uid (int): Unique identifier for the network weights.
+        """
+        self.was_loaded = False
+        try:
+            self.load_state_dict(torch.load(f"results/models/{self.name}/{uid}"))
+            self.was_loaded = True
+        except FileNotFoundError:
+            print(
+                f"Model weights for {self.name} with uid {uid} not found. Initializing with random weights."
+            )
 
     def forward(
         self,

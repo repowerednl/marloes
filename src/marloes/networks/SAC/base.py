@@ -13,6 +13,8 @@ class SACBaseNetwork(nn.Module):
         hidden_layers (nn.Sequential): Sequential container for the hidden layers.
     """
 
+    _id_counters = {}
+
     def __init__(
         self,
         input_dim: int,
@@ -34,6 +36,14 @@ class SACBaseNetwork(nn.Module):
         """
         super(SACBaseNetwork, self).__init__()
 
+        # Set name
+        cls_name = self.__class__.__name__
+        if cls_name not in SACBaseNetwork._id_counters:
+            SACBaseNetwork._id_counters[cls_name] = 0
+
+        self.name = f"{cls_name}_{SACBaseNetwork._id_counters[cls_name]}"
+        SACBaseNetwork._id_counters[cls_name] += 1
+
         # Get the parameters from the config
         if hidden_dim is not None:
             self.hidden_dim = hidden_dim
@@ -51,6 +61,22 @@ class SACBaseNetwork(nn.Module):
             dim = self.hidden_dim
 
         self.hidden_layers = nn.Sequential(*layers)
+
+    def try_to_load_weights(self, uid: int) -> None:
+        """
+        Load the network weights from a folder if the uid is provided.
+
+        Args:
+            uid (int): Unique identifier for the network weights.
+        """
+        self.was_loaded = False
+        try:
+            self.load_state_dict(torch.load(f"results/models/{self.name}/{uid}"))
+            self.was_loaded = True
+        except FileNotFoundError:
+            print(
+                f"Model weights for {self.name} with uid {uid} not found. Initializing with random weights."
+            )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """

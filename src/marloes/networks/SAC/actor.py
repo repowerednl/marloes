@@ -51,6 +51,8 @@ class ActorNetwork(SACBaseNetwork):
         self.log_std_min = SAC_config.get("log_std_min", -20)
         self.log_std_max = SAC_config.get("log_std_max", 2)
 
+        self.try_to_load_weights(config.get("uid", None))
+
     def forward(self, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Perform a forward pass through the network.

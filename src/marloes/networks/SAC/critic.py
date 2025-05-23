@@ -32,6 +32,7 @@ class CriticNetwork(SACBaseNetwork):
             state_dim + action_dim, config.get("SAC", {})
         )
         self.output_layer = nn.Linear(self.hidden_dim, 1)  # Output layer for Q-value
+        self.try_to_load_weights(config.get("uid", None))
 
     def forward(self, state: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
         """
