@@ -98,9 +98,10 @@ class BaseAlgorithm(ABC):
             if step < self.num_initial_random_steps:
                 # Initially do random actions for exploration
                 actions = self.sample_actions(self.environment.agent_dict)
+                info = {}
             else:
                 # Get actions from the algorithm
-                actions = self.get_actions(state)
+                actions, info = self.get_actions(state)
             next_state, reward, dones, infos = self.environment.step(
                 actions=actions,
                 loss_dict=self.losses,
@@ -108,7 +109,7 @@ class BaseAlgorithm(ABC):
             )
 
             # Store (real) experiences
-            self.real_RB.push(state, actions, reward, next_state)
+            self.real_RB.push(state, actions, reward, next_state, info)
 
             state = next_state
 

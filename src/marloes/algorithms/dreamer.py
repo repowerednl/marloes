@@ -113,7 +113,7 @@ class Dreamer(BaseAlgorithm):
         return {
             agent_id: action_list[i]
             for i, agent_id in enumerate(self.environment.agent_dict.keys())
-        }
+        }, self.previous
 
     def perform_training_steps(self, step: int):
         """
@@ -155,7 +155,10 @@ class Dreamer(BaseAlgorithm):
             # | ----------------------------------------------------- |#
             starting_points = self.real_RB.sample(self.batch_size)
             imagined_sequences = self.world_model.imagine(
-                starting_points["state"], self.actor_critic.actor, self.horizon
+                starting_points["state"],
+                starting_points["belief"],
+                self.actor_critic.actor,
+                self.horizon,
             )
 
             # | ------------------------------------- |#

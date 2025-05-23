@@ -78,7 +78,11 @@ class WorldModel(nn.Module):
         self.loss = self.reset_loss()
 
     def imagine(
-        self, starting_points: torch.Tensor, actor: Actor, horizon: int = 16
+        self,
+        starting_points: torch.Tensor,
+        beliefs: list,
+        actor: Actor,
+        horizon: int = 16,
     ) -> list[dict]:
         """
         Generates imagined trajectories from the initial state using the actor.
@@ -94,16 +98,18 @@ class WorldModel(nn.Module):
         with torch.no_grad():
             batch = []
             # we have a batch of starting points
-            for x in starting_points:
+            for x, belief_info in zip(starting_points, beliefs):
                 imagined = {
                     "states": [],
                     "rewards": [],
                     "actions": [],
                 }
                 x = x.unsqueeze(0)
-                # Obtain h_t
-                h_0 = self.rssm._init_state(1)
-                h_0 = h_0[-1]
+                if not belief_info:
+                    # initialize empty belief
+                    belief_info = {"h_t": self.rssm._init_state(1)[-1]}
+                # Obtain h_t from belief
+                h_0 = belief_info["h_t"]
                 # take the last layer of the GRU, shape (batch=1, hidden_size)
                 # infer z_t
                 z_0, _ = self.rssm._get_latent_state(h_0)
