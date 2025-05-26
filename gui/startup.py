@@ -199,7 +199,7 @@ class ExperimentSetupApp(QWidget):
             new_start_time = original_start_time + timedelta(
                 minutes=config["training_steps"]
             )
-            config["start_time"] = new_start_time
+            config["simulation_start_time"] = new_start_time
             config["uid"] = uid
             config["num_initial_random_steps"] = 0
             config["performed_training_steps"] = config["training_steps"]
@@ -256,6 +256,7 @@ class ExperimentSetupApp(QWidget):
             random_minutes = random.randint(0, 4 * 30 * 24 * 60)
             start_time += timedelta(minutes=random_minutes)
             config["start_time"] = start_time
+            config["simulation_start_time"] = start_time
 
         self.config = config
 

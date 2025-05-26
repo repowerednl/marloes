@@ -52,7 +52,7 @@ class EnergyValley(MultiAgentEnv):
         """
         super().__init__()
         default_start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
-        self.start_time = config.get("start_time", default_start_time)
+        self.start_time = config.get("simulation_start_time", default_start_time)
         self.time_stamp = self.start_time
         self.time_step = 60  # 1 minute in seconds
 
