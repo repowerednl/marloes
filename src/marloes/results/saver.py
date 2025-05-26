@@ -38,7 +38,7 @@ class Saver:
         elif not evaluate:
             self.uid = self._update_simulation_number()
         else:
-            self.uid = get_latest_uid(self.base_file_path)
+            self.uid = get_latest_uid("results")
         self._save_config_to_yaml(config)
 
     def save(self, extractor: Extractor | ExtensiveExtractor) -> None:
