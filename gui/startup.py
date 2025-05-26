@@ -202,7 +202,7 @@ class ExperimentSetupApp(QWidget):
             config["start_time"] = start_time
             config["uid"] = uid
             config["num_initial_random_steps"] = 0
-            config["num_training_steps"] = passed_config["num_training_steps"]
+            config["training_steps"] = passed_config["training_steps"]
 
         # Algorithm choice
         algorithm_choice = self.algorithm_dropdown.currentText()
