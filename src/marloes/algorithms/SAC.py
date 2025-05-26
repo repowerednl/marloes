@@ -255,7 +255,9 @@ class SAC:
 
         try:
             checkpoint = torch.load(
-                f"results/models/{uid}.pth", map_location=self.device
+                f"results/models/{uid}.pth",
+                map_location=self.device,
+                weights_only=False,
             )
         except FileNotFoundError:
             print(f"No saved model found for UID {uid}. Starting with random weights.")

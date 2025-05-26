@@ -69,11 +69,11 @@ class Dyna(BaseAlgorithm):
             for i, (actor_network, actor_optimizer) in enumerate(
                 zip(self.sac.actors, self.sac.actor_optimizers)
             ):
-                self.networks[f"actor_{i}_network"] = actor_network
-                self.networks[f"actor_{i}_optimizer"] = actor_optimizer
+                self.networks[f"actor_{i}_network"] = actor_network.state_dict()
+                self.networks[f"actor_{i}_optimizer"] = actor_optimizer.state_dict()
         else:
-            self.networks["actor_network"] = self.sac.actor_network
-            self.networks["actor_optimizer"] = self.sac.actor_optimizer
+            self.networks["actor_network"] = self.sac.actor_network.state_dict()
+            self.networks["actor_optimizer"] = self.sac.actor_optimizer.state_dict()
 
     def get_actions(self, state: dict, deterministic: bool = False) -> dict:
         """
