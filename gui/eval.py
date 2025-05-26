@@ -115,18 +115,20 @@ class EvaluationApp(QWidget):
         self.close()
 
 
-def clear_all_files_with_uid(uid: int):
+def clear_all_files_with_uid(uid: int, path: str = "evaluate") -> None:
     """
     Clear all files related to a specific UID.
-    Should recursively go through "evaluate" folder and delete all files
+    Should recursively go through "evaluate" folder and subfolders and delete all files
     that match the UID in their filename.
     """
-    base_path = "evaluate"
-    files_to_delete = glob.glob(os.path.join(base_path, f"*{uid}*"))
-
-    for file in files_to_delete:
-        try:
-            os.remove(file)
-            logging.info(f"Deleted file: {file}")
-        except Exception as e:
-            logging.error(f"Error deleting file {file}: {e}")
+    for dirpath, dirnames, filenames in os.walk(path):
+        for filename in filenames:
+            if str(uid) in filename:
+                file_path = os.path.join(dirpath, filename)
+                try:
+                    os.remove(file_path)
+                    logging.info(f"Deleted file: {file_path}")
+                except Exception as e:
+                    logging.error(f"Error deleting file {file_path}: {e}")
+            else:
+                logging.debug(f"Skipping file: {filename} (does not match UID {uid})")
