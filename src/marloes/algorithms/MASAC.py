@@ -98,12 +98,16 @@ class MultiAgentSAC:
 
         self.alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
 
-    def act(self, state):
+    def act(self, state, deterministic=False):
         """
         Selects an action based on the current state using the actor network.
         """
         with torch.no_grad():
-            actions = [actor.sample(state)[0] for actor in self.actors]
+            if deterministic:
+                means = [actor(state)[0] for actor in self.actors]
+                actions = [torch.tanh(mean) for mean in means]
+            else:
+                actions = [actor.sample(state)[0] for actor in self.actors]
         return torch.cat(actions, dim=-1)
 
     def update(self, batch):

@@ -35,8 +35,10 @@ class Dyna(BaseAlgorithm):
         # Use MultiAgentSAC if sCTCE is enabled
         if dyna_config.get("sCTCE", False):
             self.sac = MultiAgentSAC(self.config, device=self.device)
+            self.actor_networks = self.sac.actors
         else:
             self.sac = SAC(self.config, device=self.device)
+            self.actor_networks = [self.sac.actor_network]
 
         # Dyna specific parameters
         self.world_model_update_frequency = dyna_config.get(
@@ -49,13 +51,13 @@ class Dyna(BaseAlgorithm):
 
         # Specify networks to be saved
         self.networks = [
-            self.sac.actor_network,
             self.sac.critic_1_network,
             self.sac.critic_2_network,
             self.sac.value_network,
             self.sac.target_value_network,
             self.world_model,
         ]
+        self.networks.extend(self.actor_networks)
 
     def get_actions(self, state: dict, deterministic: bool = False) -> dict:
         """

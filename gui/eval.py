@@ -54,6 +54,7 @@ class EvaluationApp(QWidget):
         self.eval_steps_input.setRange(1, 1000000)
         self.eval_steps_input.setSingleStep(100)
         self.eval_steps_input.setValue(15000)
+        layout.addWidget(self.eval_steps_input)
 
         # Start button
         self.start_button = QPushButton("Start Evaluation")

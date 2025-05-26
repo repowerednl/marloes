@@ -88,7 +88,7 @@ class WorldModel(nn.Module):
         """
         self.was_loaded = False
         try:
-            self.load_state_dict(torch.load(f"results/models/{self.name}/{uid}"))
+            self.load_state_dict(torch.load(f"results/models/{self.name}/{uid}.pt"))
             self.was_loaded = True
         except FileNotFoundError:
             print(
