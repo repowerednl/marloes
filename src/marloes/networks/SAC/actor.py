@@ -19,7 +19,7 @@ class ActorNetwork(SACBaseNetwork):
         log_std_max (float): Maximum value for log standard deviation.
     """
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict) -> None:
         """
         Initializes the ActorNetwork with the given configuration.
 
@@ -38,7 +38,9 @@ class ActorNetwork(SACBaseNetwork):
             action_dim = config["action_dim"]
         SAC_config = config.get("SAC", {})
         super(ActorNetwork, self).__init__(
-            state_dim, SAC_config, hidden_dim=SAC_config.get("actor_hidden_dim", None)
+            state_dim,
+            SAC_config,
+            hidden_dim=SAC_config.get("actor_hidden_dim", None),
         )
 
         # Separate heads for mean and log_std
@@ -50,8 +52,6 @@ class ActorNetwork(SACBaseNetwork):
         # So either almost deterministic (log_std -> -inf) or almost uniform (log_std -> inf)
         self.log_std_min = SAC_config.get("log_std_min", -20)
         self.log_std_max = SAC_config.get("log_std_max", 2)
-
-        self.try_to_load_weights(config.get("uid", None))
 
     def forward(self, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """

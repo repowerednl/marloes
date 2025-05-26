@@ -63,18 +63,7 @@ class Saver:
         os.makedirs(models_folder, exist_ok=True)
 
         # Save the networks
-        for network in networks:
-            try:
-                network_name = network.name
-            except AttributeError:
-                logging.warning(
-                    f"Network {network} does not have a name attribute. Skipping saving."
-                )
-                continue
-            network_folder = os.path.join(models_folder, network_name)
-            os.makedirs(network_folder, exist_ok=True)
-            network_filename = os.path.join(network_folder, f"{self.uid}.pt")
-            torch.save(network.state_dict(), network_filename)
+        torch.save(networks, os.path.join(models_folder, f"{self.uid}.pth"))
 
         # Save the results from the extensive extractor
         # First check if the extensive data attribute is present

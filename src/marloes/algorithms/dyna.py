@@ -29,16 +29,14 @@ class Dyna(BaseAlgorithm):
                 - "real_sample_ratio" (float): Ratio of real to synthetic samples.
         """
         super().__init__(config, evaluate)
-        self.world_model = WorldModel(self.config).to(self.device)
+        self.world_model = WorldModel(self.config, self.device).to(self.device)
         dyna_config = config.get("dyna", {})
 
         # Use MultiAgentSAC if sCTCE is enabled
         if dyna_config.get("sCTCE", False):
             self.sac = MultiAgentSAC(self.config, device=self.device)
-            self.actor_networks = self.sac.actors
         else:
             self.sac = SAC(self.config, device=self.device)
-            self.actor_networks = [self.sac.actor_network]
 
         # Dyna specific parameters
         self.world_model_update_frequency = dyna_config.get(
@@ -50,14 +48,32 @@ class Dyna(BaseAlgorithm):
         self.update_interval = dyna_config.get("update_interval", 100)
 
         # Specify networks to be saved
-        self.networks = [
-            self.sac.critic_1_network,
-            self.sac.critic_2_network,
-            self.sac.value_network,
-            self.sac.target_value_network,
-            self.world_model,
-        ]
-        self.networks.extend(self.actor_networks)
+        self.track_networks()
+
+    def track_networks(self):
+        self.networks = {
+            "critic_1_network": self.sac.critic_1_network.state_dict(),
+            "critic_1_optimizer": self.sac.critic_1_optimizer.state_dict(),
+            "critic_2_network": self.sac.critic_2_network.state_dict(),
+            "critic_2_optimizer": self.sac.critic_2_optimizer.state_dict(),
+            "value_network": self.sac.value_network.state_dict(),
+            "value_optimizer": self.sac.value_optimizer.state_dict(),
+            "target_value_network": self.sac.target_value_network.state_dict(),
+            "log_alpha": self.sac.log_alpha,
+            "alpha_optimizer": self.sac.alpha_optimizer.state_dict(),
+            "world_model_network": self.world_model.state_dict(),
+            "world_model_optimizer": self.world_model.optimizer.state_dict(),
+        }
+        # Extend with actor networks if MultiAgentSAC is used
+        if isinstance(self.sac, MultiAgentSAC):
+            for i, (actor_network, actor_optimizer) in enumerate(
+                zip(self.sac.actors, self.sac.actor_optimizers)
+            ):
+                self.networks[f"actor_{i}_network"] = actor_network
+                self.networks[f"actor_{i}_optimizer"] = actor_optimizer
+        else:
+            self.networks["actor_network"] = self.sac.actor_network
+            self.networks["actor_optimizer"] = self.sac.actor_optimizer
 
     def get_actions(self, state: dict, deterministic: bool = False) -> dict:
         """

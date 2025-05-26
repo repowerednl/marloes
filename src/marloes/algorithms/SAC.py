@@ -16,6 +16,7 @@ class SAC:
 
     def __init__(self, config: dict, device: str):
         # Hyperparameters
+        self.device = device
         self.SAC_config = config.get("SAC", {})
         self.gamma = self.SAC_config.get("gamma", 0.99)  # Discount factor
         self.tau = self.SAC_config.get("tau", 0.005)  # Target network update rate
@@ -38,11 +39,12 @@ class SAC:
 
         # Initialize optimizers
         self._init_optimizers()
-        if not self.target_value_network.was_loaded:
-            self.target_value_network.load_state_dict(self.value_network.state_dict())
+        self.target_value_network.load_state_dict(self.value_network.state_dict())
 
         # Initialize losses
         self._init_losses(config.get("model_updates_per_step", 10))
+
+        self._try_to_load_weights(config.get("uid", None))
 
     def _init_losses(self, model_updates_per_step):
         self.i = 0
@@ -72,13 +74,13 @@ class SAC:
             eps=eps,
             weight_decay=weight_decay,
         )
-        self.critic1_optimizer = Adam(
+        self.critic_1_optimizer = Adam(
             self.critic_1_network.parameters(),
             lr=critic_lr,
             eps=eps,
             weight_decay=weight_decay,
         )
-        self.critic2_optimizer = Adam(
+        self.critic_2_optimizer = Adam(
             self.critic_2_network.parameters(),
             lr=critic_lr,
             eps=eps,
@@ -182,15 +184,15 @@ class SAC:
 
             # Back propagate the critic loss and update the critic network parameters
             if i == 0:
-                self.critic1_optimizer.zero_grad()
+                self.critic_1_optimizer.zero_grad()
                 critic_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.critic_1_network.parameters(), 1.0)
-                self.critic1_optimizer.step()
+                self.critic_1_optimizer.step()
             else:
-                self.critic2_optimizer.zero_grad()
+                self.critic_2_optimizer.zero_grad()
                 critic_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.critic_2_network.parameters(), 1.0)
-                self.critic2_optimizer.step()
+                self.critic_2_optimizer.step()
 
             # Store the critic loss
             if i == 0:
@@ -239,3 +241,40 @@ class SAC:
             target_param.data.copy_(
                 self.tau * param.data + (1 - self.tau) * target_param.data
             )
+
+    def _try_to_load_weights(self, uid: int = None) -> None:
+        """
+        Load the network weights from a folder if the uid is provided.
+
+        Args:
+            uid (int): Unique identifier for the network weights.
+        """
+        if not uid:
+            print("No UID provided. Skipping loading of weights.")
+            return
+
+        try:
+            checkpoint = torch.load(
+                f"results/models/{uid}.pth", map_location=self.device
+            )
+        except FileNotFoundError:
+            print(f"No saved model found for UID {uid}. Starting with random weights.")
+            return
+
+        # Load model weights
+        self.actor_network.load_state_dict(checkpoint["actor_network"])
+        self.critic_1_network.load_state_dict(checkpoint["critic_1_network"])
+        self.critic_2_network.load_state_dict(checkpoint["critic_2_network"])
+        self.value_network.load_state_dict(checkpoint["value_network"])
+        self.target_value_network.load_state_dict(checkpoint["target_value_network"])
+
+        # Load log_alpha and ensure it requires grad
+        self.log_alpha = checkpoint["log_alpha"].to(self.device)
+        self.log_alpha.requires_grad_(True)
+
+        # Load optimizers
+        self.actor_optimizer.load_state_dict(checkpoint["actor_optimizer"])
+        self.critic_1_optimizer.load_state_dict(checkpoint["critic_1_optimizer"])
+        self.critic_2_optimizer.load_state_dict(checkpoint["critic_2_optimizer"])
+        self.value_optimizer.load_state_dict(checkpoint["value_optimizer"])
+        self.alpha_optimizer.load_state_dict(checkpoint["alpha_optimizer"])

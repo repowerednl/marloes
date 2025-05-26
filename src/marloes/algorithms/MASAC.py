@@ -79,13 +79,13 @@ class MultiAgentSAC:
             eps=eps,
             weight_decay=weight_decay,
         )
-        self.critic1_optimizer = Adam(
+        self.critic_1_optimizer = Adam(
             self.critic_1_network.parameters(),
             lr=critic_lr,
             eps=eps,
             weight_decay=weight_decay,
         )
-        self.critic2_optimizer = Adam(
+        self.critic_2_optimizer = Adam(
             self.critic_2_network.parameters(),
             lr=critic_lr,
             eps=eps,
@@ -187,15 +187,15 @@ class MultiAgentSAC:
 
             # Back propagate the critic loss and update the critic network parameters
             if i == 0:
-                self.critic1_optimizer.zero_grad()
+                self.critic_1_optimizer.zero_grad()
                 critic_loss.backward()
                 # torch.nn.utils.clip_grad_norm_(self.critic_1_network.parameters(), 1.0)
-                self.critic1_optimizer.step()
+                self.critic_1_optimizer.step()
             else:
-                self.critic2_optimizer.zero_grad()
+                self.critic_2_optimizer.zero_grad()
                 critic_loss.backward()
                 # torch.nn.utils.clip_grad_norm_(self.critic_2_network.parameters(), 1.0)
-                self.critic2_optimizer.step()
+                self.critic_2_optimizer.step()
 
             # Store the critic loss
             if i == 0:

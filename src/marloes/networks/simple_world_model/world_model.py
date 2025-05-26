@@ -1,3 +1,4 @@
+import logging
 from typing import Iterator
 import numpy as np
 import torch
@@ -31,7 +32,7 @@ class WorldModel(nn.Module):
         loss (list[float]): list to store the loss values during training.
     """
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: dict, device) -> None:
         """
         Initialize the WorldModel.
 
@@ -46,6 +47,7 @@ class WorldModel(nn.Module):
         """
         super(WorldModel, self).__init__()
         self.name = "WorldModel"
+        self.device = device
         self.world_model_config = config.get("WorldModel", {})
         self.num_agents = config["action_dim"]
         agents_scalar_dim = config["agents_scalar_dim"]
@@ -77,23 +79,29 @@ class WorldModel(nn.Module):
         self.loss = None
 
         # Load weights if uid is provided
-        self.try_to_load_weights(config.get("uid", None))
+        self._try_to_load_weights(config.get("uid", None))
 
-    def try_to_load_weights(self, uid: int) -> None:
+    def _try_to_load_weights(self, uid: int = None) -> None:
         """
         Load the network weights from a folder if the uid is provided.
 
         Args:
             uid (int): Unique identifier for the network weights.
         """
-        self.was_loaded = False
+        if not uid:
+            print("No UID provided. Skipping loading of weights.")
+            return
+
         try:
-            self.load_state_dict(torch.load(f"results/models/{self.name}/{uid}.pt"))
-            self.was_loaded = True
-        except FileNotFoundError:
-            print(
-                f"Model weights for {self.name} with uid {uid} not found. Initializing with random weights."
+            checkpoint = torch.load(
+                f"results/models/{uid}.pth", map_location=self.device
             )
+        except FileNotFoundError:
+            print(f"No saved model found for UID {uid}. Starting with random weights.")
+            return
+
+        self.load_state_dict(checkpoint["world_model_network"])
+        self.optimizer.load_state_dict(checkpoint["world_model_optimizer"])
 
     def forward(
         self,
