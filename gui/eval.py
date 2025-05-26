@@ -71,6 +71,9 @@ class EvaluationApp(QWidget):
         if not uid:
             uid = get_latest_uid("results")
 
+        # Delete previous evalation files with this UID
+        clear_all_files_with_uid(uid)
+
         try:
             with open(f"results/configs/{uid}.yaml", "r") as f:
                 config: dict = yaml.safe_load(f)
@@ -112,11 +115,18 @@ class EvaluationApp(QWidget):
         self.close()
 
 
-if __name__ == "__main__":
-    from PyQt6.QtWidgets import QApplication
-    import sys
+def clear_all_files_with_uid(uid: int):
+    """
+    Clear all files related to a specific UID.
+    Should recursively go through "evaluate" folder and delete all files
+    that match the UID in their filename.
+    """
+    base_path = "evaluate"
+    files_to_delete = glob.glob(os.path.join(base_path, f"*{uid}*"))
 
-    app = QApplication(sys.argv)
-    window = EvaluationApp()
-    window.show()
-    sys.exit(app.exec())
+    for file in files_to_delete:
+        try:
+            os.remove(file)
+            logging.info(f"Deleted file: {file}")
+        except Exception as e:
+            logging.error(f"Error deleting file {file}: {e}")
