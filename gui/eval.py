@@ -71,9 +71,6 @@ class EvaluationApp(QWidget):
         if not uid:
             uid = get_latest_uid("results")
 
-        # Delete previous evalation files with this UID
-        clear_all_files_with_uid(uid)
-
         try:
             with open(f"results/configs/{uid}.yaml", "r") as f:
                 config: dict = yaml.safe_load(f)
@@ -87,6 +84,9 @@ class EvaluationApp(QWidget):
         except Exception as e:
             logging.error(f"Could not load scenario: {e}")
             return
+
+        # Delete previous evalation files with this UID
+        clear_all_files_with_uid(uid, scenario)
 
         # Update the config with the scenario
         config["data_config"] = scenario
@@ -115,12 +115,13 @@ class EvaluationApp(QWidget):
         self.close()
 
 
-def clear_all_files_with_uid(uid: int, path: str = "evaluate") -> None:
+def clear_all_files_with_uid(uid: int, scenario: str) -> None:
     """
     Clear all files related to a specific UID.
     Should recursively go through "evaluate" folder and subfolders and delete all files
     that match the UID in their filename.
     """
+    path = f"evaluate/{scenario}/"
     for dirpath, dirnames, filenames in os.walk(path):
         for filename in filenames:
             if str(uid) in filename:
