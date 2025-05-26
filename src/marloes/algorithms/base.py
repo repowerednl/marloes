@@ -49,7 +49,9 @@ class BaseAlgorithm(ABC):
 
         # General settings
         self.chunk_size = config.get("chunk_size", 10000)
-        self.training_steps = config.get("training_steps", 100000)
+        training_steps = config.get("training_steps", 100000)
+        performed_training_steps = config.get("performed_training_steps", 0)
+        self.training_steps = training_steps - performed_training_steps
         self.eval_steps = config.get("eval_steps", 0)
         num_initial_random_steps = config.get("num_initial_random_steps", 0)
         self.batch_size = config.get("batch_size", 128)
@@ -74,7 +76,7 @@ class BaseAlgorithm(ABC):
         # Save losses
         self.losses = {}
         self.normalize = True
-        self.networks = []
+        self.networks = {}
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)

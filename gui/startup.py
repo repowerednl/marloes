@@ -195,14 +195,15 @@ class ExperimentSetupApp(QWidget):
                 return
 
             # Set start time to later to "continue" the training
-            default_start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
-            start_time = default_start_time + timedelta(
+            original_start_time = config.get("start_time")
+            new_start_time = original_start_time + timedelta(
                 minutes=config["training_steps"]
             )
-            config["start_time"] = start_time
+            config["start_time"] = new_start_time
             config["uid"] = uid
             config["num_initial_random_steps"] = 0
-            config["training_steps"] = passed_config["training_steps"]
+            config["performed_training_steps"] = config["training_steps"]
+            config["training_steps"] += passed_config["training_steps"]
 
         # Algorithm choice
         algorithm_choice = self.algorithm_dropdown.currentText()
