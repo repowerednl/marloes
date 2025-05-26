@@ -186,6 +186,7 @@ class ExperimentSetupApp(QWidget):
                 pass
 
         if uid:
+            passed_config = config.copy()
             try:
                 with open(f"results/configs/{uid}.yaml", "r") as f:
                     config = yaml.safe_load(f)
@@ -201,6 +202,7 @@ class ExperimentSetupApp(QWidget):
             config["start_time"] = start_time
             config["uid"] = uid
             config["num_initial_random_steps"] = 0
+            config["num_training_steps"] = passed_config["num_training_steps"]
 
         # Algorithm choice
         algorithm_choice = self.algorithm_dropdown.currentText()
