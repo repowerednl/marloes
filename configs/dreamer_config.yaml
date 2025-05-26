@@ -4,7 +4,7 @@ training_steps: 20000
 num_initial_random_steps: 500
 update_interval: 50
 horizon: 16
-batch_size: 32
+batch_size: 64
 update_steps: 1
 agents:
   # - type: solar
@@ -48,13 +48,13 @@ replay_buffers:
   real_capacity: 10000
   model_capacity: 10000
 WorldModel:
-  lr: 0.0001
-  weight_decay: 0.01
+  lr: 0.00001
+  weight_decay: 0.0001
   beta_weights:
     pred: 1.0
     dyn: 1.0
     rep: 0.1
-  clip_grad: 5
+  clip_grad: 1
   free_bits: 1.0
   RSSM:
     clamp_lower: -5.0
@@ -65,10 +65,10 @@ WorldModel:
 ActorCritic:
   actor_lr: 0.0001
   critic_lr: 0.0001
-  actor_weight_decay: 0.01
-  critic_weight_decay: 0.01
-  actor_clip_grad: 5
-  critic_clip_grad: 5
+  actor_weight_decay: 0.0001
+  critic_weight_decay: 0.0001
+  actor_clip_grad: 1
+  critic_clip_grad: 1
   gamma: 0.997
   lambda: 0.95
   ema_update: 0.98

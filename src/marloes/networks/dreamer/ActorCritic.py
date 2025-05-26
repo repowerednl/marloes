@@ -147,8 +147,8 @@ class ActorCritic(nn.Module):
         """
         policy_dist = self.actor(states)
         log_probs = policy_dist.log_prob(actions)
-
-        entropy = policy_dist.entropy().mean()
+        # get entropy as a scalar
+        entropy = policy_dist.entropy().sum(-1).mean()
 
         # Scale factor S=EMA( Per(returns, 95) - Per(returns, 5) )
         # where Per(x, p) is the p-th percentile of x (detaching to prevent gradient flow)
@@ -166,13 +166,16 @@ class ActorCritic(nn.Module):
             quantile_95 - quantile_5,
             min=0.99,
         )
-        if self.s_ema == 0.0:
-            self.s_ema = S
+        # Initialize EMA on first nonzero raw_S
+        if self.s_ema.item() == 0.0:
+            # fill_ keeps it as a buffer
+            self.s_ema.fill_(S)
         else:
-            self.s_ema = self.s_ema_alpha * S + (1 - self.s_ema_alpha) * self.s_ema
+            # in-place EMA update: preserves buffer registration
+            self.s_ema.mul_(self.s_ema_alpha).add_((1 - self.s_ema_alpha) * S)
 
         actor_loss = (
-            -((advantages.detach() / S) * log_probs).mean()
+            -((advantages.detach() / self.s_ema) * log_probs).mean()
             - self.entropy_coef * entropy
         )
         return actor_loss
@@ -242,7 +245,7 @@ class Actor(nn.Module):
         self.fc_mean = nn.Linear(hidden_size, output_size)
         self.log_std = nn.Parameter(torch.zeros(output_size))
         # initialize the weights of log_std with a small negative value to encourage exploration
-        nn.init.constant_(self.log_std, -0.5)
+        nn.init.constant_(self.log_std, 0.0)
 
     def forward(self, x):
         """
