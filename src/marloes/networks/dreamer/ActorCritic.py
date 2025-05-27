@@ -97,7 +97,6 @@ class ActorCritic(nn.Module):
         with torch.no_grad():
             # Use the critic target to compute the values
             target_values = self.critic_target(states)
-
             # Compute the advantages (lambda-returns)
             returns, advantages = self._compute_advantages(rewards, target_values)
 
@@ -111,6 +110,7 @@ class ActorCritic(nn.Module):
         # Actor loss
         self.actor_optim.zero_grad()
         actor_loss.backward()
+
         # add gradient clipping
         torch.nn.utils.clip_grad_norm_(self.actor.parameters(), self.actor_clip_grad)
         self.actor_optim.step()
@@ -159,21 +159,28 @@ class ActorCritic(nn.Module):
             flat_returns.std() + 1e-8
         )
 
-        # Compute the 95th and 5th percentiles
-        quantile_95 = torch.quantile(flat_returns, 0.95)
-        quantile_5 = torch.quantile(flat_returns, 0.05)
-        S = torch.clamp(
-            quantile_95 - quantile_5,
-            min=0.99,
-        )
-        # Initialize EMA on first nonzero raw_S
-        if self.s_ema.item() == 0.0:
-            # fill_ keeps it as a buffer
-            self.s_ema.fill_(S)
-        else:
-            # in-place EMA update: preserves buffer registration
-            self.s_ema.mul_(self.s_ema_alpha).add_((1 - self.s_ema_alpha) * S)
+        # # Compute the 95th and 5th percentiles
+        # quantile_95 = torch.quantile(flat_returns, 0.95)
+        # quantile_5 = torch.quantile(flat_returns, 0.05)
+        # S = torch.clamp(
+        #     quantile_95 - quantile_5,
+        #     min=0.99,
+        # )
+        # # Initialize EMA on first nonzero raw_S
+        # if self.s_ema.item() == 0.0:
+        #     # fill_ keeps it as a buffer
+        #     self.s_ema.fill_(S)
+        # else:
+        #     # in-place EMA update: preserves buffer registration
+        #     self.s_ema.mul_(self.s_ema_alpha).add_((1 - self.s_ema_alpha) * S)
 
+        # print("Adv stats:", advantages.min().item(), advantages.max().item(), advantages.mean().item())
+
+        # print([p.shape for p in self.actor_optim.param_groups[0]['params']])
+
+        # print("S (EMA):", self.s_ema.item())
+        # set s_ema to one for debugging
+        self.s_ema.fill_(1.0)
         actor_loss = (
             -((advantages.detach() / self.s_ema) * log_probs).mean()
             - self.entropy_coef * entropy
@@ -244,10 +251,13 @@ class Actor(nn.Module):
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc_mean = nn.Linear(hidden_size, output_size)
         self.log_std = nn.Parameter(torch.zeros(output_size))
+        self.log_std.requires_grad = True  # Allow log_std to be learned
         # initialize the weights of log_std with a small negative value to encourage exploration
-        nn.init.constant_(self.log_std, 0.0)
+        nn.init.constant_(self.log_std, -0.5)
 
-    def forward(self, x):
+    def forward(
+        self, x, deterministic: bool = False
+    ) -> torch.distributions.Normal | torch.Tensor:
         """
         Forward pass through the Actor network.
 
@@ -263,7 +273,14 @@ class Actor(nn.Module):
         mu = self.fc_mean(x)
         mu = torch.tanh(mu)
         std = torch.exp(self.log_std)
-        return torch.distributions.Normal(mu, std)
+        if deterministic:
+            return mu
+        normal = torch.distributions.Normal(mu, std)
+        # wrap in TanhTransform to ensure actions are in the range [-1, 1]
+        dist = torch.distributions.TransformedDistribution(
+            normal, torch.distributions.transforms.TanhTransform(cache_size=1)
+        )
+        return dist
 
 
 class Critic(nn.Module):

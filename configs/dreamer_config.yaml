@@ -1,11 +1,11 @@
 algorithm: Priorities
 chunk_size: 1000
-training_steps: 20000
-num_initial_random_steps: 500
+training_steps: 10000
+num_initial_random_steps: 1
 update_interval: 50
-horizon: 16
-batch_size: 64
-update_steps: 1
+horizon: 8
+batch_size: 32
+update_steps: 2
 agents:
   # - type: solar
   #   AC: 9000
@@ -45,16 +45,16 @@ subrewards:
     active: true
     scaling_factor: 1
 replay_buffers:
-  real_capacity: 10000
-  model_capacity: 10000
+  real_capacity: 5000
+  model_capacity: 5000
 WorldModel:
-  lr: 0.00001
-  weight_decay: 0.0001
+  lr: 0.001
+  weight_decay: 0.0
   beta_weights:
     pred: 1.0
     dyn: 1.0
     rep: 0.1
-  clip_grad: 1
+  clip_grad: 5
   free_bits: 1.0
   RSSM:
     clamp_lower: -5.0
@@ -63,14 +63,14 @@ WorldModel:
       clamp_lower: -5.0
       clamp_upper: 5.0
 ActorCritic:
-  actor_lr: 0.0001
-  critic_lr: 0.0001
-  actor_weight_decay: 0.0001
-  critic_weight_decay: 0.0001
-  actor_clip_grad: 1
-  critic_clip_grad: 1
+  actor_lr: 0.001
+  critic_lr: 0.001
+  actor_weight_decay: 0.0
+  critic_weight_decay: 0.0
+  actor_clip_grad: 5
+  critic_clip_grad: 5
   gamma: 0.997
   lambda: 0.95
-  ema_update: 0.98
-  s_ema_alpha: 0.98
-  entropy_coef: 0.05
+  ema_update: 0.98 # update the target networks with this factor
+  s_ema_alpha: 0.9
+  entropy_coef: 0.01 # coefficient for the entropy loss
