@@ -52,7 +52,9 @@ class Saver:
                 )  # change to save only the data up to the current iteration
 
     def final_save(
-        self, extractor: Extractor | ExtensiveExtractor, networks: list[nn.Module]
+        self,
+        extractor: Extractor | ExtensiveExtractor,
+        networks: list[nn.Module] = None,
     ) -> None:
         """
         Should access the 'model' in the algorithm and save the weights/parameters into a file.
@@ -63,7 +65,8 @@ class Saver:
         os.makedirs(models_folder, exist_ok=True)
 
         # Save the networks
-        torch.save(networks, os.path.join(models_folder, f"{self.uid}.pth"))
+        if networks:
+            torch.save(networks, os.path.join(models_folder, f"{self.uid}.pth"))
 
         # Save the results from the extensive extractor
         # First check if the extensive data attribute is present
