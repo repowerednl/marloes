@@ -29,7 +29,7 @@ class WorldModel(nn.Module):
     def __init__(
         self,
         state_dim: tuple,
-        action_dim: tuple,  # Unused now, but added if we want init more dynamically.
+        action_dim: tuple,
         config: dict = {},
         params: dict = None,
         hyper_params: HyperParams = None,
@@ -49,6 +49,7 @@ class WorldModel(nn.Module):
             config=config.get("RSSM", {}),
             params=params,
             hyper_params=hyper_params,
+            actions_shape=action_dim[0],
             stochastic=True,
         )
         # RSSM in between, is created first to ensure the link between encoder and decoder

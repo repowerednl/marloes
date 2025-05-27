@@ -112,7 +112,7 @@ class Dreamer(BaseAlgorithm):
         action_list = actions.squeeze(0).tolist()
         return {
             agent_id: action_list[i]
-            for i, agent_id in enumerate(self.environment.agent_dict.keys())
+            for i, agent_id in enumerate(self.environment.trainable_agent_dict.keys())
         }, self.previous
 
     def perform_training_steps(self, step: int):

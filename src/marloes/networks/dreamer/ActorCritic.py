@@ -49,6 +49,10 @@ class ActorCritic(nn.Module):
         self.critic_clip_grad = config.get("critic_clip_grad", 0.5)
         self.beta_weights = {"val": 1.0, "repval": 0.3}
 
+        self.deterministic = config.get(
+            "deterministic", False
+        )  # Use deterministic actions
+
         # EMA for S
         self.register_buffer("s_ema", torch.tensor(0.0))
         self.s_ema_alpha = config.get("s_ema_alpha", 0.98)  # EMA decay for S
@@ -73,7 +77,11 @@ class ActorCritic(nn.Module):
         Returns:
             torch.Tensor: Predicted actions.
         """
-        return self.actor(model_state).sample()
+        if self.deterministic:
+            # Use the actor in deterministic mode (only the mean)
+            return self.actor(model_state, True).detach()
+        else:
+            return self.actor(model_state, False).sample()
 
     def learn(self, trajectories: list) -> dict[str, torch.Tensor]:
         """
@@ -89,7 +97,7 @@ class ActorCritic(nn.Module):
         # Unpack the states into a batched tensor for the critic
         states = torch.stack([t["states"] for t in trajectories], dim=0).squeeze()
         # Unpack the actions into a batched tensor for the loss computing
-        actions = torch.stack([t["actions"] for t in trajectories], dim=0).squeeze()
+        actions = torch.stack([t["actions"] for t in trajectories], dim=0).squeeze(2)
         # Unpack the rewards into a batched tensor for the loss computing
         rewards = torch.stack([t["rewards"] for t in trajectories], dim=0).squeeze(-1)
 
@@ -146,7 +154,10 @@ class ActorCritic(nn.Module):
             torch.Tensor: Computed actor loss.
         """
         policy_dist = self.actor(states)
-        log_probs = policy_dist.log_prob(actions)
+        if not self.deterministic:
+            log_probs = policy_dist.log_prob(actions)
+        else:
+            log_probs = 1  # actions are just the mean of the layer TODO: what should log_probs be in deterministic mode?
         # get entropy as a scalar
         entropy = policy_dist.base_dist.entropy().sum(-1).mean()
 
@@ -272,9 +283,9 @@ class Actor(nn.Module):
         # Apply tanh bound to keep actions in [-1, 1]
         mu = self.fc_mean(x)
         mu = torch.tanh(mu)
-        std = torch.exp(self.log_std)
         if deterministic:
             return mu
+        std = torch.exp(self.log_std)
         normal = torch.distributions.Normal(mu, std)
         # wrap in TanhTransform to ensure actions are in the range [-1, 1]
         dist = torch.distributions.TransformedDistribution(

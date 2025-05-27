@@ -134,7 +134,7 @@ class BaseAlgorithm(ABC):
             # --------------------
             if step < self.num_initial_random_steps:
                 # Initially do random actions for exploration
-                actions = self.sample_actions(self.environment.agent_dict)
+                actions = self.sample_actions(self.environment.trainable_agent_dict)
                 info = {}
             else:
                 # Get actions from the algorithm

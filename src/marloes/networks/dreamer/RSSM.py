@@ -20,6 +20,7 @@ class RSSM(BaseNetwork):
         config: dict = {},
         params: dict = None,
         hyper_params: HyperParams = None,
+        actions_shape: int = 0,
         stochastic: bool = False,
     ):
         """
@@ -35,7 +36,8 @@ class RSSM(BaseNetwork):
         super().__init__()
         self.clamp_upper = config.get("clamp_upper", 5)
         self.clamp_lower = config.get("clamp_lower", -5)
-        self.initialize_network(params, RSSM_LD)
+        self.action_dim = actions_shape
+        self.initialize_network(params, config.get("LayerDetails", RSSM_LD))
         self.encoder = Encoder(
             x_shape + self.hidden_size,
             self.latent_state_size,
@@ -78,7 +80,7 @@ class RSSM(BaseNetwork):
             if key not in details.hidden["dense"]:
                 raise ValueError(f"Missing key '{key}' in dense hidden layer details.")
 
-    def initialize_network(self, params: dict, details: LayerDetails):
+    def initialize_network(self, params: dict, details: dict | LayerDetails):
         """
         Initializes the RSSM network.
 
@@ -86,12 +88,14 @@ class RSSM(BaseNetwork):
             params (dict): Network parameters.
             details (LayerDetails): Layer details for the RSSM network.
         """
-        self._validate_rssm(details)
-        self.latent_state_size = details.hidden["dense"]["out_features"]
-        self.hidden_size = details.hidden["recurrent"]["hidden_size"]
+        self.latent_state_size = details["latent_size"]
+        self.hidden_size = details["recurrent_size"]
         # Initialize the RNN for SEQUENCE MODEL:
         self.rnn = nn.GRU(
-            **details.hidden["recurrent"]
+            input_size=self.latent_state_size + self.hidden_size + self.action_dim,
+            hidden_size=self.hidden_size,
+            batch_first=details["batch_first"],
+            num_layers=details["num_layers"],
         )  # Recurrent states produces h_t
 
         # DYNAMICS MODEL:
@@ -112,8 +116,6 @@ class RSSM(BaseNetwork):
 
         if params:
             self._load_from_params(params)
-        elif details.random_init:
-            self._initialize_random_params()
 
     def forward(self, h_t: torch.Tensor, z_t: torch.Tensor, a_t: torch.Tensor):
         """

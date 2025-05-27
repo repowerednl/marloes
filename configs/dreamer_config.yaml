@@ -15,10 +15,12 @@ agents:
     AC: 2000
     DC: 2000
     orientation: EW
+    trainable: false
   - type: solar
     AC: 1000
     DC: 1000
     orientation: EW
+    trainable: true
   # - type: wind
   #   location: Onshore
   #   power: 1000
@@ -26,9 +28,11 @@ agents:
   - type: demand
     scale: 15
     profile: Farm
+    trainable: false
   - type: battery
     energy_capacity: 2000
     power: 1000
+    trainable: true
   # - type: battery
   #   energy_capacity: 100
   #   power: 750
@@ -59,13 +63,19 @@ WorldModel:
   RSSM:
     clamp_lower: -5.0
     clamp_upper: 5.0
+    LayerDetails:
+      recurrent_size: 64
+      latent_size: 32
+      batch_first: True
+      num_layers: 2
     Encoder:
       clamp_lower: -5.0
       clamp_upper: 5.0
 ActorCritic:
+  deterministic: False
   actor_lr: 0.001
   critic_lr: 0.001
-  actor_weight_decay: 0.0001
+  actor_weight_decay: 0.0
   critic_weight_decay: 0.0
   actor_clip_grad: 5
   critic_clip_grad: 5
