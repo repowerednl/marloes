@@ -24,6 +24,6 @@ class SimpleSetpoint(BaseAlgorithm):
 
     def perform_training_steps(self, step: int) -> None:
         """
-        Overrides the training step. No learning is required for the priority-based algorithm.
+        Overrides the training step. No learning is required for the SimpleSetpoint algorithm.
         """
         pass
