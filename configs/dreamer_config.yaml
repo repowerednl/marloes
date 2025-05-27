@@ -45,8 +45,8 @@ subrewards:
     active: true
     scaling_factor: 1
 replay_buffers:
-  real_capacity: 5000
-  model_capacity: 5000
+  real_capacity: 3000
+  model_capacity: 3000
 WorldModel:
   lr: 0.001
   weight_decay: 0.0
@@ -65,7 +65,7 @@ WorldModel:
 ActorCritic:
   actor_lr: 0.001
   critic_lr: 0.001
-  actor_weight_decay: 0.0
+  actor_weight_decay: 0.0001
   critic_weight_decay: 0.0
   actor_clip_grad: 5
   critic_clip_grad: 5

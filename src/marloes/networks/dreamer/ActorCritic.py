@@ -148,7 +148,7 @@ class ActorCritic(nn.Module):
         policy_dist = self.actor(states)
         log_probs = policy_dist.log_prob(actions)
         # get entropy as a scalar
-        entropy = policy_dist.entropy().sum(-1).mean()
+        entropy = policy_dist.base_dist.entropy().sum(-1).mean()
 
         # Scale factor S=EMA( Per(returns, 95) - Per(returns, 5) )
         # where Per(x, p) is the p-th percentile of x (detaching to prevent gradient flow)
