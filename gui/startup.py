@@ -1,5 +1,8 @@
+from datetime import datetime, timedelta
 import logging
+import random
 import time
+from zoneinfo import ZoneInfo
 
 import yaml
 from PyQt6.QtWidgets import (
@@ -13,13 +16,16 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QGroupBox,
     QHBoxLayout,
+    QLineEdit,
 )
 from PyQt6.QtCore import QTimer
 
 from gui.success_screen import SuccessScreen
+from gui.util import load_scenarios
 from src.marloes.algorithms.dreamer import Dreamer
 from src.marloes.algorithms.base import BaseAlgorithm
 from src.marloes.algorithms.priorities import Priorities
+from src.marloes.algorithms.simplesetpoint import SimpleSetpoint
 
 from src.marloes.algorithms.dyna import Dyna
 from src.marloes.validation.validate_config import validate_config
@@ -47,13 +53,25 @@ class ExperimentSetupApp(QWidget):
         self.logo = LogoWindow()
         layout.addWidget(self.logo)
 
+        # UID input
+        layout.addWidget(QLabel("UID (optional):"))
+        self.uid_input = QLineEdit()
+        self.uid_input.setPlaceholderText("Leave empty to skip")
+        layout.addWidget(self.uid_input)
+
         # DEFAULT CONFIG CHECKBOX
         layout.addWidget(QLabel("Select configuration:"))
         self.config_dropdown = QComboBox()
         self.config_dropdown.addItems(
-            ["default_config", "simple_config", "dyna_config", "test_config"]
+            ["dyna_config", "default_config", "simple_config", "test_config"]
         )
         layout.addWidget(self.config_dropdown)
+
+        # SCENARIO DROPDOWN
+        self.scenario_label = QLabel("Select Scenario:")
+        self.scenario_dropdown = load_scenarios()
+        layout.addWidget(self.scenario_label)
+        layout.addWidget(self.scenario_dropdown)
 
         # ALGORITHM SELECTION
         self.algorithm_label = QLabel("Select Algorithm:")
@@ -128,19 +146,7 @@ class ExperimentSetupApp(QWidget):
 
     def start_experiment(self):
         self.collect_config()
-        # valid, error_message = self.validate()
-        # if not valid:
-        #     self.error_screen = ErrorScreen(error_message, self)
-        #     self.error_screen.show()
-        #     self.close()
-        # else:
-        logging.info("Starting experiment with the following configuration:")
-        for key, value in self.config.items():
-            logging.info(f"     {key}: {value}")
-        # Switch to the loading screen
-        # self.loading_screen = LoadingScreen(self.config)
-        # self.loading_screen.show()
-        # self.close()
+
         algorithm: BaseAlgorithm = BaseAlgorithm.get_algorithm(
             self.config["algorithm"], self.config
         )
@@ -148,9 +154,6 @@ class ExperimentSetupApp(QWidget):
         try:
             algorithm.train()
         except Exception as e:
-            # print(f"Error during training: {e}")
-            # self.error_screen = ErrorScreen("Error during training", self)
-            # self.error_screen.show()
             self.close()
             raise e
         end_time = time.time()
@@ -172,11 +175,55 @@ class ExperimentSetupApp(QWidget):
             config = {}
             print(f"Error loading default config: {e}")
 
+        # If UID is provided, add it to the config
+        uid_text = self.uid_input.text().strip()
+        uid = None
+        if uid_text:
+            try:
+                uid = int(uid_text)
+            except ValueError:
+                logging.error("Invalid UID provided. Running new experiment.")
+                pass
+
+        if uid:
+            passed_config = config.copy()
+            try:
+                with open(f"results/configs/{uid}.yaml", "r") as f:
+                    config = yaml.safe_load(f)
+            except FileNotFoundError:
+                logging.error(f"Configuration file for UID {uid} not found.")
+                return
+
+            # Set start time to later to "continue" the training
+            original_start_time = config.get("start_time")
+            new_start_time = original_start_time + timedelta(
+                minutes=config["training_steps"]
+            )
+            config["simulation_start_time"] = new_start_time
+            config["uid"] = uid
+            config["num_initial_random_steps"] = 0
+            config["performed_training_steps"] = config["training_steps"]
+            config["training_steps"] += passed_config["training_steps"]
+
+        # Algorithm choice
         algorithm_choice = self.algorithm_dropdown.currentText()
         if algorithm_choice:
             if not config.get("algorithm") or algorithm_choice != "Priorities":
                 config["algorithm"] = algorithm_choice
 
+        # Scenario choice
+        scenario = self.scenario_dropdown.currentText()
+        try:
+            with open(f"data_scenarios/{scenario}.yaml", "r") as f:
+                scenario = yaml.safe_load(f)
+        except Exception as e:
+            logging.error(f"Could not load scenario: {e}")
+            return
+
+        # Update the config with the scenario
+        config["data_config"] = scenario
+
+        # Training steps
         if self.training_steps.isVisible():
             if (
                 not config.get("training_steps")
@@ -188,8 +235,10 @@ class ExperimentSetupApp(QWidget):
             if not config.get("chunk_size") or self.chunk_size.value() != 10000:
                 config["chunk_size"] = self.chunk_size.value()
 
+        # Extractor type
         config["extractor_type"] = self.extractor_type_dropdown.currentText()
 
+        # Subreward scaling factors
         selected_subrewards = {
             name: {
                 "active": True,
@@ -201,7 +250,14 @@ class ExperimentSetupApp(QWidget):
         selected_subrewards.update(config.get("subrewards", {}))
         config["subrewards"] = selected_subrewards
 
-        # TODO: add additional parameters as needed
+        # Start time some minute in the first 4 months of 2025
+        if "start_time" not in config:
+            start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+            random_minutes = random.randint(0, 4 * 30 * 24 * 60)
+            start_time += timedelta(minutes=random_minutes)
+            config["start_time"] = start_time
+            config["simulation_start_time"] = start_time
+
         self.config = config
 
     def validate(self):

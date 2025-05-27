@@ -11,19 +11,34 @@ from marloes.data.metrics import Metrics
 
 
 class Visualizer:
-    def __init__(self, uids: list[int]):
+    def __init__(self, uids: list[int], selected_scenarios: list[str]):
         """
         Initialize the Visualizer with a list of UIDs.
         Each UID will have its own Calculator instance.
         """
-        self.uids = uids
+        self.uids = []
+        directories = []
+        self.raw_uids = uids
         # If nothing is passed the uid must be extracted from the calculator
-        if not self.uids:
-            calculator = Calculator(self.uids)
-            self.uids = [calculator.uid]
+        if not self.raw_uids:
+            calculator = Calculator(self.raw_uids)
+            self.raw_uids = [calculator.uid]
+
+        # For every UID, create a separate instance for every scenario
+        for uid in self.raw_uids:
+            for scenario in selected_scenarios:
+                self.uids.append(f"{uid}_{scenario}")
+                if scenario == "training":
+                    directories.append("results")
+                else:
+                    directories.append(f"evaluate/{scenario}")
+
         logging.info(f"Visualizer initialized with UIDs: {self.uids}")
 
-        self.calculators = {uid: Calculator(uid) for uid in self.uids}
+        self.calculators = {
+            uid: Calculator(uid.split("_")[0], directory)
+            for uid, directory in zip(self.uids, directories)
+        }
 
     def get_common_metrics(self):
         """
@@ -35,7 +50,7 @@ class Visualizer:
             calculator = self.calculators[uid]
             metrics = calculator.get_all_metrics()
             common_metrics.intersection_update(metrics)
-        return list(common_metrics)
+        return sorted(list(common_metrics))
 
     def plot_metrics(
         self,
@@ -50,6 +65,7 @@ class Visualizer:
         logging.info(f"Plotting metrics {metrics} for simulations {self.uids}...")
 
         aggregated_data = {}
+        start_times = {}
 
         # Retrieve the metrics data for each UID
         for uid in self.uids:
@@ -61,6 +77,9 @@ class Visualizer:
             info_data = metrics_data.pop("info", None)
             calculator.log_sanity_check(info_data)
 
+            # Extract start time
+            start_times[uid] = metrics_data.pop("start_time")
+
             # Organize data by metric
             for metric, data in metrics_data.items():
                 if data is None:
@@ -70,6 +89,14 @@ class Visualizer:
                     continue
                 if metric not in aggregated_data:
                     aggregated_data[metric] = {}
+                if isinstance(data, np.ndarray):
+                    # Convert to pandas Series for easier handling
+                    data = pd.Series(
+                        data,
+                        index=pd.date_range(
+                            start=start_times[uid], periods=len(data), freq="min"
+                        ),
+                    )
                 aggregated_data[metric][uid] = data
 
         for metric, data_by_uid in aggregated_data.items():
@@ -93,17 +120,11 @@ class Visualizer:
         """
         Plots the default metrics for each UID in a single figure per metric.
         """
-        index = pd.date_range(
-            start="1/1/2025", periods=len(next(iter(data_by_uid.values()))), freq="min"
-        )
-
         # Apply rolling median if requested
         if rolling:
             for uid, series in data_by_uid.items():
                 # Apply rolling median with a window of 60 minutes
-                data_by_uid[uid] = (
-                    pd.Series(series, index=index).rolling(window=60).median()
-                )
+                data_by_uid[uid] = series.rolling(window=60).median()
 
         fig = go.Figure()
         # If metric contains "loss" set y-axis to log scale
@@ -112,14 +133,14 @@ class Visualizer:
 
             # Actor loss is negative so shift it to just above 0
             if "actor" in metric.lower():
-                min_y = min([series.min() for series in data_by_uid.values()])
+                # min_y = min([series.min() for series in data_by_uid.values()])
                 for uid, series in data_by_uid.items():
-                    data_by_uid[uid] = series - min_y + 0.01
+                    data_by_uid[uid] = series
 
         for uid, series in data_by_uid.items():
             fig.add_trace(
                 go.Scatter(
-                    x=index,
+                    x=series.index,
                     y=series,
                     mode="lines",
                     name=f"UID {uid}",
@@ -153,10 +174,8 @@ class Visualizer:
         for metric, data_by_uid in aggregated_data.items():
             if uid not in data_by_uid:
                 continue
-            arr = data_by_uid[uid]
+            series = data_by_uid[uid]
 
-            idx = pd.date_range(start="1/1/2025", periods=len(arr), freq="min")
-            series = pd.Series(arr, index=idx)
             if rolling:
                 series = series.rolling(window=60, min_periods=1).median()
 

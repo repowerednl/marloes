@@ -1,7 +1,10 @@
+from datetime import datetime
 import logging
+import os
 
 import numpy as np
 import pandas as pd
+import yaml
 
 from marloes.valley.rewards.subrewards import (
     CO2SubReward,
@@ -29,12 +32,25 @@ class Calculator:
         "NE": NESubReward,
     }
     EXTRA_METRICS = {
-        "grid_state": "cumulative_grid_state",
+        "grid_state": ["cumulative_grid_state"],
+        "reward": ["cumulative_reward", "reward_daily"],
+        "total_grid_production": [
+            "cumulative_grid_production",
+            "daily_grid_production",
+        ],
+        "total_solar_production": ["surplus", "negative_surplus"],
     }
 
     def __init__(self, uid: int | None = None, dir: str = "results"):
         self.extractor = Extractor(from_model=False)
         self.uid = self.extractor.from_files(uid, dir)
+
+        # Get start time from dir/configs/uid.yaml, loading the yaml to dict and extracting the start time
+        if os.path.exists(f"{dir}/configs/{uid}.yaml"):
+            with open(f"{dir}/configs/{uid}.yaml", "r") as f:
+                config: dict = yaml.safe_load(f)
+            start_time = config.get("start_time", datetime(2025, 1, 1, tzinfo=None))
+            self.start_time = pd.to_datetime(start_time, utc=True)
 
     def get_all_metrics(self) -> list[str]:
         """
@@ -43,9 +59,10 @@ class Calculator:
         """
         base_metrics = self.extractor.get_all_metrics()
         # Extract al extra metrics for which the key is in the base metrics
-        extra_metrics = [
-            self.EXTRA_METRICS[key] for key in self.EXTRA_METRICS if key in base_metrics
-        ]
+        extra_metrics = []
+        for key in self.EXTRA_METRICS:
+            if key in base_metrics:
+                extra_metrics.extend(self.EXTRA_METRICS[key])
         return base_metrics + extra_metrics
 
     def get_metrics(self, metrics: list[str]) -> dict[str, np.ndarray | None]:
@@ -73,6 +90,7 @@ class Calculator:
             results[metric] = getattr(self.extractor, metric, None)
 
         results["info"] = self._sanity_check(results)
+        results["start_time"] = self.start_time
         return results
 
     def cumulative_grid_state(self) -> np.ndarray:
@@ -80,6 +98,55 @@ class Calculator:
         Calculates the cumulative grid state.
         """
         return np.cumsum(self.extractor.grid_state)
+
+    def cumulative_reward(self) -> np.ndarray:
+        """
+        Calculates the cumulative reward.
+        """
+        return np.cumsum(self.extractor.reward)
+
+    def cumulative_grid_production(self) -> np.ndarray:
+        """
+        Calculates the cumulative grid production.
+        """
+        return np.cumsum(self.extractor.total_grid_production)
+
+    def reward_daily(self) -> np.ndarray:
+        """
+        Shows the daily improvement of the reward.
+        """
+        series = pd.Series(self.extractor.reward)
+        index = pd.date_range(
+            start="2025-01-01",
+            periods=len(series),
+            freq="min",
+        )
+        series.index = index
+        series = series.resample("D").sum()
+        return series.values
+
+    def daily_grid_production(self) -> np.ndarray:
+        """
+        Shows the daily improvement of the grid production.
+        """
+        series = pd.Series(self.extractor.total_grid_production)
+        index = pd.date_range(
+            start="2025-01-01",
+            periods=len(series),
+            freq="min",
+        )
+        series.index = index
+        series = series.resample("D").sum()
+        return series.values
+
+    def surplus(self) -> np.ndarray:
+        """
+        Calculates the surplus.
+        """
+        return self.extractor.total_solar_production - self.extractor.total_demand
+
+    def negative_surplus(self) -> np.ndarray:
+        return -self.surplus()
 
     def _get_reward_model(self, metric: str) -> SubReward | None:
         reward_class = self.REWARD_CLASSES.get(metric)

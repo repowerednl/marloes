@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import logging
 
 
 class SACBaseNetwork(nn.Module):
@@ -13,7 +14,13 @@ class SACBaseNetwork(nn.Module):
         hidden_layers (nn.Sequential): Sequential container for the hidden layers.
     """
 
-    def __init__(self, input_dim: int, sac_config: dict, activation=nn.ReLU()) -> None:
+    def __init__(
+        self,
+        input_dim: int,
+        sac_config: dict,
+        activation=nn.ReLU(),
+        hidden_dim: int = None,
+    ) -> None:
         """
         Initializes the SACBaseNetwork with the given input and output dimensions and hidden layer dimensions.
         All provided defaults are based on the original SAC paper.
@@ -24,11 +31,15 @@ class SACBaseNetwork(nn.Module):
                 - "hidden_dim" (int, optional): Dimension of the hidden layers (default: 256).
                 - "num_layers" (int, optional): Number of hidden layers (default: 2).
             activation (nn.Module, optional): Activation function to use between layers (default: nn.ReLU()).
+            hidden_dim (int, optional): Dimension of the hidden layers (default: None).
         """
         super(SACBaseNetwork, self).__init__()
 
         # Get the parameters from the config
-        self.hidden_dim = sac_config.get("hidden_dim", 256)
+        if hidden_dim is not None:
+            self.hidden_dim = hidden_dim
+        else:
+            self.hidden_dim = sac_config.get("hidden_dim", 256)
         num_layers = sac_config.get("num_layers", 2)
 
         # Build the layers

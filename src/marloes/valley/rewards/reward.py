@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 
 import numpy as np
@@ -26,28 +27,39 @@ class Reward:
         "NE": NESubReward,
     }
 
-    def __init__(self, actual: bool = True, **kwargs):
+    def __init__(self, config: dict, actual: bool = True, **kwargs):
         """
         Initializes the Reward instance with specified sub-penalties/rewards.
         """
         self.actual = actual
         self.sub_rewards: dict[str, SubReward] = {
-            key.upper(): self.VALID_SUB_REWARDS[key.upper()](**value)
+            key.upper(): self.VALID_SUB_REWARDS[key.upper()](config, **value)
             for key, value in kwargs.items()
             if key.upper() in self.VALID_SUB_REWARDS
         }
-        logging.info(f"Initialized Reward with sub-rewards: {self.sub_rewards}")
+        logging.info(
+            f"Initialized Reward with sub-rewards: {[sub for sub in self.sub_rewards if self.sub_rewards[sub].active]}"
+        )
 
         # Track the net grid state if ss or nb is active and actual is True
-        self.prev_net_grid_state = 0
+        self.net_grid_state = 0
 
-    def get(self, extractor: Extractor) -> float | np.ndarray:
+    def get(self, extractor: Extractor, time_stamp: datetime) -> float | np.ndarray:
         """
         Calculate the total reward based on the active sub-rewards.
         """
         if self.actual:
             total_reward = 0
-            self.prev_net_grid_state += extractor.grid_state[extractor.i]
+
+            # For the SS subreward
+            self.net_grid_state += extractor.grid_state[extractor.i]
+            input_dict = {
+                "net_grid_state": self.net_grid_state,
+                "grid_state": extractor.grid_state[extractor.i],
+                "total_demand": extractor.total_demand[extractor.i],
+                "total_battery_intake": extractor.total_battery_intake[extractor.i],
+            }
+
         else:
             total_reward = np.zeros(len(extractor.grid_state))
 
@@ -56,7 +68,8 @@ class Reward:
                 total_reward += sub_reward.scaling_factor * sub_reward.calculate(
                     extractor,
                     actual=self.actual,
-                    prev_net_grid_state=self.prev_net_grid_state,
+                    input_dict=input_dict if self.actual else None,
+                    time_stamp=time_stamp,
                 )
 
         return total_reward

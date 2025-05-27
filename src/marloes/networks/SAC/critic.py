@@ -29,7 +29,8 @@ class CriticNetwork(SACBaseNetwork):
         state_dim = config["state_dim"]
         action_dim = config["action_dim"]
         super(CriticNetwork, self).__init__(
-            state_dim + action_dim, config.get("SAC", {})
+            state_dim + action_dim,
+            config.get("SAC", {}),
         )
         self.output_layer = nn.Linear(self.hidden_dim, 1)  # Output layer for Q-value
 

@@ -22,6 +22,7 @@ from marloes.agents import (
     SolarAgent,
     WindAgent,
 )
+from marloes.algorithms.util import get_net_forecasted_power
 from marloes.data.util import encode_datetime
 from marloes.results.extractor import ExtensiveExtractor, Extractor
 from marloes.data.replaybuffer import ReplayBuffer
@@ -50,25 +51,28 @@ class EnergyValley(MultiAgentEnv):
         Initializes the environment, agents, and solver model.
         """
         super().__init__()
-        self.start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        default_start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        self.start_time = config.get("simulation_start_time", default_start_time)
         self.time_stamp = self.start_time
         self.time_step = 60  # 1 minute in seconds
 
         self.agents: list[Agent] = []
+        self.trainable_agents: list[Agent] = []
         self.grid: Optional[GridAgent] = None
         self.model: Optional[Model] = None
         self.extractor: Extractor = self.EXTRACTOR_MAP[
             config.pop("extractor_type", "default")
         ]()
-        self.reward = Reward(actual=True, **config.get("subrewards", {}))
+        self.reward = Reward(config, actual=True, **config.get("subrewards", {}))
 
-        self._initialize_agents(config, algorithm_type)
+        self._initialize_agents(config, algorithm_type, config.get("data_config", {}))
         self._initialize_model(
             algorithm_type
         )  # Model has a graph (nx.DiGraph) with assets as nodes and edges as connections
 
         # For efficiency
         self.agent_dict = {agent.id: agent for agent in self.agents}
+        self.trainable_agent_dict = {agent.id: agent for agent in self.trainable_agents}
         self._state_cache = {agent.id: None for agent in self.agents}
         # is the hub ever done? Is life ever done? Is life a simulation?
         self._dones_cache = {agent.id: False for agent in self.agents}
@@ -76,14 +80,18 @@ class EnergyValley(MultiAgentEnv):
 
         # Add dims to the environment
         self.state_dim = ReplayBuffer.dict_to_tens(self._get_full_observation()).shape
-        self.action_dim = torch.Size([len(self.agents)])
-        self.global_dim = ReplayBuffer.dict_to_tens(self._get_global_context()).shape
+        self.action_dim = torch.Size([len(self.trainable_agents)])
+        self.global_dim = ReplayBuffer.dict_to_tens(
+            self._get_global_context(self._combine_states())
+        ).shape
         self.agents_scalar_dim = [
             len(state) for state in self._combine_states(False).values()
         ]
         self.forecasts = [agent.forecast is not None for agent in self.agents]
 
-    def _initialize_agents(self, config: dict, algorithm_type: str) -> None:
+    def _initialize_agents(
+        self, config: dict, algorithm_type: str, data_config: dict
+    ) -> None:
         """
         Function to initialize all agents with the given configuration.
         Requires config with "agents" key (list of dicts), and "grid" key (dict).
@@ -97,9 +105,9 @@ class EnergyValley(MultiAgentEnv):
             self.agents.append(CurtailmentAgent({}, self.start_time))
 
         for agent_config in config.get("agents", []):
-            self._add_agent(agent_config)
+            self._add_agent(agent_config, data_config)
 
-    def _add_agent(self, agent_config: dict) -> None:
+    def _add_agent(self, agent_config: dict, data_config: dict) -> None:
         """
         Adds an agent based on its type from the configuration.
         """
@@ -108,7 +116,12 @@ class EnergyValley(MultiAgentEnv):
             raise ValueError(f"Unknown agent type: '{agent_type}'")
 
         agent_class = self.AGENT_TYPE_MAP[agent_type]
-        self.agents.append(agent_class(agent_config, self.start_time))
+        trainable = agent_config.pop("trainable", True)
+        self.agents.append(
+            agent_class(agent_config, self.start_time, data_config=data_config)
+        )
+        if trainable:
+            self.trainable_agents.append(self.agents[-1])
 
     def _initialize_model(self, algorithm_type: str) -> None:
         """
@@ -202,8 +215,9 @@ class EnergyValley(MultiAgentEnv):
             self._state_cache[agent.id] = relevant_state
         return self._state_cache
 
-    def _get_global_context(self, normalize: bool = True) -> dict:
+    def _get_global_context(self, observations: dict, normalize: bool = True) -> dict:
         """Function to get additional global information (market prices, etc.)"""
+        net_forecasted_power = get_net_forecasted_power(observations)
         if not normalize:
             current_month = self.time_stamp.month
             current_day = self.time_stamp.day
@@ -211,6 +225,7 @@ class EnergyValley(MultiAgentEnv):
             current_minute = self.time_stamp.minute
             return {
                 "global_context": {
+                    "net_forecasted_power": net_forecasted_power,
                     "month": current_month,
                     "day": current_day,
                     "hour": current_hour,
@@ -219,16 +234,20 @@ class EnergyValley(MultiAgentEnv):
             }
         else:
             # Use cyclical normalization for time
-            return {"global_context": encode_datetime(self.time_stamp)}
+            return {
+                "global_context": {"net_forecasted_power": net_forecasted_power}
+                | encode_datetime(self.time_stamp)
+            }
 
     def _get_full_observation(self, normalize: bool = True) -> dict:
         """Function to get the full observation (agent state + additional information)"""
         # TODO: Is the grid information added to the state?
-        return self._combine_states() | self._get_global_context(normalize)
+        combined_states = self._combine_states()
+        return combined_states | self._get_global_context(combined_states, normalize)
 
     def _calculate_reward(self):
         """Function to calculate the reward"""
-        reward = self.reward.get(self.extractor)
+        reward = self.reward.get(self.extractor, self.time_stamp)
         return reward
 
     def reset(self) -> tuple[dict, dict]:
@@ -244,7 +263,6 @@ class EnergyValley(MultiAgentEnv):
         self, actions: dict, loss_dict: dict | None = None, normalize: bool = True
     ):
         """Function should return the observation, reward, done, info"""
-
         # Set setpoints for agents based on actions
         for agent_id, action in actions.items():
             self.agent_dict[agent_id].act(action, self.time_stamp)

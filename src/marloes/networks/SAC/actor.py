@@ -19,7 +19,7 @@ class ActorNetwork(SACBaseNetwork):
         log_std_max (float): Maximum value for log standard deviation.
     """
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict) -> None:
         """
         Initializes the ActorNetwork with the given configuration.
 
@@ -32,9 +32,16 @@ class ActorNetwork(SACBaseNetwork):
                     - "log_std_max" (float, optional): Maximum value for log_std (default: 2).
         """
         state_dim = config["state_dim"]
-        action_dim = config["action_dim"]
+        if config["dyna"].get("sCTCE", False):
+            action_dim = 1
+        else:
+            action_dim = config["action_dim"]
         SAC_config = config.get("SAC", {})
-        super(ActorNetwork, self).__init__(state_dim, SAC_config)
+        super(ActorNetwork, self).__init__(
+            state_dim,
+            SAC_config,
+            hidden_dim=SAC_config.get("actor_hidden_dim", None),
+        )
 
         # Separate heads for mean and log_std
         self.mean_layer = nn.Linear(self.hidden_dim, action_dim)

@@ -11,8 +11,9 @@ from .base import Agent
 
 
 class BatteryAgent(Agent):
-    def __init__(self, config: dict, start_time: datetime):
+    def __init__(self, config: dict, start_time: datetime, *args, **kwargs):
         super().__init__(Battery, config, start_time)
+        self.asset.state_of_charge = 0
 
     @classmethod
     def get_default_config(cls, config, id: str) -> dict:

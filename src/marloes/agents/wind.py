@@ -12,13 +12,17 @@ from .base import Agent
 
 
 class WindAgent(Agent):
-    def __init__(self, config: dict, start_time: datetime):
-        series, forecast = self._get_production_series(config)
+    def __init__(self, config: dict, start_time: datetime, data_config: dict = {}):
+        series, forecast = self._get_production_series(config, data_config)
         super().__init__(Supply, config, start_time, series, forecast)
 
-    def _get_production_series(self, config: dict) -> tuple[pd.Series, pd.Series]:
+    def _get_production_series(
+        self, config: dict, data_config: dict
+    ) -> tuple[pd.Series, pd.Series]:
         # Read in the right 1 MWp profile from the wind data
-        series = read_series(f"Wind_{config.get('location')}.parquet")
+        series = read_series(
+            f"Wind_{config.get('location')}.parquet", data_config=data_config
+        )
 
         series *= config["power"]
 
@@ -26,7 +30,11 @@ class WindAgent(Agent):
         series[series > config["AC"]] = config["AC"]
 
         # Get forecast
-        forecast = read_series(f"Wind_{config.pop('location')}.parquet", forecast=True)
+        forecast = read_series(
+            f"Wind_{config.pop('location')}.parquet",
+            forecast=True,
+            data_config=data_config,
+        )
         forecast *= config["power"]
         forecast[forecast > config["AC"]] = config["AC"]
 
