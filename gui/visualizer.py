@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 from gui.errors import ErrorScreen
+from gui.util import load_scenario_checkboxes
 from marloes.results.visualizer import Visualizer
 
 
@@ -37,6 +38,10 @@ class VisualizerGUI(QWidget):
         uid_layout.addWidget(uid_label)
         uid_layout.addWidget(self.uid_input)
         layout.addLayout(uid_layout)
+
+        # Selection of scenarios
+        scenario_widget, self.scenario_checkboxes = load_scenario_checkboxes()
+        layout.addWidget(scenario_widget)
 
         # Button to load metrics into the group
         self.load_metrics_button = QPushButton("Load Metrics")
@@ -89,7 +94,10 @@ class VisualizerGUI(QWidget):
         """
         # Get uids to initialize the visualizer
         uids = self.get_uids()
-        self.visualizer = Visualizer(uids)
+        selected_scenarios = [
+            name for name, cb in self.scenario_checkboxes.items() if cb.isChecked()
+        ]
+        self.visualizer = Visualizer(uids, selected_scenarios)
         metrics = self.visualizer.get_common_metrics()
 
         if not metrics:

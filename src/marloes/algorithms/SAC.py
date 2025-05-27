@@ -16,6 +16,7 @@ class SAC:
 
     def __init__(self, config: dict, device: str):
         # Hyperparameters
+        self.device = device
         self.SAC_config = config.get("SAC", {})
         self.gamma = self.SAC_config.get("gamma", 0.99)  # Discount factor
         self.tau = self.SAC_config.get("tau", 0.005)  # Target network update rate
@@ -23,10 +24,10 @@ class SAC:
             "alpha", 0.1
         )  # Temperature parameter for entropy
 
-        # # We introduce learnable alpha (Temperature parameter for entropy)
-        # action_dim = config["action_dim"]
-        # self.target_entropy = -action_dim  # Target entropy is -action_dim for now
-        # self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
+        # We introduce learnable alpha (Temperature parameter for entropy)
+        action_dim: float = config["action_dim"]
+        self.target_entropy = -action_dim  # Target entropy is -action_dim for now
+        self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
 
         self.value_network = ValueNetwork(config).to(device)  # Parameterized by psi
         self.target_value_network = ValueNetwork(config).to(
@@ -43,6 +44,8 @@ class SAC:
         # Initialize losses
         self._init_losses(config.get("model_updates_per_step", 10))
 
+        self._try_to_load_weights(config.get("uid", None))
+
     def _init_losses(self, model_updates_per_step):
         self.i = 0
         self.loss_value = np.zeros(model_updates_per_step)
@@ -50,7 +53,7 @@ class SAC:
         self.loss_critic_2 = np.zeros(model_updates_per_step)
         self.loss_actor = np.zeros(model_updates_per_step)
         self.mean_q = np.zeros(model_updates_per_step)
-        # self.alphas = np.zeros(model_updates_per_step)
+        self.alphas = np.zeros(model_updates_per_step)
 
     def _init_optimizers(self):
         """
@@ -60,7 +63,7 @@ class SAC:
         actor_lr = self.SAC_config.get("actor_lr", 3e-4)
         critic_lr = self.SAC_config.get("critic_lr", 3e-4)
         value_lr = self.SAC_config.get("value_lr", 3e-4)
-        # alpha_lr = self.SAC_config.get("alpha_lr", 3e-4)
+        alpha_lr = self.SAC_config.get("alpha_lr", 3e-4)
 
         eps = self.SAC_config.get("eps", 1e-7)
         weight_decay = self.SAC_config.get("weight_decay", 0.0)
@@ -71,13 +74,13 @@ class SAC:
             eps=eps,
             weight_decay=weight_decay,
         )
-        self.critic1_optimizer = Adam(
+        self.critic_1_optimizer = Adam(
             self.critic_1_network.parameters(),
             lr=critic_lr,
             eps=eps,
             weight_decay=weight_decay,
         )
-        self.critic2_optimizer = Adam(
+        self.critic_2_optimizer = Adam(
             self.critic_2_network.parameters(),
             lr=critic_lr,
             eps=eps,
@@ -89,15 +92,20 @@ class SAC:
             eps=eps,
             weight_decay=weight_decay,
         )
-        # self.alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
+        self.alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
 
-    def act(self, state):
+    def act(self, state, deterministic: bool = False):
         """
         Selects an action based on the current state using the actor network.
         """
         self.actor_network.eval()  # Set to evaluation mode
-        with torch.no_grad():  # Disable gradient calculation
-            actions, _ = self.actor_network.sample(state)
+
+        with torch.no_grad():
+            if deterministic:
+                mean, _ = self.actor_network(state)
+                actions = torch.tanh(mean)
+            else:
+                actions, _ = self.actor_network.sample(state)
         return actions
 
     def update(self, batch):
@@ -138,8 +146,8 @@ class SAC:
         self.mean_q[self.i] = Q_min.mean().item()
 
         # Calculate the target value
-        # alpha = self.log_alpha.exp()
-        target_value = Q_min - self.alpha * log_pi
+        alpha = self.log_alpha.exp()
+        target_value = Q_min - alpha * log_pi
 
         # Calculate the value loss (0.5 scaling from the paper)
         # value_loss = 0.5 * F.mse_loss(V, target_value.detach())
@@ -176,15 +184,15 @@ class SAC:
 
             # Back propagate the critic loss and update the critic network parameters
             if i == 0:
-                self.critic1_optimizer.zero_grad()
+                self.critic_1_optimizer.zero_grad()
                 critic_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.critic_1_network.parameters(), 1.0)
-                self.critic1_optimizer.step()
+                self.critic_1_optimizer.step()
             else:
-                self.critic2_optimizer.zero_grad()
+                self.critic_2_optimizer.zero_grad()
                 critic_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.critic_2_network.parameters(), 1.0)
-                self.critic2_optimizer.step()
+                self.critic_2_optimizer.step()
 
             # Store the critic loss
             if i == 0:
@@ -205,8 +213,8 @@ class SAC:
         Q_min = torch.min(Q_1, Q_2)
 
         # Calculate the actor loss
-        # alpha = self.log_alpha.exp()
-        actor_loss = (self.alpha * log_pi - Q_min).mean()
+        alpha = self.log_alpha.exp()
+        actor_loss = (alpha * log_pi - Q_min).mean()
 
         # Back propagate the loss and update parameters
         self.actor_optimizer.zero_grad()
@@ -214,14 +222,14 @@ class SAC:
         torch.nn.utils.clip_grad_norm_(self.actor_network.parameters(), 0.5)
         self.actor_optimizer.step()
 
-        # # Update the alpha parameter; entropy -> target entropy
-        # alpha_loss = -(self.log_alpha * (log_pi + self.target_entropy).detach()).mean()
-        # self.alpha_optimizer.zero_grad()
-        # alpha_loss.backward()
-        # self.alpha_optimizer.step()
+        # Update the alpha parameter; entropy -> target entropy
+        alpha_loss = -(self.log_alpha * (log_pi + self.target_entropy).detach()).mean()
+        self.alpha_optimizer.zero_grad()
+        alpha_loss.backward()
+        self.alpha_optimizer.step()
 
         self.loss_actor[self.i] = actor_loss.item()
-        # self.alphas[self.i] = self.log_alpha.exp().item()
+        self.alphas[self.i] = self.log_alpha.exp().item()
 
     def _update_target_value_network(self):
         """
@@ -233,3 +241,42 @@ class SAC:
             target_param.data.copy_(
                 self.tau * param.data + (1 - self.tau) * target_param.data
             )
+
+    def _try_to_load_weights(self, uid: int = None) -> None:
+        """
+        Load the network weights from a folder if the uid is provided.
+
+        Args:
+            uid (int): Unique identifier for the network weights.
+        """
+        if not uid:
+            print("No UID provided. Skipping loading of weights.")
+            return
+
+        try:
+            checkpoint = torch.load(
+                f"results/models/{uid}.pth",
+                map_location=self.device,
+                weights_only=False,
+            )
+        except FileNotFoundError:
+            print(f"No saved model found for UID {uid}. Starting with random weights.")
+            return
+
+        # Load model weights
+        self.actor_network.load_state_dict(checkpoint["actor_network"])
+        self.critic_1_network.load_state_dict(checkpoint["critic_1_network"])
+        self.critic_2_network.load_state_dict(checkpoint["critic_2_network"])
+        self.value_network.load_state_dict(checkpoint["value_network"])
+        self.target_value_network.load_state_dict(checkpoint["target_value_network"])
+
+        # Load log_alpha and ensure it requires grad
+        self.log_alpha = checkpoint["log_alpha"].to(self.device)
+        self.log_alpha.requires_grad_(True)
+
+        # Load optimizers
+        self.actor_optimizer.load_state_dict(checkpoint["actor_optimizer"])
+        self.critic_1_optimizer.load_state_dict(checkpoint["critic_1_optimizer"])
+        self.critic_2_optimizer.load_state_dict(checkpoint["critic_2_optimizer"])
+        self.value_optimizer.load_state_dict(checkpoint["value_optimizer"])
+        self.alpha_optimizer.load_state_dict(checkpoint["alpha_optimizer"])

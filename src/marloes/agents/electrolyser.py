@@ -10,7 +10,7 @@ from .base import Agent
 
 
 class ElectrolyserAgent(Agent):
-    def __init__(self, config: dict, start_time: datetime):
+    def __init__(self, config: dict, start_time: datetime, *args, **kwargs):
         super().__init__(Battery, config, start_time)
         # the internal clock is to keep track of the start-up time of the electrolyser
         self.start_up_time = 5  # value from PEM(EC)

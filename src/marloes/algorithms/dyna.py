@@ -17,7 +17,7 @@ class Dyna(BaseAlgorithm):
 
     __name__ = "Dyna"
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: dict, evaluate: bool = False):
         """
         Initializes the Dyna algorithm.
 
@@ -28,8 +28,8 @@ class Dyna(BaseAlgorithm):
                 - "model_updates_per_step" (int): Number of model updates per step.
                 - "real_sample_ratio" (float): Ratio of real to synthetic samples.
         """
-        super().__init__(config)
-        self.world_model = WorldModel(self.config).to(self.device)
+        super().__init__(config, evaluate)
+        self.world_model = WorldModel(self.config, self.device).to(self.device)
         dyna_config = config.get("dyna", {})
 
         # Use MultiAgentSAC if sCTCE is enabled
@@ -47,7 +47,35 @@ class Dyna(BaseAlgorithm):
         self.real_sample_ratio = dyna_config.get("real_sample_ratio", 0.5)
         self.update_interval = dyna_config.get("update_interval", 100)
 
-    def get_actions(self, state: dict) -> dict:
+        # Specify networks to be saved
+        self.track_networks()
+
+    def track_networks(self):
+        self.networks = {
+            "critic_1_network": self.sac.critic_1_network.state_dict(),
+            "critic_1_optimizer": self.sac.critic_1_optimizer.state_dict(),
+            "critic_2_network": self.sac.critic_2_network.state_dict(),
+            "critic_2_optimizer": self.sac.critic_2_optimizer.state_dict(),
+            "value_network": self.sac.value_network.state_dict(),
+            "value_optimizer": self.sac.value_optimizer.state_dict(),
+            "target_value_network": self.sac.target_value_network.state_dict(),
+            "log_alpha": self.sac.log_alpha,
+            "alpha_optimizer": self.sac.alpha_optimizer.state_dict(),
+            "world_model_network": self.world_model.state_dict(),
+            "world_model_optimizer": self.world_model.optimizer.state_dict(),
+        }
+        # Extend with actor networks if MultiAgentSAC is used
+        if isinstance(self.sac, MultiAgentSAC):
+            for i, (actor_network, actor_optimizer) in enumerate(
+                zip(self.sac.actors, self.sac.actor_optimizers)
+            ):
+                self.networks[f"actor_{i}_network"] = actor_network.state_dict()
+                self.networks[f"actor_{i}_optimizer"] = actor_optimizer.state_dict()
+        else:
+            self.networks["actor_network"] = self.sac.actor_network.state_dict()
+            self.networks["actor_optimizer"] = self.sac.actor_optimizer.state_dict()
+
+    def get_actions(self, state: dict, deterministic: bool = False) -> dict:
         """
         Generates actions based on the current observation using the SAC agent.
 
@@ -71,7 +99,7 @@ class Dyna(BaseAlgorithm):
         ).to(self.device)
 
         # Get actions from the SAC agent
-        actions = self.sac.act(state_tensors)
+        actions = self.sac.act(state_tensors, deterministic=deterministic)
 
         # Convert actions back to the original format
         action_list = actions.cpu().tolist()
@@ -105,7 +133,7 @@ class Dyna(BaseAlgorithm):
                 "sac_critic_2_loss": np.mean(self.sac.loss_critic_2),
                 "sac_actor_loss": np.mean(self.sac.loss_actor),
                 "mean_q": np.mean(self.sac.mean_q),
-                # "sac_alpha": np.mean(self.sac.alphas),
+                "sac_alpha": np.mean(self.sac.alphas),
             }
 
         # 1. Update world model (with real experiences only)
@@ -176,7 +204,7 @@ class Dyna(BaseAlgorithm):
             "sac_critic_2_loss": np.mean(self.sac.loss_critic_2),
             "sac_actor_loss": np.mean(self.sac.loss_actor),
             "mean_q": np.mean(self.sac.mean_q),
-            # "sac_alpha": np.mean(self.sac.alphas),
+            "sac_alpha": np.mean(self.sac.alphas),
         }
 
     @staticmethod

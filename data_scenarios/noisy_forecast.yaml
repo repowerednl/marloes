@@ -1,0 +1,6 @@
+# A scenario with high noise and relatively rare dropouts.
+name: noisy_forecast
+noise: 0.07
+drop_prob: 0.025
+long_drop_prob: 0.005
+max_long_drop_days: 5
