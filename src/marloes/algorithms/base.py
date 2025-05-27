@@ -112,7 +112,7 @@ class BaseAlgorithm(ABC):
                 self.saver.save(extractor=self.environment.extractor)
                 self.environment.extractor.clear()
 
-        self.saver.final_save(self.environment.extractor, self.networks)
+        self.saver.final_save(self.environment.extractor)
         logging.info("Evaluation process completed.")
 
     def train(self) -> None:
