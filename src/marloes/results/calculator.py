@@ -38,7 +38,7 @@ class Calculator:
             "cumulative_grid_production",
             "daily_grid_production",
         ],
-        "total_solar_production": ["surplus"],
+        "total_solar_production": ["surplus", "negative_surplus"],
     }
 
     def __init__(self, uid: int | None = None, dir: str = "results"):
@@ -144,6 +144,9 @@ class Calculator:
         Calculates the surplus.
         """
         return self.extractor.total_solar_production - self.extractor.total_demand
+
+    def negative_surplus(self) -> np.ndarray:
+        return -self.surplus()
 
     def _get_reward_model(self, metric: str) -> SubReward | None:
         reward_class = self.REWARD_CLASSES.get(metric)
