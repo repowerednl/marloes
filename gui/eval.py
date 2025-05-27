@@ -96,6 +96,7 @@ class EvaluationApp(QWidget):
 
         # Start time is the first of september 2025 for evaluation
         start_time = datetime(2025, 9, 1, tzinfo=ZoneInfo("UTC"))
+        config["simulation_start_time"] = start_time
         config["start_time"] = start_time
 
         print(f"Loaded config: {config}")
