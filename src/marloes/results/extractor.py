@@ -23,6 +23,7 @@ from marloes.agents import (
 from marloes.agents.base import SupplyAgents, StorageAgents, DemandAgents
 from marloes.algorithms.util import get_net_forecasted_power, get_net_power
 from marloes.data.extensive_data import ExtensiveDataStore
+from marloes.results.util import get_latest_uid
 
 MINUTES_IN_A_YEAR = 525600
 
@@ -127,8 +128,7 @@ class Extractor:
         """
         # If uid is None, extract latest uid from results/uid.txt
         if not uid:
-            with open(f"{dir}/uid.txt", "r") as f:
-                uid = int(f.read().strip()) - 2
+            uid = get_latest_uid(dir)
 
         # Check if there is a config saved with the given uid
         if not os.path.exists(f"{dir}/configs/{uid}.yaml"):

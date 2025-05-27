@@ -1,47 +1,78 @@
 from datetime import datetime
+import os
 from zoneinfo import ZoneInfo
+import logging
 
 import pandas as pd
 import numpy as np
 
 
 def read_series(
-    filepath: str, in_kw: bool = True, filetype: str = "parquet", forecast: bool = False
+    filepath: str,
+    in_kw: bool = True,
+    filetype: str = "parquet",
+    forecast: bool = False,
+    data_config: dict = None,
 ) -> pd.Series:
     """
     Reads a Parquet file and returns it as a minutely kW series.
     """
-    # Adjust filepath for root
+    # Adjust filepath for forecast
     if forecast:
-        filepath = f"src/marloes/data/forecasts/{filepath}"
+        subdir = f"forecasts/{filepath}"
     else:
-        filepath = f"src/marloes/data/profiles/{filepath}"
+        subdir = f"profiles/{filepath}"
+    # Check cache first
+    cached_filepath = f"src/marloes/data/cached/{subdir.replace('.parquet', '.pkl')}"
+    try:
+        series = pd.read_pickle(cached_filepath)
+        logging.info(f"Loaded series from cache: {cached_filepath}")
+    except FileNotFoundError:
+        # Adjust filepath for root
+        filepath = f"src/marloes/data/{subdir}"
 
-    # Read in the file given the filetype
-    read_function = getattr(pd, f"read_{filetype}")
-    df = read_function(filepath)
+        # Read in the file given the filetype
+        read_function = getattr(pd, f"read_{filetype}")
+        df = read_function(filepath)
 
-    # Ensure there are not multiple columns in the DataFrame
-    if df.shape[1] != 1:
-        raise ValueError("Only one column is allowed to convert to series.")
+        # Ensure there are not multiple columns in the DataFrame
+        if df.shape[1] != 1:
+            raise ValueError("Only one column is allowed to convert to series.")
 
-    # Make sure the data is in kWh to convert it to minutely kW
-    if in_kw:
-        df = convert_kw_to_kwh(df)
-    df = convert_kwh_to_minutely_kw(df)
+        # Make sure the data is in kWh to convert it to minutely kW
+        if in_kw:
+            df = convert_kw_to_kwh(df)
+        df = convert_kwh_to_minutely_kw(df)
 
-    # Convert the DataFrame to a Series
-    series = df.squeeze("columns")
+        # Convert the DataFrame to a Series
+        series = df.squeeze("columns")
 
-    # Shift the series to the year 2025 so all data aligns
-    series = shift_series(
-        series,
-        datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC")),
-        datetime(2025, 12, 31, 23, 59, tzinfo=ZoneInfo("UTC")),
-    )
-    series = add_noise_to_series(series, 0)
+        # Shift the series to the year 2025 so all data aligns
+        series = shift_series(
+            series,
+            datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC")),
+            datetime(2025, 12, 31, 23, 59, tzinfo=ZoneInfo("UTC")),
+        )
+
+        # Save to cache
+        dumped_filepath = (
+            f"src/marloes/data/cached/{subdir.replace('.parquet', '.pkl')}"
+        )
+        os.makedirs(os.path.dirname(dumped_filepath), exist_ok=True)
+        series.to_pickle(dumped_filepath)
+        logging.info(f"Saved series to cache: {dumped_filepath}")
+
+    series = add_noise_to_series(
+        series, noise=data_config.get("noise")
+    )  # Add noise to the series
     if not forecast:
-        series = drop_out_series(series)
+        # Simulate dropouts in the series
+        series = drop_out_series(
+            series,
+            drop_prob=data_config.get("drop_prob"),
+            long_drop_prob=data_config.get("long_drop_prob"),
+            max_long_drop_days=data_config.get("max_long_drop_days"),
+        )
 
     return series
 

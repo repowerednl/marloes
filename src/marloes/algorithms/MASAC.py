@@ -79,13 +79,13 @@ class MultiAgentSAC:
             eps=eps,
             weight_decay=weight_decay,
         )
-        self.critic1_optimizer = Adam(
+        self.critic_1_optimizer = Adam(
             self.critic_1_network.parameters(),
             lr=critic_lr,
             eps=eps,
             weight_decay=weight_decay,
         )
-        self.critic2_optimizer = Adam(
+        self.critic_2_optimizer = Adam(
             self.critic_2_network.parameters(),
             lr=critic_lr,
             eps=eps,
@@ -98,12 +98,16 @@ class MultiAgentSAC:
 
         self.alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
 
-    def act(self, state):
+    def act(self, state, deterministic=False):
         """
         Selects an action based on the current state using the actor network.
         """
         with torch.no_grad():
-            actions = [actor.sample(state)[0] for actor in self.actors]
+            if deterministic:
+                means = [actor(state)[0] for actor in self.actors]
+                actions = [torch.tanh(mean) for mean in means]
+            else:
+                actions = [actor.sample(state)[0] for actor in self.actors]
         return torch.cat(actions, dim=-1)
 
     def update(self, batch):
@@ -183,15 +187,15 @@ class MultiAgentSAC:
 
             # Back propagate the critic loss and update the critic network parameters
             if i == 0:
-                self.critic1_optimizer.zero_grad()
+                self.critic_1_optimizer.zero_grad()
                 critic_loss.backward()
                 # torch.nn.utils.clip_grad_norm_(self.critic_1_network.parameters(), 1.0)
-                self.critic1_optimizer.step()
+                self.critic_1_optimizer.step()
             else:
-                self.critic2_optimizer.zero_grad()
+                self.critic_2_optimizer.zero_grad()
                 critic_loss.backward()
                 # torch.nn.utils.clip_grad_norm_(self.critic_2_network.parameters(), 1.0)
-                self.critic2_optimizer.step()
+                self.critic_2_optimizer.step()
 
             # Store the critic loss
             if i == 0:

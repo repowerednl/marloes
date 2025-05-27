@@ -168,6 +168,8 @@ cython_debug/
 # The results
 /results/
 /results/uid.txt
+/evaluate/
+/src/marloes/data/cached/
 
 # Jetbrains
 .idea
