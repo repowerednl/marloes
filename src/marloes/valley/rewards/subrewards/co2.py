@@ -3,6 +3,9 @@ import numpy as np
 from marloes.results.extractor import Extractor
 from marloes.valley.rewards.subrewards.base import SubReward
 
+MAX_DEMAND = 30
+BATTERY_SCALE = 0.2
+
 
 class CO2SubReward(SubReward):
     """
@@ -19,6 +22,31 @@ class CO2SubReward(SubReward):
         "grid": 284.73,
     }
 
+    def __init__(
+        self,
+        config: dict,
+        active: bool = False,
+        scaling_factor: float = 1.0,
+    ):
+        """
+        Initializes the CO2SubReward instance with activation and scaling properties.
+        Stores max emissions used for normalization.
+        """
+        super().__init__(config, active, scaling_factor)
+        max_demand = sum(
+            agent.get("scale", 1) * MAX_DEMAND
+            for agent in self.config["agents"]
+            if agent.get("type") == "demand"
+        )
+        max_battery = sum(
+            agent.get("power") * BATTERY_SCALE
+            for agent in self.config["agents"]
+            if agent.get("type") == "battery"
+        )
+        self.max_emmissions = (max_demand + max_battery) * self.EMISSION_COEFFICIENTS[
+            "grid"
+        ]  # Use the maximum emissions from the grid as the normalization factor
+
     def calculate(
         self, extractor: Extractor, actual: bool, **kwargs
     ) -> float | np.ndarray:
@@ -33,4 +61,4 @@ class CO2SubReward(SubReward):
             self.EMISSION_COEFFICIENTS["grid"]
             * self._get_target(extractor.total_grid_production, i, actual),
         ]
-        return -sum(penalties)
+        return max(-(sum(penalties) / self.max_emmissions), -1)

@@ -35,7 +35,7 @@ class Visualizer:
             calculator = self.calculators[uid]
             metrics = calculator.get_all_metrics()
             common_metrics.intersection_update(metrics)
-        return list(common_metrics)
+        return sorted(list(common_metrics))
 
     def plot_metrics(
         self,
@@ -93,14 +93,15 @@ class Visualizer:
         """
         Plots the default metrics for each UID in a single figure per metric.
         """
-        index = pd.date_range(
-            start="1/1/2025", periods=len(next(iter(data_by_uid.values()))), freq="min"
-        )
+        # Make index datetime index for the shortest series
+        min_periods = min(len(v) for v in data_by_uid.values())
+        index = pd.date_range(start="1/1/2025", periods=min_periods, freq="min")
 
         # Apply rolling median if requested
         if rolling:
             for uid, series in data_by_uid.items():
                 # Apply rolling median with a window of 60 minutes
+                series = series[: len(index)]
                 data_by_uid[uid] = (
                     pd.Series(series, index=index).rolling(window=60).median()
                 )
@@ -112,15 +113,15 @@ class Visualizer:
 
             # Actor loss is negative so shift it to just above 0
             if "actor" in metric.lower():
-                min_y = min([series.min() for series in data_by_uid.values()])
+                # min_y = min([series.min() for series in data_by_uid.values()])
                 for uid, series in data_by_uid.items():
-                    data_by_uid[uid] = series - min_y + 0.01
+                    data_by_uid[uid] = series
 
         for uid, series in data_by_uid.items():
             fig.add_trace(
                 go.Scatter(
                     x=index,
-                    y=series,
+                    y=series[: len(index)],
                     mode="lines",
                     name=f"UID {uid}",
                 )

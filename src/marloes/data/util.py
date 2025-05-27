@@ -33,10 +33,6 @@ def read_series(
     # Convert the DataFrame to a Series
     series = df.squeeze("columns")
 
-    if forecast:
-        # Bug fix for misaligned forecast data
-        series.index = series.index + pd.DateOffset(hours=1)
-
     # Shift the series to the year 2025 so all data aligns
     series = shift_series(
         series,
