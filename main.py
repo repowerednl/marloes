@@ -3,6 +3,7 @@ import argparse
 import numpy as np
 import yaml
 from PyQt6.QtWidgets import QApplication
+from gui.eval import EvaluationApp
 import gui.startup as startup
 from gui.visualizer import VisualizerGUI
 from marloes.results.calculator import Calculator
@@ -15,10 +16,10 @@ def marloes():
     ---------------------------------------------------
     ---------------------------------------------------
     ---  __  __    _    ____  _                     ---
-    --- |  \/  |  / \  |  _ \| |   ___   ___  ___  ---
-    --- | |\/| | / _ \ | |_|/| |  /   \ / -_)( _ ) ---
-    --- | |  | |/ ___ \| |\ \| |_|  ~  | /___ \ \  ---
-    --- |_|  |_/_/   \_\_| \_\____\___/ \___/(___) ---
+    --- |  \/  |  / \  |  _ \| |   ___   ___  ___   ---
+    --- | |\/| | / _ \ | |_|/| |  /   \ / -_)( _ )  ---
+    --- | |  | |/ ___ \| |\ \| |_|  ~  | /___ \ \   ---
+    --- |_|  |_/_/   \_\_| \_\____\___/ \___/(___)  ---
     ---------------------------------------------------
     ---------------------------------------------------
     """
@@ -48,6 +49,11 @@ def parse_arguments():
         type=int,
         help="Set the seed for the random number generator",
     )
+    parser.add_argument(
+        "--eval",
+        action="store_true",
+        help="Run the evaluation mode",
+    )
     return parser.parse_args()
 
 
@@ -66,6 +72,9 @@ def run_app_mode(args):
     if args.visualizer:
         visualizer_window = VisualizerGUI()
         visualizer_window.show()
+    elif args.eval:
+        eval_window = EvaluationApp()
+        eval_window.show()
     else:
         window = startup.ExperimentSetupApp()
         window.show()

@@ -23,7 +23,10 @@ class ValueNetwork(SACBaseNetwork):
                 - "state_dim" (int): Dimension of the input state.
                 - Other keys inherited from SACBaseNetwork for hidden layers configuration.
         """
-        super(ValueNetwork, self).__init__(config["state_dim"], config.get("SAC", {}))
+        super(ValueNetwork, self).__init__(
+            config["state_dim"],
+            config.get("SAC", {}),
+        )
         self.output_layer = nn.Linear(self.hidden_dim, 1)
 
     def forward(self, state: torch.Tensor) -> torch.Tensor:

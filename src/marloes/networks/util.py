@@ -65,7 +65,6 @@ def gaussian_kl_divergence(
 ) -> torch.Tensor:
     """
     Computes the KL divergence between two Gaussians with parameters (mu, logvar).
-    All should be tensors of shape.
     """
     kl = 0.5 * (
         logvar_p

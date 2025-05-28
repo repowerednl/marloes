@@ -1,0 +1,6 @@
+# A scenario with relatively low noise, but very frequent dropouts.
+name: sensor_failure
+noise: 0.01
+drop_prob: 0.15
+long_drop_prob: 0.05
+max_long_drop_days: 10

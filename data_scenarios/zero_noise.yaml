@@ -1,0 +1,6 @@
+# This file defines a scenario with no noise or missing data.
+name: zero_noise
+noise: 0.0
+drop_prob: 0.0
+long_drop_prob: 0.0
+max_long_drop_days: 0

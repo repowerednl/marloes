@@ -11,11 +11,11 @@ class Priorities(BaseAlgorithm):
 
     __name__ = "Priorities"
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, evaluate: bool = False):
         """
         Initializes the Priorities algorithm.
         """
-        super().__init__(config)
+        super().__init__(config, evaluate)
         self.normalize = False  # No normalization needed for priorities
 
     @staticmethod
@@ -59,7 +59,7 @@ class Priorities(BaseAlgorithm):
             )
         return batteries
 
-    def get_actions(self, observations: dict) -> dict:
+    def get_actions(self, observations: dict, deterministic: bool = False) -> dict:
         """
         No explicit actions are needed as the priorities are predefined.
         The Simon Battery needs setpoints in order to work. To define a baseline we define logical steps for the battery.

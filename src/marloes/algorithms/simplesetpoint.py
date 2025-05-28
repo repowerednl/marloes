@@ -10,19 +10,19 @@ class SimpleSetpoint(BaseAlgorithm):
 
     __name__ = "SimpleSetpoint"
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, evaluate: bool = False):
         """
         Initializes the SimpleSetpoint algorithm.
         """
-        super().__init__(config)
+        super().__init__(config, evaluate)
 
-    def get_actions(self, observations) -> dict:
+    def get_actions(self, observations, deterministic: bool = False) -> dict:
         """
         Generates random actions for each agent in the environment.
         """
-        return {agent_id: random.uniform(-1, 1) for agent_id in observations.keys()}
+        return self.sample_actions(self.environment.agent_dict)
 
-    def _train_step(self, observations, rewards, dones, infos) -> None:
+    def perform_training_steps(self, step: int) -> None:
         """
         Overrides the training step. No learning is required for the SimpleSetpoint algorithm.
         """

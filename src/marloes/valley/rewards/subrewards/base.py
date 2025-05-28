@@ -10,10 +10,11 @@ class SubReward(ABC):
     Represents an individual sub-reward with activation and scaling properties.
     """
 
-    def __init__(self, active: bool = False, scaling_factor: float = 1.0):
+    def __init__(self, config: dict, active: bool = False, scaling_factor: float = 1.0):
         """
         Initializes the SubReward instance with activation and scaling properties.
         """
+        self.config = config
         self.active = active
         self.scaling_factor = scaling_factor
 

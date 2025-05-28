@@ -17,8 +17,10 @@ class RSSM(BaseNetwork):
     def __init__(
         self,
         x_shape: int,
+        config: dict = {},
         params: dict = None,
         hyper_params: HyperParams = None,
+        actions_shape: int = 0,
         stochastic: bool = False,
     ):
         """
@@ -32,8 +34,15 @@ class RSSM(BaseNetwork):
         """
         self.stochastic = stochastic
         super().__init__()
-        self.initialize_network(params, RSSM_LD)
-        self.encoder = Encoder(x_shape + self.hidden_size, self.latent_state_size)
+        self.clamp_upper = config.get("clamp_upper", 5)
+        self.clamp_lower = config.get("clamp_lower", -5)
+        self.action_dim = actions_shape
+        self.initialize_network(params, config.get("LayerDetails", RSSM_LD))
+        self.encoder = Encoder(
+            x_shape + self.hidden_size,
+            self.latent_state_size,
+            config=config.get("Encoder", {}),
+        )
 
     @staticmethod
     def _validate_rssm(details: LayerDetails):
@@ -71,7 +80,7 @@ class RSSM(BaseNetwork):
             if key not in details.hidden["dense"]:
                 raise ValueError(f"Missing key '{key}' in dense hidden layer details.")
 
-    def initialize_network(self, params: dict, details: LayerDetails):
+    def initialize_network(self, params: dict, details: dict | LayerDetails):
         """
         Initializes the RSSM network.
 
@@ -79,12 +88,14 @@ class RSSM(BaseNetwork):
             params (dict): Network parameters.
             details (LayerDetails): Layer details for the RSSM network.
         """
-        self._validate_rssm(details)
-        self.latent_state_size = details.hidden["dense"]["out_features"]
-        self.hidden_size = details.hidden["recurrent"]["hidden_size"]
+        self.latent_state_size = details["latent_size"]
+        self.hidden_size = details["recurrent_size"]
         # Initialize the RNN for SEQUENCE MODEL:
         self.rnn = nn.GRU(
-            **details.hidden["recurrent"]
+            input_size=self.latent_state_size + self.hidden_size + self.action_dim,
+            hidden_size=self.hidden_size,
+            batch_first=details["batch_first"],
+            num_layers=details["num_layers"],
         )  # Recurrent states produces h_t
 
         # DYNAMICS MODEL:
@@ -105,8 +116,6 @@ class RSSM(BaseNetwork):
 
         if params:
             self._load_from_params(params)
-        elif details.random_init:
-            self._initialize_random_params()
 
     def forward(self, h_t: torch.Tensor, z_t: torch.Tensor, a_t: torch.Tensor):
         """
@@ -148,7 +157,7 @@ class RSSM(BaseNetwork):
         """
         x = torch.cat([h_t, z_t, a_t], dim=-1).float()
         # protect rnn by clamping
-        x = torch.clamp(x, min=-10, max=10)
+        x = torch.clamp(x, min=self.clamp_lower, max=self.clamp_upper)
         return self.rnn(x)
 
     def _get_latent_state(self, h_t: torch.Tensor) -> tuple[torch.Tensor, dict]:
@@ -156,7 +165,7 @@ class RSSM(BaseNetwork):
         Predicts the latent state from the hidden state.
 
         Args:
-            h_t (torch.Tensor): Hidden state.
+            h_t (torch.Tensor): Hidden state..0
 
         Returns:
             tuple: Latent state and its details (mean and log variance).
@@ -167,7 +176,11 @@ class RSSM(BaseNetwork):
             logvar = self.fc_logvar(h_t)
             # nan values with h_t initialized to 0
             mu = torch.nan_to_num(mu, nan=0.0)
-            logvar = torch.clamp(torch.nan_to_num(logvar, nan=0.0), min=-10, max=10)
+            logvar = torch.clamp(
+                torch.nan_to_num(logvar, nan=0.0),
+                min=self.clamp_lower,
+                max=self.clamp_upper,
+            )
             z_t = dist(mu, logvar)
             return z_t, {"mean": mu, "logvar": logvar}
 
@@ -307,7 +320,9 @@ class Encoder(BaseNetwork):
     Since we have no images (CNN) in this case, we can use a simple MLP.
     """
 
-    def __init__(self, input: int, latent_dim: int, hidden_dim: int = 256):
+    def __init__(
+        self, input: int, latent_dim: int, config: dict = {}, hidden_dim: int = 256
+    ):
         """
         Initializes the Encoder.
 
@@ -320,6 +335,8 @@ class Encoder(BaseNetwork):
         self.fc1 = nn.Linear(input, hidden_dim)
         self.fc_mu = nn.Linear(hidden_dim, latent_dim)
         self.fc_logvar = nn.Linear(hidden_dim, latent_dim)
+        self.clamp_upper = config.get("clamp_upper", 5)
+        self.clamp_lower = config.get("clamp_lower", -5)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
         """
@@ -335,7 +352,9 @@ class Encoder(BaseNetwork):
             self.fc1(x.float())
         )  # float() added to ensure compatibility with torch.tensor float32
         mu = self.fc_mu(x)
-        logvar = torch.clamp(self.fc_logvar(x), min=-10, max=10)
+        logvar = torch.clamp(
+            self.fc_logvar(x), min=self.clamp_lower, max=self.clamp_upper
+        )
         return dist(mu, logvar), {
             "mean": mu,
             "logvar": logvar,
