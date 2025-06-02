@@ -97,7 +97,9 @@ class BaseAlgorithm(ABC):
                 logging.info(f"Reached step {step}/{self.eval_steps}...")
 
             # Get actions from the algorithm
-            actions = self.get_actions(state, deterministic=True)
+            actions, _ = self.get_actions(
+                state, deterministic=True
+            )  # always deterministic in production (predictable)
 
             next_state, reward, dones, infos = self.environment.step(
                 actions=actions,
@@ -135,7 +137,7 @@ class BaseAlgorithm(ABC):
             if step < self.num_initial_random_steps:
                 # Initially do random actions for exploration
                 actions = self.sample_actions(self.environment.trainable_agent_dict)
-                info = {}
+                info = None
             else:
                 # Get actions from the algorithm
                 actions, info = self.get_actions(state)
