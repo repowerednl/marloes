@@ -60,12 +60,6 @@ class ExperimentSetupApp(QWidget):
         self.uid_input.setPlaceholderText("Leave empty to skip")
         layout.addWidget(self.uid_input)
 
-        # UID input
-        layout.addWidget(QLabel("UID (optional):"))
-        self.uid_input = QLineEdit()
-        self.uid_input.setPlaceholderText("Leave empty to skip")
-        layout.addWidget(self.uid_input)
-
         # DEFAULT CONFIG CHECKBOX
         layout.addWidget(QLabel("Select configuration:"))
         self.config_dropdown = QComboBox()
