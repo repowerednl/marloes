@@ -63,7 +63,6 @@ class ExperimentSetupApp(QWidget):
         # DEFAULT CONFIG CHECKBOX
         layout.addWidget(QLabel("Select configuration:"))
         self.config_dropdown = QComboBox()
-
         config_files = [
             f.replace(".yaml", "")
             for f in os.listdir("configs/")
@@ -72,7 +71,6 @@ class ExperimentSetupApp(QWidget):
         # config_files.sort(key=lambda x: "dreamer" not in x.lower())
 
         self.config_dropdown.addItems(config_files)
-
         layout.addWidget(self.config_dropdown)
 
         # SCENARIO DROPDOWN
