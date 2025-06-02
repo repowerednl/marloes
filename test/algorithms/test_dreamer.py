@@ -73,7 +73,7 @@ class DreamerTestCase(TestCase):
     def test_init(self):
         self.assertEqual(len(self.alg.environment.agents), 6)
         # environment should have state dim
-        self.assertEqual(self.alg.environment.state_dim, (7215,))
+        self.assertEqual(self.alg.environment.state_dim, (7228,))
         # environment should have action_space torch.Size([3])
         self.assertEqual(self.alg.environment.action_dim, (6,))
         # there should be a WorldModel and an ActorCritic
@@ -106,12 +106,45 @@ class DreamerTestCase(TestCase):
         obs, _ = self.alg.environment.reset()
         self.alg.update_interval = 5
         # it should not call self.world_model.learn or self.actor_critic.learn for step 0-4 and return None
-        for step in range(5):
-            self.alg.perform_training_steps(step)
-            self.assertIsNone(self.alg.world_model.learn())
-            self.assertIsNone(self.alg.actor_critic.learn())
-        # Mocking the learn methods to return a dictionary and make sure if step % update_interval == 0 returns a dict
-        with patch.object(self.alg.world_model, "learn", return_value={}):
-            with patch.object(self.alg.actor_critic, "learn", return_value={}):
-                loss = self.alg.perform_training_steps(5)
-                self.assertIsInstance(loss, dict)
+        with patch.object(
+            self.alg.world_model, "learn", wraps=self.alg.world_model.learn
+        ) as mock_world_model_learn, patch.object(
+            self.alg.actor_critic, "learn", wraps=self.alg.actor_critic.learn
+        ) as mock_actor_critic_learn:
+            for step in range(5):
+                result = self.alg.perform_training_steps(step)
+                self.assertIsNone(result)
+                mock_world_model_learn.assert_not_called()
+                mock_actor_critic_learn.assert_not_called()
+
+        # Mocking the learn and imagine methods to return a dictionary and make sure if step % update_interval == 0 returns a dict
+        with patch.object(
+            self.alg.world_model, "learn", return_value={"total_loss": 0}
+        ):
+            with patch.object(
+                self.alg.actor_critic,
+                "learn",
+                return_value={"actor_loss": 0, "critic_loss": 0},
+            ):
+                with patch.object(self.alg.world_model, "imagine", return_value={}):
+                    # does still perform (imagine)
+                    loss = self.alg.perform_training_steps(5)
+                    self.assertIsInstance(loss, dict)
+
+    def test_perform_training_steps_end_to_end(self):
+        """
+        Testing end to end, with learning and imagination steps in between.
+        """
+        actions = {agent_id: 0.5 for agent_id in self.alg.environment.agent_dict.keys()}
+        # fill the replaybuffer with 100 elements
+        for i in range(1000):
+            obs, rew, _, _ = self.alg.environment.step(actions)
+            self.alg.real_RB.push(obs, actions, rew, obs)
+
+        obs, _ = self.alg.environment.reset()
+        self.alg.update_interval = 5
+        results = self.alg.perform_training_steps(step=5)
+        # Check if the results are a dictionary with expected keys
+        self.assertIsInstance(results, dict)
+        expected_keys = ["worldmodel_loss", "actor_loss", "critic_loss"]
+        self.assertTrue(all(key in results for key in expected_keys))

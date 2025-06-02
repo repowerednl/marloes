@@ -42,7 +42,7 @@ class Visualizer:
 
     def get_common_metrics(self):
         """
-        Get a list of common metrics for all calculators.
+        Get an ordered list (alphabetically) of common metrics for all calculators.
         This is useful to ensure that the same metrics are available across different simulations.
         """
         common_metrics = set(self.calculators[self.uids[0]].get_all_metrics())
@@ -146,7 +146,6 @@ class Visualizer:
                     name=f"UID {uid}",
                 )
             )
-
         fig.update_layout(
             title=f"{metric.replace('_', ' ').title()} Across Simulation(s): {self.uids}",
             xaxis_title="Time",
@@ -191,6 +190,8 @@ class Visualizer:
                     secondary_y=True,
                 )
             else:
+                if "intake" in metric.lower():  # battery
+                    series = -series
                 fig.add_trace(
                     go.Scatter(
                         x=series.index,

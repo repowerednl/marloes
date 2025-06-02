@@ -3,7 +3,9 @@ from collections import deque, namedtuple
 import torch
 
 # Define a transition structure
-Transition = namedtuple("Transition", ["state", "actions", "rewards", "next_state"])
+Transition = namedtuple(
+    "Transition", ["state", "actions", "rewards", "next_state", "belief"]
+)
 
 
 class ReplayBuffer:
@@ -21,11 +23,11 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.buffer)
 
-    def push(self, state, actions, rewards, next_state):
+    def push(self, state, actions, rewards, next_state, belief=None):
         """
         Stores a transition in the buffer.
         """
-        self.buffer.append(Transition(state, actions, rewards, next_state))
+        self.buffer.append(Transition(state, actions, rewards, next_state, belief))
 
     def sample(self, batch_size: int, sequence: int = 0, flatten: bool = True):
         """
@@ -76,24 +78,31 @@ class ReplayBuffer:
         action_list = []
         reward_list = []
         next_state_list = []
+        transition_info = []
 
         for tr in transitions:
             state_list.append(self.dict_to_tens(tr.state))
             action_list.append(self.dict_to_tens(tr.actions))
             reward_list.append(self.dict_to_tens(tr.rewards))
             next_state_list.append(self.dict_to_tens(tr.next_state))
+            if tr.belief is not None:
+                transition_info.append(tr.belief)
 
         state = torch.stack(state_list).to(self.device)
         action = torch.stack(action_list).to(self.device)
         reward = torch.stack(reward_list).to(self.device)
         next_state = torch.stack(next_state_list).to(self.device)
 
-        return {
+        result = {
             "state": state,
             "actions": action,
             "rewards": reward,
             "next_state": next_state,
         }
+        if transition_info:
+            result["belief"] = transition_info
+
+        return result
 
     def clear(self):
         """

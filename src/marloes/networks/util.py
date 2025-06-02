@@ -3,12 +3,17 @@ import numpy as np
 
 
 def dist(mu, raw_logvar):
-    # Instead of directly using raw_logvar, apply softplus to ensure positivity,
-    # then subtract a constant offset if needed.
-    logvar = torch.log(torch.nn.functional.softplus(raw_logvar) + 1e-6)
-    logvar = torch.clamp(logvar, min=-10.0, max=10.0)
+    # Apply softplus to ensure positivity and avoid extreme small values.
+    logvar = torch.nn.functional.softplus(raw_logvar) + 1e-6
+
+    # Clamp logvar to ensure it remains within a reasonable range for numerical stability.
+    logvar = torch.clamp(logvar, min=-5.0, max=5.0)
+    # Compute standard deviation (std) from the logvar.
     std = torch.exp(0.5 * logvar)
+
+    # Generate random noise from a normal distribution.
     eps = torch.randn_like(std)
+    # Return the sampled values.
     return mu + eps * std
 
 
@@ -60,7 +65,6 @@ def gaussian_kl_divergence(
 ) -> torch.Tensor:
     """
     Computes the KL divergence between two Gaussians with parameters (mu, logvar).
-    All should be tensors of shape.
     """
     kl = 0.5 * (
         logvar_p

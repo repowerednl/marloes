@@ -11,6 +11,7 @@ from marloes.valley.rewards.subrewards import (
     SSSubReward,
     SubReward,
     NESubReward,
+    TESTSubReward,
 )
 
 
@@ -25,6 +26,7 @@ class Reward:
         "NC": NCSubReward,
         "NB": NBSubReward,
         "NE": NESubReward,
+        "TEST": TESTSubReward,
     }
 
     def __init__(self, config: dict, actual: bool = True, **kwargs):

@@ -16,10 +16,10 @@ def marloes():
     ---------------------------------------------------
     ---------------------------------------------------
     ---  __  __    _    ____  _                     ---
-    --- |  \/  |  / \  |  _ \| |   ___   ___  ___  ---
-    --- | |\/| | / _ \ | |_|/| |  /   \ / -_)( _ ) ---
-    --- | |  | |/ ___ \| |\ \| |_|  ~  | /___ \ \  ---
-    --- |_|  |_/_/   \_\_| \_\____\___/ \___/(___) ---
+    --- |  \/  |  / \  |  _ \| |   ___   ___  ___   ---
+    --- | |\/| | / _ \ | |_|/| |  /   \ / -_)( _ )  ---
+    --- | |  | |/ ___ \| |\ \| |_|  ~  | /___ \ \   ---
+    --- |_|  |_/_/   \_\_| \_\____\___/ \___/(___)  ---
     ---------------------------------------------------
     ---------------------------------------------------
     """
@@ -40,7 +40,7 @@ def parse_arguments():
         help="Load config file instead of running the app",
     )
     parser.add_argument(
-        "--visualizer",
+        "--vis",
         action="store_true",
         help="Start the Visualizer GUI",
     )
@@ -69,7 +69,7 @@ def run_app_mode(args):
     np.random.seed(args.seed if args.seed else 42)
     app = QApplication(sys.argv)
 
-    if args.visualizer:
+    if args.vis:
         visualizer_window = VisualizerGUI()
         visualizer_window.show()
     elif args.eval:

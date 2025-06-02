@@ -32,6 +32,7 @@ from src.marloes.validation.validate_config import validate_config
 
 from .errors import ErrorScreen
 from .img import LogoWindow
+import os
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -62,9 +63,14 @@ class ExperimentSetupApp(QWidget):
         # DEFAULT CONFIG CHECKBOX
         layout.addWidget(QLabel("Select configuration:"))
         self.config_dropdown = QComboBox()
-        self.config_dropdown.addItems(
-            ["dyna_config", "default_config", "simple_config", "test_config"]
-        )
+        config_files = [
+            f.replace(".yaml", "")
+            for f in os.listdir("configs/")
+            if f.endswith(".yaml")
+        ]
+        config_files.sort(key=lambda x: "dreamer" not in x.lower())
+
+        self.config_dropdown.addItems(config_files)
         layout.addWidget(self.config_dropdown)
 
         # SCENARIO DROPDOWN
@@ -77,7 +83,7 @@ class ExperimentSetupApp(QWidget):
         self.algorithm_label = QLabel("Select Algorithm:")
         self.algorithm_dropdown = QComboBox(self)
         self.algorithm_dropdown.addItems(
-            ["Priorities", "SimpleSetpoint", "Dyna", "Dreamer"]
+            ["Dreamer", "Priorities", "SimpleSetpoint", "Dyna"]
         )
         layout.addWidget(self.algorithm_label)
         layout.addWidget(self.algorithm_dropdown)
@@ -96,7 +102,7 @@ class ExperimentSetupApp(QWidget):
         self.subreward_checkboxes = {}
         self.subreward_scalings = {}
 
-        for name in ["CO2", "SS", "NC", "NB", "NE"]:
+        for name in ["CO2", "SS", "NC", "NB", "NE"]:  # TODO: dynamically load this
             row = QHBoxLayout()
 
             checkbox = QCheckBox(name)

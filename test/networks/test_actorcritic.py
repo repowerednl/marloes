@@ -60,11 +60,11 @@ class ActorCriticTestCase(TestCase):
         # for 10 trajectories:
         # states: torch.Size([10, 10])
         # actions: torch.Size([10, 5])
-        # rewards: torch.Size([10])
+        # rewards: torch.Size([10, 1])
         trajectory = {
             "states": torch.tensor(np.random.rand(10, 10)).float(),
             "actions": torch.tensor(np.random.rand(10, 5)).float(),
-            "rewards": torch.tensor(np.random.rand(10, 1)).float(),
+            "rewards": torch.tensor(np.random.rand(10, 1)).unsqueeze(1).float(),
         }
         # create a list of 5 trajectories
         trajectories = [trajectory] * 5

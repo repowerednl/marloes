@@ -1,5 +1,4 @@
 from PyQt6.QtWidgets import (
-    QApplication,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
@@ -7,11 +6,8 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QCheckBox,
     QPushButton,
-    QScrollArea,
     QGroupBox,
-    QFileDialog,
 )
-from PyQt6.QtCore import Qt
 
 from gui.errors import ErrorScreen
 from gui.util import load_scenario_checkboxes

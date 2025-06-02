@@ -108,8 +108,7 @@ class Dyna(BaseAlgorithm):
             {keys[i]: action_list[b][i] for i in range(len(keys))}
             for b in range(len(action_list))
         ]
-
-        return batched[0] if single else batched
+        return (batched[0], None) if single else (batched, None)
 
     def perform_training_steps(self, step: int) -> dict[str, float]:
         """

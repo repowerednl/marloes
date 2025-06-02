@@ -86,7 +86,7 @@ class EvaluationApp(QWidget):
             return
 
         # Delete previous evalation files with this UID
-        clear_all_files_with_uid(uid, scenario)
+        clear_all_files_with_uid(uid, scenario["name"])
 
         # Update the config with the scenario
         config["data_config"] = scenario
@@ -98,6 +98,7 @@ class EvaluationApp(QWidget):
         start_time = datetime(2025, 9, 1, tzinfo=ZoneInfo("UTC"))
         config["simulation_start_time"] = start_time
         config["start_time"] = start_time
+        config["uid"] = uid
 
         print(f"Loaded config: {config}")
 

@@ -97,7 +97,9 @@ class BaseAlgorithm(ABC):
                 logging.info(f"Reached step {step}/{self.eval_steps}...")
 
             # Get actions from the algorithm
-            actions = self.get_actions(state, deterministic=True)
+            actions, _ = self.get_actions(
+                state, deterministic=True
+            )  # always deterministic in production (predictable)
 
             next_state, reward, dones, infos = self.environment.step(
                 actions=actions,
@@ -135,10 +137,10 @@ class BaseAlgorithm(ABC):
             if step < self.num_initial_random_steps:
                 # Initially do random actions for exploration
                 actions = self.sample_actions(self.environment.trainable_agent_dict)
+                info = None
             else:
                 # Get actions from the algorithm
-                actions = self.get_actions(state)
-
+                actions, info = self.get_actions(state)
             next_state, reward, dones, infos = self.environment.step(
                 actions=actions,
                 loss_dict=self.losses,
@@ -146,7 +148,7 @@ class BaseAlgorithm(ABC):
             )
 
             # Store (real) experiences
-            self.real_RB.push(state, actions, reward, next_state)
+            self.real_RB.push(state, actions, reward, next_state, info)
 
             state = next_state
 
@@ -154,7 +156,6 @@ class BaseAlgorithm(ABC):
             # --------------------
             if step > self.num_initial_random_steps:
                 self.losses = self.perform_training_steps(step)
-
             # Any time a chunk is "full", it should be saved
             if self.chunk_size != 0 and step % self.chunk_size == 0 and step != 0:
                 logging.info("Saving intermediate results and resetting extractor...")
@@ -163,7 +164,9 @@ class BaseAlgorithm(ABC):
                 self.environment.extractor.clear()
 
         # Save the final results and TODO: model
-        logging.info("Training finished. Saving results...")
+        logging.info(
+            f"Training finished at {self.environment.agents[0].asset.state.time}. Saving results for uid: {self.saver.uid}..."
+        )
         self.saver.final_save(self.environment.extractor, self.networks)
 
         logging.info("Training process completed.")
@@ -190,6 +193,14 @@ class BaseAlgorithm(ABC):
         """
         Loads a parameter configuration from a file.
         TODO: Implement loading of model parameters.
+        """
+        pass
+
+    @abstractmethod
+    def track_networks(self) -> None:
+        """
+        Tracks the networks used by the algorithm.
+        This method should be implemented by subclasses to save their specific networks.
         """
         pass
 

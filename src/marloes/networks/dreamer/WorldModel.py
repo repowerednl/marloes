@@ -12,8 +12,10 @@ from marloes.networks.util import (
     kl_free_bits,
 )
 
+import logging
 
-class WorldModel:
+
+class WorldModel(nn.Module):
     """
     World model using simple MLP Encoder and Decoder for an RSSM network, based on the DreamerV3 architecture.
     Requires:
@@ -27,7 +29,8 @@ class WorldModel:
     def __init__(
         self,
         state_dim: tuple,
-        action_dim: tuple,  # Unused now, but added if we want init more dynamically.
+        action_dim: tuple,
+        config: dict = {},
         params: dict = None,
         hyper_params: HyperParams = None,
     ):
@@ -40,10 +43,13 @@ class WorldModel:
             params (dict, optional): Dictionary with network parameters.
             hyper_params (HyperParams, optional): Hyperparameters for the network.
         """
+        super(WorldModel, self).__init__()
         self.rssm = RSSM(
             x_shape=state_dim[0],
+            config=config.get("RSSM", {}),
             params=params,
             hyper_params=hyper_params,
+            actions_shape=action_dim[0],
             stochastic=True,
         )
         # RSSM in between, is created first to ensure the link between encoder and decoder
@@ -51,31 +57,33 @@ class WorldModel:
         self.reward_predictor = RewardPredictor(
             self.rssm.rnn.hidden_size, self.rssm.fc.out_features
         )
-        self.continue_predictor = ContinuePredictor(
-            self.rssm.rnn.hidden_size, self.rssm.fc.out_features
-        )
-
-        self.modules = [
-            self.rssm,
-            self.decoder,
-            self.reward_predictor,
-            self.continue_predictor,
-        ]
+        # self.continue_predictor = ContinuePredictor(
+        #     self.rssm.rnn.hidden_size, self.rssm.fc.out_features
+        # )
         # Optimizer
-        self.optim = torch.optim.Adam(
-            params=[param for mod in self.modules for param in mod.parameters()],
-            lr=0.001,
-            weight_decay=1e-4,
+        self.optim = torch.optim.AdamW(
+            params=self.parameters(),
+            lr=config.get("lr", 1e-5),
+            weight_decay=config.get("weight_decay", 1e-4),
         )
-        self.beta_weights = {
-            "pred": 1.0,
-            "dyn": 1.0,
-            "rep": 0.1,
-        }
-        self.loss = []
+        self.beta_weights = config.get(
+            "beta_weights",
+            {
+                "pred": 1.0,
+                "dyn": 1.0,
+                "rep": 0.1,
+            },
+        )
+        self.clip_grad = config.get("clip_grad", 0.5)
+        self.free_bits = config.get("free_bits", 1.0)
+        self.loss = self.reset_loss()
 
     def imagine(
-        self, starting_points: torch.Tensor, actor: Actor, horizon: int = 16
+        self,
+        starting_points: torch.Tensor,
+        beliefs: list,
+        actor: Actor,
+        horizon: int = 16,
     ) -> list[dict]:
         """
         Generates imagined trajectories from the initial state using the actor.
@@ -91,36 +99,38 @@ class WorldModel:
         with torch.no_grad():
             batch = []
             # we have a batch of starting points
-            for x in starting_points:
+            for x, belief_info in zip(starting_points, beliefs):
                 imagined = {
                     "states": [],
                     "rewards": [],
                     "actions": [],
                 }
                 x = x.unsqueeze(0)
-                # Obtain h_t
-                h_0 = self.rssm._init_state(x.shape[0])
-                h_0 = h_0[
-                    -1
-                ]  # take the last layer of the GRU, shape (batch=1, hidden_size)
+                if not belief_info:
+                    # initialize empty belief
+                    belief_info = {"h_t": self.rssm._init_state(1)[-1]}
+                # Obtain h_t from belief
+                h_0 = belief_info["h_t"]
+                # take the last layer of the GRU, shape (batch=1, hidden_size)
                 # infer z_t
                 z_0, _ = self.rssm._get_latent_state(h_0)
+
                 # sample action from the actor with model state
                 # model state is the concatenation of h_t and z_t
                 s = torch.cat([h_0, z_0], dim=-1)
+
                 a_0 = actor(s).sample()  # shape (batch=1, action_dim)
 
+                # should be of shapes [1, length] before passing to rssm
                 h_t, z_hat_t, _ = self.rssm.forward(h_0, z_0, a_0)
+
                 # form model state
                 x = torch.cat(
                     [x, h_t], dim=-1
                 )  # shape (batch=1, obs_dim + hidden_size)
                 z_t, _ = self.rssm.encoder(x)
                 a_t = a_0
-                # Store the initial state (?) TODO: yes or no?
-                # imagined["states"].append(z_t)
-                # imagined["actions"].append(a_t)
-                # imagined["rewards"].append(self.reward_predictor(h_t, z_t))
+                # Store the initial state/action/reward (?) TODO: yes or no?
                 """
                 At each starting point, we imagine trajectories of length horizon.
                 """
@@ -178,14 +188,15 @@ class WorldModel:
         # |  - Obtain Continue signal [h_t,z_t] -> c_t    #TODO or TOREMOVE              |#
         # | ---------------------------------------------------------------------------- |#
         h = results["recurrent_states"]
-        z = results["actual"]
-        r_ts = self.reward_predictor(h, z)
+        # z = results["actual"]
+        z_hat = results["predicted"]
+        r_ts = self.reward_predictor(h, z_hat)
 
         # | -----------------------------------------------------------------------------|#
         # | Step 3: Decode the predicted latent state to the observations                |#
         # |  - Obtain predicted observations [z] -> x_hat_t                              |#
         # | ---------------------------------------------------------------------------- |#
-        x_hat_t = self.decoder(z)
+        x_hat_t = self.decoder(z_hat)
 
         # | -----------------------------------------------------------------------------|#
         # | Step 4: Compute the loss functions                                           |#
@@ -229,7 +240,7 @@ class WorldModel:
             z_hat_mean,
             z_hat_logvar,
         )
-        dynamic_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
+        dynamic_loss = kl_free_bits(kl=pre_kl, free_bits=self.free_bits)
 
         """
         Second loss function, the representation loss trains the representations to be more predictable
@@ -247,13 +258,12 @@ class WorldModel:
             z_mean,
             z_logvar,
         )
-        representation_loss = kl_free_bits(kl=pre_kl, free_bits=1.0)
-
+        representation_loss = kl_free_bits(kl=pre_kl, free_bits=self.free_bits)
         """
         Third loss function, the prediction loss is end-to-end training of the model
         trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression (not implemented)
         """
-        prediction_loss = -symlog_squared_loss(x_hat_t, x) - symlog_squared_loss(
+        prediction_loss = symlog_squared_loss(x_hat_t, x) + symlog_squared_loss(
             r_ts, rew
         )
 
@@ -266,16 +276,31 @@ class WorldModel:
         # Backpropagate the total loss
         self.optim.zero_grad()
         total_loss.backward()
+        # add gradient clipping # TODO: change WorldModel to a nn.Module
+        torch.nn.utils.clip_grad_norm_(
+            self.parameters(),
+            max_norm=self.clip_grad,
+        )
         self.optim.step()
 
-        # Store the loss in the list
-        self.loss.append(total_loss.item())
+        # Store the losses in the loss dictionary
+        self.loss["dynamics_loss"].append(dynamic_loss.item())
+        self.loss["representation_loss"].append(representation_loss.item())
+        self.loss["prediction_loss"].append(prediction_loss.item())
+        self.loss["total_world_loss"].append(total_loss.item())
 
+    def reset_loss(self) -> dict:
+        """
+        Resets the loss dictionary to zero.
+
+        Returns:
+            dict: Dictionary with empty lists.
+        """
         return {
-            "dynamics_loss": dynamic_loss,
-            "representation_loss": representation_loss,
-            "prediction_loss": prediction_loss,
-            "total_loss": total_loss,
+            "dynamics_loss": [],
+            "representation_loss": [],
+            "prediction_loss": [],
+            "total_world_loss": [],
         }
 
 
@@ -328,7 +353,6 @@ class RewardPredictor(BaseNetwork):
         super(RewardPredictor, self).__init__()
         # simple MLP
         self.fc = nn.Linear(hidden_dim + latent_dim, 1)
-        # activation function may be added, using unrestricted output for now
 
     def forward(self, h_t: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
         """
@@ -343,6 +367,8 @@ class RewardPredictor(BaseNetwork):
         """
         x = torch.cat([h_t, z_t], dim=-1)
         r_t = self.fc(x)
+        # (v2) bind returns with tanh activation
+        r_t = torch.tanh(r_t)
         return r_t
 
 

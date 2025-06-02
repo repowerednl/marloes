@@ -69,3 +69,6 @@ class TestReplayBuffer(unittest.TestCase):
         self.assertTrue(
             torch.equal(tensor, expected), f"Expected {expected}, got {tensor}"
         )
+        integer_value_reward = 5
+        tensor = ReplayBuffer.dict_to_tens(integer_value_reward)
+        expected = torch.tensor([5.0])
