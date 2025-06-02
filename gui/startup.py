@@ -68,7 +68,7 @@ class ExperimentSetupApp(QWidget):
             for f in os.listdir("configs/")
             if f.endswith(".yaml")
         ]
-        # config_files.sort(key=lambda x: "dreamer" not in x.lower())
+        config_files.sort(key=lambda x: "dreamer" not in x.lower())
 
         self.config_dropdown.addItems(config_files)
         layout.addWidget(self.config_dropdown)

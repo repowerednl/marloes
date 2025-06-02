@@ -40,13 +40,21 @@ This will prompt a experiment startup screen for you to select a configuration t
 ### Visualization
 Alternatively, to view the metrics resulting from your experiment, the following code can be run:
 ```sh
-python main.py --visualizer
+python main.py --vis
 ```
 
 This will prompt a simple interface which allows you to fill in the uid(s) of the experiments you want to visualize and select the metrics to plot. Leaving the uid field empty will automatically select the latest run experiment. Multiple experiments can be plotted against each other by filling in multiple uids seperated by commas.
 
+### Evaluation
+To visualize how algorithms perform on new data (unless you've trained on more than 8 months of data) you can run the following command:
+```sh
+python main.py --eval
+```
+
+This will prompt a simple interface that allows you to fill in the uid(s) of the experiments you want to evaluate. Leaving the field empty will automatically select the latest run experiment. Multiple experiments can be plotted in the same was as in the Visualization.
+
 ### Sphinx docs
-To autogenerate code documentation, sphinx is used to generate html files. 
+To autogenerate code documentation, sphinx is used to generate html files.
 ```sh
 cd sphinx-docs && poetry run make html
 ```

@@ -1,12 +1,12 @@
 algorithm: Priorities
 chunk_size: 1000
-training_steps: 10000
-num_initial_random_steps: 400
+training_steps: 20000
+num_initial_random_steps: 1
 update_interval: 50
 horizon: 8
 batch_size: 32
 update_steps: 2
-deterministic: False
+deterministic: True
 agents:
   # - type: solar
   #   AC: 9000
@@ -21,7 +21,7 @@ agents:
     AC: 1000
     DC: 1000
     orientation: EW
-    trainable: true
+    trainable: false
   # - type: wind
   #   location: Onshore
   #   power: 1000
@@ -41,13 +41,13 @@ grid:
   name: Grid
 subrewards:
   CO2:
-    active: false
+    active: true
     scaling_factor: 1
   NE:
     active: false
     scaling_factor: 1
   TEST:
-    active: true
+    active: false
     scaling_factor: 1
 replay_buffers:
   real_capacity: 3000
