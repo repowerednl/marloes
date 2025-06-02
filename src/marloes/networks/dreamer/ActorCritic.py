@@ -13,7 +13,12 @@ class ActorCritic(nn.Module):
     """
 
     def __init__(
-        self, input: int, output: int, hidden_size: int = 64, config: dict = {}
+        self,
+        input: int,
+        output: int,
+        hidden_size: int = 64,
+        config: dict = {},
+        deterministic: bool = False,
     ):
         """
         Initializes the ActorCritic module.
@@ -49,12 +54,12 @@ class ActorCritic(nn.Module):
         self.critic_clip_grad = config.get("critic_clip_grad", 0.5)
         self.beta_weights = {"val": 1.0, "repval": 0.3}
 
-        self.deterministic = config.get(
-            "deterministic", False
-        )  # Use deterministic actions
+        self.deterministic = (
+            deterministic  # Whether to use deterministic actions during training
+        )
 
         # EMA for S
-        self.register_buffer("s_ema", torch.tensor(0.0))
+        self.s_ema = torch.zeros(1, device="cpu")  # Initialize S as a zero tensor
         self.s_ema_alpha = config.get("s_ema_alpha", 0.98)  # EMA decay for S
 
         # Store losses
@@ -67,7 +72,7 @@ class ActorCritic(nn.Module):
         self.actor_loss = []
         self.critic_loss = []
 
-    def act(self, model_state: torch.Tensor) -> torch.Tensor:
+    def act(self, model_state: torch.Tensor, deterministic: bool) -> torch.Tensor:
         """
         Predicts actions using the Actor network.
 
@@ -77,7 +82,7 @@ class ActorCritic(nn.Module):
         Returns:
             torch.Tensor: Predicted actions.
         """
-        if self.deterministic:
+        if deterministic:
             # Use the actor in deterministic mode (only the mean)
             return self.actor(model_state, True).detach()
         else:
@@ -191,7 +196,7 @@ class ActorCritic(nn.Module):
 
         # print("S (EMA):", self.s_ema.item())
         # set s_ema to one for debugging
-        self.s_ema.fill_(1.0)
+        self.s_ema.fill_(1.0)  # For debugging purposes, set S to 1.0
         actor_loss = (
             -((advantages.detach() / self.s_ema) * log_probs).mean()
             - self.entropy_coef * entropy

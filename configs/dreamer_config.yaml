@@ -16,7 +16,7 @@ agents:
     AC: 2000
     DC: 2000
     orientation: EW
-    trainable: false
+    trainable: true
   - type: solar
     AC: 1000
     DC: 1000

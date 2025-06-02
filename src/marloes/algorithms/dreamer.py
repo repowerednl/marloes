@@ -23,6 +23,8 @@ class Dreamer(BaseAlgorithm):
             config (dict): Configuration dictionary for the algorithm.
         """
         super().__init__(config, evaluate)
+        self.deterministic = self.config.get("deterministic", False)
+
         self._initialize_world_model(self.config.get("WorldModel", {}))
         self._initialize_actor_critic(self.config.get("ActorCritic", {}))
         self.update_interval = self.config.get("update_interval", 100)
@@ -52,6 +54,7 @@ class Dreamer(BaseAlgorithm):
             input=input_size,
             output=self.environment.action_dim[0],
             config=config,
+            deterministic=self.deterministic,
         )
 
     def _init_previous(self):
@@ -73,10 +76,11 @@ class Dreamer(BaseAlgorithm):
             "actor_optimizer": self.actor_critic.actor_optim.state_dict(),
             "critic": self.actor_critic.critic.state_dict(),
             "critic_optimizer": self.actor_critic.critic_optim.state_dict(),
-            # "s_ema": self.actor_critic.s_ema
+            "critic_target": self.actor_critic.critic_target.state_dict(),
+            "s_ema": self.actor_critic.s_ema,
         }
 
-    def get_actions(self, observations: dict):
+    def get_actions(self, observations: dict, deterministic: bool = False) -> dict:
         """
         Computes actions based on the current observations and model state.
 
@@ -113,7 +117,7 @@ class Dreamer(BaseAlgorithm):
             # Step 3: Get the action (based on the model state)  #
             # -------------------------------------------------- #
             s = torch.cat([h_t, z_t], dim=-1)
-            actions = self.actor_critic.act(s)
+            actions = self.actor_critic.act(s, deterministic)
 
             # Step 4: Update the previous state with the current state  #
             # -------------------------------------------------- #
@@ -141,11 +145,12 @@ class Dreamer(BaseAlgorithm):
         if step % self.update_interval != 0 or step == 0:  # TODO: uncomment
             return self.losses
 
+        # set world_model to train mode
+        self.world_model.train()
+        # set actor_critic to train mode
+        self.actor_critic.train()
+
         for _ in range(self.update_steps):
-            # set world_model to train mode
-            self.world_model.train()
-            # set actor_critic to train mode
-            self.actor_critic.train()
             # | --------------------------------------------------- |#
             # | Step 1: Get a sample from the replay buffer         |#
             # |  - should be a sample of sequences (size=horizon)   |#
