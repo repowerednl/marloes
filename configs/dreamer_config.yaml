@@ -1,11 +1,12 @@
 algorithm: Priorities
 chunk_size: 1000
 training_steps: 10000
-num_initial_random_steps: 1
+num_initial_random_steps: 400
 update_interval: 50
 horizon: 8
 batch_size: 32
 update_steps: 2
+deterministic: False
 agents:
   # - type: solar
   #   AC: 9000
@@ -75,7 +76,6 @@ WorldModel:
       clamp_lower: -5.0
       clamp_upper: 5.0
 ActorCritic:
-  deterministic: False
   actor_lr: 0.001
   critic_lr: 0.001
   actor_weight_decay: 0.0
