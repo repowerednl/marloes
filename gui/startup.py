@@ -63,15 +63,16 @@ class ExperimentSetupApp(QWidget):
         # DEFAULT CONFIG CHECKBOX
         layout.addWidget(QLabel("Select configuration:"))
         self.config_dropdown = QComboBox()
+
         config_files = [
             f.replace(".yaml", "")
             for f in os.listdir("configs/")
             if f.endswith(".yaml")
         ]
-        # if config files has a file with 'dreamer in the name' it should be the first element in the list
-        config_files.sort(key=lambda x: "dreamer" not in x.lower())
+        # config_files.sort(key=lambda x: "dreamer" not in x.lower())
 
         self.config_dropdown.addItems(config_files)
+
         layout.addWidget(self.config_dropdown)
 
         # SCENARIO DROPDOWN
