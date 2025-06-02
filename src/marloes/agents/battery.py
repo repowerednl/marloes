@@ -21,19 +21,18 @@ class BatteryAgent(Agent):
         degradation_function = partial(
             battery_degradation_function,
             capacity=config["energy_capacity"],
-            # Default to 7000 cycles
             total_cycles=config.get("total_cycles", 8000),
         )
         return {
             "name": id,
-            "max_power_in": config["power"],
-            "max_power_out": config["power"],
+            "max_power_in": 125,
+            "max_power_out": 125,
             "max_state_of_charge": 0.95,  # Assumption: 5% from max and min
             "min_state_of_charge": 0.05,
             "energy_capacity": config["energy_capacity"],
-            "ramp_up_rate": config["power"],  # instant
-            "ramp_down_rate": config["power"],  # instant
-            "efficiency": 0.85,
+            "ramp_up_rate": 125,  # instant
+            "ramp_down_rate": 125,  # instant
+            "efficiency": 0.90,
             "degradation_function": degradation_function,
         }
 
@@ -49,6 +48,15 @@ class BatteryAgent(Agent):
         )
         merged_config["max_power_out"] = min(
             merged_config.get("max_power_out", np.inf), merged_config.pop("power")
+        )
+        # update ramp up/down rates, instant max power unless specified lower
+        merged_config["ramp_up_rate"] = min(
+            merged_config.get("ramp_up_rate", np.inf),
+            merged_config.get("max_power_in", np.inf),
+        )
+        merged_config["ramp_down_rate"] = min(
+            merged_config.get("ramp_down_rate", np.inf),
+            merged_config.get("max_power_out", np.inf),
         )
 
         return merged_config
