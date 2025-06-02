@@ -109,7 +109,7 @@ class Dyna(BaseAlgorithm):
             for b in range(len(action_list))
         ]
 
-        return batched[0] if single else batched
+        return batched[0], {} if single else batched, {}
 
     def perform_training_steps(self, step: int) -> dict[str, float]:
         """
@@ -205,7 +205,7 @@ class Dyna(BaseAlgorithm):
             "sac_actor_loss": np.mean(self.sac.loss_actor),
             "mean_q": np.mean(self.sac.mean_q),
             "sac_alpha": np.mean(self.sac.alphas),
-        }
+        }, {}
 
     @staticmethod
     def _combine_batches(real_batch, synthetic_batch):

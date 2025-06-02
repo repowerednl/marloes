@@ -64,6 +64,18 @@ class Dreamer(BaseAlgorithm):
             "a_t": torch.zeros(1, self.environment.action_dim[0]),
         }
 
+    def track_networks(self):
+        # should create a dictionary with the networks and their state_dicts
+        self.networks = {
+            "world_model": self.world_model.state_dict(),
+            "world_model_optimizer": self.world_model.optim.state_dict(),
+            "actor": self.actor_critic.actor.state_dict(),
+            "actor_optimizer": self.actor_critic.actor_optim.state_dict(),
+            "critic": self.actor_critic.critic.state_dict(),
+            "critic_optimizer": self.actor_critic.critic_optim.state_dict(),
+            # "s_ema": self.actor_critic.s_ema
+        }
+
     def get_actions(self, observations: dict):
         """
         Computes actions based on the current observations and model state.

@@ -194,6 +194,14 @@ class BaseAlgorithm(ABC):
         """
         pass
 
+    @abstractmethod
+    def track_networks(self) -> None:
+        """
+        Tracks the networks used by the algorithm.
+        This method should be implemented by subclasses to save their specific networks.
+        """
+        pass
+
     @staticmethod
     def get_algorithm(
         name: str, config: dict, evaluate: bool = False
