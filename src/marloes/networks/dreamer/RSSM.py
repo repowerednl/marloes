@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from marloes.networks.base import BaseNetwork, LayerDetails, HyperParams
-from marloes.networks.details import RSSM_LD
 from marloes.networks.util import dist
 
 
@@ -37,7 +36,7 @@ class RSSM(BaseNetwork):
         self.clamp_upper = config.get("clamp_upper", 5)
         self.clamp_lower = config.get("clamp_lower", -5)
         self.action_dim = actions_shape
-        self.initialize_network(params, config.get("LayerDetails", RSSM_LD))
+        self.initialize_network(params, config.get("LayerDetails", {}))
         self.encoder = Encoder(
             x_shape + self.hidden_size,
             self.latent_state_size,
@@ -96,6 +95,9 @@ class RSSM(BaseNetwork):
             hidden_size=self.hidden_size,
             batch_first=details["batch_first"],
             num_layers=details["num_layers"],
+            bias=details["bias"],
+            dropout=details["dropout"],
+            bidirectional=details["bidirectional"],
         )  # Recurrent states produces h_t
 
         # DYNAMICS MODEL:

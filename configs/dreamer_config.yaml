@@ -67,6 +67,9 @@ WorldModel:
       recurrent_size: 64
       latent_size: 32
       batch_first: True
+      bias: True
+      dropout: 0.0
+      bidirectional: False
       num_layers: 2
     Encoder:
       clamp_lower: -5.0

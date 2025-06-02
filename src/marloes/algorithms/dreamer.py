@@ -15,14 +15,14 @@ class Dreamer(BaseAlgorithm):
 
     __name__ = "Dreamer"
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, evaluate: bool = False):
         """
         Initializes the Dreamer algorithm.
 
         Args:
             config (dict): Configuration dictionary for the algorithm.
         """
-        super().__init__(config)
+        super().__init__(config, evaluate)
         self._initialize_world_model(self.config.get("WorldModel", {}))
         self._initialize_actor_critic(self.config.get("ActorCritic", {}))
         self.update_interval = self.config.get("update_interval", 100)
