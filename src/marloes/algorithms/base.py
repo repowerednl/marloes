@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 import random
 import time
+import numpy as np
 import torch
 
 from marloes.agents.battery import BatteryAgent
@@ -25,6 +26,11 @@ class BaseAlgorithm(ABC):
         logging.info(
             f"Initializing {self.__class__.__name__} algorithm and setting up the environment..."
         )
+        seed = config.get("uid", 42)
+        np.random.seed(seed)
+        random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
 
         # Initialize the Saver, environment, and device
         self.saver = Saver(config=config, evaluate=evaluate)
