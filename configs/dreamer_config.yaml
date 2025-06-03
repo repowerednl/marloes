@@ -6,7 +6,8 @@ update_interval: 50
 horizon: 8
 batch_size: 32
 update_steps: 2
-deterministic: True
+deterministic: False
+multiplication_factor_full_reward: 1.0
 agents:
   # - type: solar
   #   AC: 9000
