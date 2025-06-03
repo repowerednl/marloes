@@ -32,4 +32,14 @@ class TESTSubReward(SubReward):
         solar_production = self._get_target(
             extractor.total_solar_production, extractor.i, True
         )
-        return -solar_production / self.max_production
+        grid_production = self._get_target(
+            extractor.total_grid_production, extractor.i, True
+        )
+
+        solar_production_reward = solar_production
+
+        grid_production_reward = -grid_production * 280
+
+        # add setpoint reward for battery
+
+        return solar_production_reward + grid_production_reward
