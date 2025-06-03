@@ -170,6 +170,8 @@ cython_debug/
 /results/uid.txt
 /evaluate/
 /src/marloes/data/cached/
+*.DS_Store
+/mermaid/
 
 # Jetbrains
 .idea

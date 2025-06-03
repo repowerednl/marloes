@@ -287,7 +287,7 @@ class EnergyValley(MultiAgentEnv):
 
         # Extract results and calculate next states
         self.extractor.from_model(self.model)
-        self.extractor.from_observations(observations)
+        self.extractor.from_observations(observations, self.trainable_agents)
         if loss_dict is not None:
             self.extractor.store_loss(loss_dict)
 

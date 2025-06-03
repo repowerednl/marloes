@@ -39,6 +39,7 @@ class Saver:
             self.uid = self._update_simulation_number()
         else:
             self.uid = get_latest_uid("results")
+        logging.info(f"Saving results to {self.base_file_path} with UID: {self.uid}")
         self._save_config_to_yaml(config)
 
     def save(self, extractor: Extractor | ExtensiveExtractor) -> None:
