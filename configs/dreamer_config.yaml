@@ -6,8 +6,7 @@ update_interval: 50
 horizon: 8
 batch_size: 32
 update_steps: 2
-deterministic: False
-multiplication_factor_full_reward: 1
+deterministic: True
 agents:
   # - type: solar
   #   AC: 9000
@@ -17,12 +16,12 @@ agents:
     AC: 2000
     DC: 2000
     orientation: EW
-    trainable: True
+    trainable: true
   - type: solar
     AC: 1000
     DC: 1000
     orientation: EW
-    trainable: True
+    trainable: false
   # - type: wind
   #   location: Onshore
   #   power: 1000
@@ -30,11 +29,11 @@ agents:
   - type: demand
     scale: 15
     profile: Farm
-    trainable: False
+    trainable: false
   - type: battery
     energy_capacity: 2000
     power: 1000
-    trainable: False
+    trainable: true
   # - type: battery
   #   energy_capacity: 100
   #   power: 750
