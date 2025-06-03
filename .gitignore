@@ -171,6 +171,7 @@ cython_debug/
 /evaluate/
 /src/marloes/data/cached/
 *.DS_Store
+/mermaid/
 
 # Jetbrains
 .idea
