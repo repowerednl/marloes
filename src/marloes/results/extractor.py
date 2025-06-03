@@ -20,7 +20,7 @@ from marloes.agents import (
     ElectrolyserAgent,
     DemandAgent,
 )
-from marloes.agents.base import SupplyAgents, StorageAgents, DemandAgents
+from marloes.agents.base import Agent, SupplyAgents, StorageAgents, DemandAgents
 from marloes.algorithms.util import get_net_forecasted_power, get_net_power
 from marloes.data.extensive_data import ExtensiveDataStore
 from marloes.results.util import get_latest_uid
@@ -66,10 +66,6 @@ class Extractor:
         self.total_demand_nomination = np.zeros(self.size)
         self.total_nomination_fraction = np.zeros(self.size)
 
-        # Setpoint info
-        self.battery_setpoints = np.zeros(self.size)
-        self.solar_setpoints = np.zeros(self.size)
-
     def clear(self):
         """Reset the timestep index to zero."""
         self.i = 0
@@ -111,15 +107,6 @@ class Extractor:
         self.total_battery_intake[self.i] = -self._get_total_flow_to_type(
             model, Battery
         )
-
-        # Save the setpoints for the battery and solar agents
-        for asset in model.graph.nodes:
-            if isinstance(asset, Battery):
-                if asset.setpoint is not None:
-                    self.battery_setpoints[self.i] = asset.setpoint.value
-            elif isinstance(asset, Supply):
-                if asset.setpoint is not None:
-                    self.solar_setpoints[self.i] = asset.setpoint.value
 
     def from_files(self, uid: int | None = None, dir: str = "results") -> int:
         """
@@ -163,7 +150,9 @@ class Extractor:
 
         return uid
 
-    def from_observations(self, observations: dict) -> None:
+    def from_observations(
+        self, observations: dict, trainable_agents: list[Agent]
+    ) -> None:
         """
         Save the necessary information from the observations.
         #TODO: extend this to save more information from observations
@@ -181,6 +170,14 @@ class Extractor:
         for key, value in observations.items():
             if "nomination_fraction" in value:
                 self.total_nomination_fraction[self.i] += value["nomination_fraction"]
+
+        # Setpoints
+        for agent in trainable_agents:
+            if not hasattr(self, f"{agent.id}_setpoints"):
+                setattr(self, f"{agent.id}_setpoints", np.zeros(self.size))
+            getattr(self, f"{agent.id}_setpoints")[self.i] = (
+                agent.asset.setpoint.value if agent.asset.setpoint else 0.0
+            )
 
     def store_loss(self, loss_dict: dict) -> None:
         """
