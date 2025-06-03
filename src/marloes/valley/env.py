@@ -64,6 +64,7 @@ class EnergyValley(MultiAgentEnv):
             config.pop("extractor_type", "default")
         ]()
         self.reward = Reward(config, actual=True, **config.get("subrewards", {}))
+        self.reward_factor = config.pop("multiplication_factor_full_reward", 1.0)
 
         self._initialize_agents(config, algorithm_type, config.get("data_config", {}))
         self._initialize_model(
@@ -248,7 +249,7 @@ class EnergyValley(MultiAgentEnv):
     def _calculate_reward(self):
         """Function to calculate the reward"""
         reward = self.reward.get(self.extractor, self.time_stamp)
-        return reward
+        return reward * self.reward_factor
 
     def reset(self) -> tuple[dict, dict]:
         """
