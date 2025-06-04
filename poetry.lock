@@ -3583,4 +3583,4 @@ sphinx = ["sphinx"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "6b80275d59a96253486d9620a934d26c3806e377cb03461fb49d996f853abaf8"
+content-hash = "2b970bb7a5ffd43986fe22b51c443ab51da89845655b7e2fbb1ae6b150e1e30a"
