@@ -28,6 +28,48 @@ def symlog_squared_loss(x, y):
     return torch.nn.functional.mse_loss(symlog(x), symlog(y))
 
 
+# def compute_lambda_returns(
+#     rewards: torch.Tensor,
+#     values: torch.Tensor,
+#     gamma: float = 0.997,
+#     lambda_: float = 0.95,
+# ) -> torch.Tensor:
+#     """
+#     Compute λ‐returns (bootstrapped N‐step returns) with:
+#       - the last reward folded into the final step, and
+#       - a batch‐wise normalization (zero‐mean, unit‐std) over all returns.
+
+#     Expects:
+#         rewards: Tensor of shape (B, T, 1)   # may be negative “costs” or positive “rewards”
+#         values:  Tensor of shape (B, T, 1)   # V(s_t) estimates from the critic
+
+#     Returns:
+#         Tensor of shape (B, T, 1) containing normalized λ‐returns.
+#     """
+#     B, T, _ = rewards.shape
+#     returns = torch.zeros_like(rewards)
+
+#     # --- Bootstrap at final step using r[T-1] + γ·V[T-1] ---
+#     # Instead of:
+#     # returns[:, -1, :] = values[:, -1, :]
+#     returns[:, -1, :] = rewards[:, -1, :] + gamma * values[:, -1, :]
+
+#     # --- Compute the λ‐returns going backward from T-2 down to 0 ---
+#     for t in range(T - 2, -1, -1):
+#         # R[t] = r[t] + γ·[ (1−λ)·V[t+1] + λ·R[t+1] ]
+#         returns[:, t, :] = rewards[:, t, :] + gamma * (
+#             (1 - lambda_) * values[:, t + 1, :] + lambda_ * returns[:, t + 1, :]
+#         )
+
+#     # --- Batch‐wise normalization to zero‐mean, unit‐variance ---
+#     flat = returns.view(-1)                   # shape (B*T,)
+#     mu   = flat.mean()
+#     std  = flat.std(unbiased=False) + 1e-8     # add eps to avoid div zero
+
+#     normalized = (returns - mu) / std
+#     return normalized
+
+
 def compute_lambda_returns(
     rewards: torch.Tensor,
     values: torch.Tensor,
