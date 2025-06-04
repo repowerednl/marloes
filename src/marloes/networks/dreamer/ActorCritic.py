@@ -29,8 +29,8 @@ class ActorCritic(nn.Module):
             hidden_size (int, optional): Dimension of the hidden layers. Defaults to 64.
         """
         super(ActorCritic, self).__init__()
-        self.actor = Actor(input, output, hidden_size)
-        self.critic = Critic(input, hidden_size)
+        self.actor = Actor(input, output, config.get("actor_hidden_size", hidden_size))
+        self.critic = Critic(input, config.get("critic_hidden_size", hidden_size))
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_ema_update = config.get("ema_update", 0.98)  # DreamerV3 uses 0.98
         for param in self.critic_target.parameters():
@@ -84,7 +84,7 @@ class ActorCritic(nn.Module):
         """
         if deterministic:
             # Use the actor in deterministic mode (only the mean)
-            return self.actor(model_state, True).detach()
+            return self.actor(model_state, True)
         else:
             return self.actor(model_state, False).sample()
 
@@ -106,6 +106,10 @@ class ActorCritic(nn.Module):
         # Unpack the rewards into a batched tensor for the loss computing
         rewards = torch.stack([t["rewards"] for t in trajectories], dim=0).squeeze(-1)
 
+        # rew is negative. Transform it to positive rewards (with lower being worse)
+        # worst = rewards.min()
+        # rewards = rewards - worst  # make the worst reward zero, and the rest positive
+
         # Obtaining the target values from the frozen critic target (v3)
         with torch.no_grad():
             # Use the critic target to compute the values
@@ -114,11 +118,14 @@ class ActorCritic(nn.Module):
             returns, advantages = self._compute_advantages(rewards, target_values)
 
         # Compute the values using the critic
-        values = self.critic(states)
+        # values = self.critic(states)
 
         # Compute the actor and critic losses
         actor_loss = self._compute_actor_loss(states, actions, advantages, returns)
-        critic_loss = self._compute_critic_loss(values, returns)
+        # critic_loss = self._compute_critic_loss(values, returns)
+        critic_loss = self._compute_critic_loss(
+            self.critic(states[:, 0, :]), returns[:, 0, :]
+        )  # Critic only updates on first step
 
         # Actor loss
         self.actor_optim.zero_grad()
@@ -170,7 +177,7 @@ class ActorCritic(nn.Module):
         # where Per(x, p) is the p-th percentile of x (detaching to prevent gradient flow)
         flat_returns = returns.detach().view(-1)
 
-        # # Standardize returns
+        # Standardize returns
         flat_returns = (flat_returns - flat_returns.mean()) / (
             flat_returns.std() + 1e-8
         )
@@ -189,6 +196,8 @@ class ActorCritic(nn.Module):
         # else:
         #     # in-place EMA update: preserves buffer registration
         #     self.s_ema.mul_(self.s_ema_alpha).add_((1 - self.s_ema_alpha) * S)
+        # print("S:", S.item(), "S_ema:", self.s_ema.item())
+        self.s_ema.fill_(1.0)  # For debugging purposes, set S to 1.0
 
         # print("Adv stats:", advantages.min().item(), advantages.max().item(), advantages.mean().item())
 
@@ -196,7 +205,6 @@ class ActorCritic(nn.Module):
 
         # print("S (EMA):", self.s_ema.item())
         # set s_ema to one for debugging
-        self.s_ema.fill_(1.0)  # For debugging purposes, set S to 1.0
         actor_loss = (
             -((advantages.detach() / self.s_ema) * log_probs).mean()
             - self.entropy_coef * entropy
@@ -218,6 +226,7 @@ class ActorCritic(nn.Module):
         Returns:
             torch.Tensor: Computed critic loss.
         """
+        # print(f"Value prediction: {values[0][0][0]}, Return: {returns[0][0][0]}")
         critic_loss = F.mse_loss(values, returns)
         return critic_loss
 
