@@ -39,6 +39,7 @@ class Calculator:
             "daily_grid_production",
         ],
         "total_solar_production": ["surplus", "negative_surplus"],
+        "supply_available_power": ["negative_available_surplus"],
     }
 
     def __init__(self, uid: int | None = None, dir: str = "results"):
@@ -147,6 +148,13 @@ class Calculator:
 
     def negative_surplus(self) -> np.ndarray:
         return -self.surplus()
+
+    def negative_available_surplus(self) -> np.ndarray:
+        """
+        Calculates the negative available surplus.
+        This is the negative of the available supply minus the demand.
+        """
+        return -(self.extractor.supply_available_power - self.extractor.total_demand)
 
     def _get_reward_model(self, metric: str) -> SubReward | None:
         reward_class = self.REWARD_CLASSES.get(metric)
