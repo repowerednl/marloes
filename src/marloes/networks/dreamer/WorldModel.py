@@ -111,9 +111,11 @@ class WorldModel(nn.Module):
                     belief_info = {"h_t": self.rssm._init_state(1)[-1]}
                 # Obtain h_t from belief
                 h_0 = belief_info["h_t"]
-                # take the last layer of the GRU, shape (batch=1, hidden_size)
-                # infer z_t
-                z_0, _ = self.rssm._get_latent_state(h_0)
+                # infer z_t if not available in belief_info
+                if "z_t" not in belief_info:
+                    z_0, _ = self.rssm._get_latent_state(h_0)
+                else:
+                    z_0 = belief_info["z_t"]
 
                 # sample action from the actor with model state
                 # model state is the concatenation of h_t and z_t
@@ -173,6 +175,9 @@ class WorldModel(nn.Module):
         x = torch.stack([sequence["state"] for sequence in sample], dim=0)
         # extract the rewards and done signals as tensors into rew
         rew = torch.stack([sequence["rewards"] for sequence in sample], dim=0)
+        # rew is negative. Transform it to positive rewards (with lower being worse)
+        # worst = rew.min()
+        # rew = rew - worst  # make the worst reward zero, and the rest positive
 
         # | -----------------------------------------------------------------------------|#
         # | Step 1: Perform rollout in RSSM                                              |#
@@ -276,7 +281,7 @@ class WorldModel(nn.Module):
         # Backpropagate the total loss
         self.optim.zero_grad()
         total_loss.backward()
-        # add gradient clipping # TODO: change WorldModel to a nn.Module
+        # add gradient clipping
         torch.nn.utils.clip_grad_norm_(
             self.parameters(),
             max_norm=self.clip_grad,
@@ -368,7 +373,7 @@ class RewardPredictor(BaseNetwork):
         x = torch.cat([h_t, z_t], dim=-1)
         r_t = self.fc(x)
         # (v2) bind returns with tanh activation
-        r_t = torch.tanh(r_t)
+        # r_t = torch.tanh(r_t)
         return r_t
 
 
