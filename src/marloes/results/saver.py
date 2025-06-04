@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import yaml
 from torch import nn
+from filelock import FileLock
 
 from marloes.results.util import get_latest_uid
 
@@ -110,11 +111,13 @@ class Saver:
         Function that extracts and updates the uid.txt file in root folder/results/uid.txt
         """
         uid_path = os.path.join(self.base_file_path, self.id_name)
-        with open(uid_path, "r+") as f:
-            uid = int(f.read())
-            f.seek(0)
-            f.write(str(uid + 2))
-            f.truncate()
+        # Make sure only one process can update the uid at a time
+        with FileLock(uid_path + ".lock"):
+            with open(uid_path, "r+") as f:
+                uid = int(f.read())
+                f.seek(0)
+                f.write(str(uid + 2))
+                f.truncate()
         return uid
 
     def _validate_folder(self, metric: str) -> str:
