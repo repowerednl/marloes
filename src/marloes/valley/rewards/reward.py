@@ -12,6 +12,7 @@ from marloes.valley.rewards.subrewards import (
     SubReward,
     NESubReward,
 )
+from marloes.valley.rewards.subrewards.balance import BalanceSubReward
 
 
 class Reward:
@@ -25,6 +26,7 @@ class Reward:
         "NC": NCSubReward,
         "NB": NBSubReward,
         "NE": NESubReward,
+        "BA": BalanceSubReward,
     }
 
     def __init__(self, config: dict, actual: bool = True, **kwargs):
