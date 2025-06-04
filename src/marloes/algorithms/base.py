@@ -47,13 +47,11 @@ class BaseAlgorithm(ABC):
         config["forecasts"] = self.environment.forecasts
 
         self.config = config
-        self.device = torch.device(
-            "mps" if torch.backends.mps.is_available() else "cpu"
-        )
-        self.device = torch.device("cpu")
+        device = config.get("device", "cpu")
+        self.device = torch.device(device)
         if self.device.type == "cpu":
             logging.warning(
-                "MPS is not available. Using CPU for computations. Performance may be slower."
+                "MPS/Cuda is not available. Using CPU for computations. Performance may be slower."
             )
 
         # General settings

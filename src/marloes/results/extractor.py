@@ -59,6 +59,7 @@ class Extractor:
         self.total_demand = np.zeros(self.size)
         self.total_grid_production = np.zeros(self.size)
         self.total_battery_intake = np.zeros(self.size)
+        self.supply_available_power = np.zeros(self.size)
 
         # Observation info
         self.total_solar_nomination = np.zeros(self.size)
@@ -106,6 +107,15 @@ class Extractor:
         self.total_demand[self.i] = self._get_total_flow_to_type(model, Demand)
         self.total_battery_intake[self.i] = -self._get_total_flow_to_type(
             model, Battery
+        )
+
+        # Get available power of supply agents
+        self.supply_available_power[self.i] = sum(
+            [
+                asset.state.available_power
+                for asset in model.graph.nodes
+                if isinstance(asset, Supply)
+            ]
         )
 
     def from_files(self, uid: int | None = None, dir: str = "results") -> int:
