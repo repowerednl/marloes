@@ -1,4 +1,4 @@
-algorithm: Priorities
+algorithm: Dreamer
 chunk_size: 1000
 training_steps: 20000
 num_initial_random_steps: 1
@@ -7,22 +7,22 @@ horizon: 8
 batch_size: 32
 update_steps: 2
 deterministic: False
-multiplication_factor_full_reward: 1.0
+multiplication_factor_full_reward: 0.5
 agents:
   # - type: solar
   #   AC: 9000
   #   DC: 10000
   #   orientation: S
   - type: solar
-    AC: 2000
-    DC: 2000
+    AC: 3000
+    DC: 3000
     orientation: EW
-    trainable: true
-  - type: solar
-    AC: 1000
-    DC: 1000
-    orientation: EW
-    trainable: false
+    trainable: True
+  # - type: solar
+  #   AC: 1000
+  #   DC: 1000
+  #   orientation: EW
+  #   trainable: False
   # - type: wind
   #   location: Onshore
   #   power: 1000
@@ -30,11 +30,11 @@ agents:
   - type: demand
     scale: 15
     profile: Farm
-    trainable: false
+    trainable: False
   - type: battery
     energy_capacity: 2000
     power: 1000
-    trainable: true
+    trainable: True
   # - type: battery
   #   energy_capacity: 100
   #   power: 750
@@ -42,32 +42,32 @@ grid:
   name: Grid
 subrewards:
   CO2:
-    active: true
+    active: False
     scaling_factor: 1
   NE:
-    active: false
+    active: False
     scaling_factor: 1
   TEST:
-    active: false
+    active: True
     scaling_factor: 1
 replay_buffers:
-  real_capacity: 3000
-  model_capacity: 3000
+  real_capacity: 5000
+  model_capacity: 5000
 WorldModel:
-  lr: 0.001
+  lr: 0.0001
   weight_decay: 0.0
   beta_weights:
     pred: 1.0
     dyn: 1.0
     rep: 0.1
   clip_grad: 5
-  free_bits: 1.0
+  free_bits: 0.1
   RSSM:
     clamp_lower: -5.0
     clamp_upper: 5.0
     LayerDetails:
       recurrent_size: 64
-      latent_size: 32
+      latent_size: 16
       batch_first: True
       bias: True
       dropout: 0.0
@@ -77,7 +77,9 @@ WorldModel:
       clamp_lower: -5.0
       clamp_upper: 5.0
 ActorCritic:
-  actor_lr: 0.001
+  actor_hidden_size: 64
+  critic_hidden_size: 64
+  actor_lr: 0.005
   critic_lr: 0.001
   actor_weight_decay: 0.0
   critic_weight_decay: 0.0
@@ -85,6 +87,6 @@ ActorCritic:
   critic_clip_grad: 5
   gamma: 0.997
   lambda: 0.95
-  ema_update: 0.98 # update the target networks with this factor
+  ema_update: 0.99 # update the target networks with this factor
   s_ema_alpha: 0.9
-  entropy_coef: 0.01 # coefficient for the entropy loss
+  entropy_coef: 0.001 # coefficient for the entropy loss

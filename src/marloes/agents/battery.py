@@ -25,13 +25,17 @@ class BatteryAgent(Agent):
         )
         return {
             "name": id,
-            "max_power_in": 125,
-            "max_power_out": 125,
+            "max_power_in": config.get(
+                "power", 125
+            ),  # Assumption: max power in is equal to power
+            "max_power_out": config.get(
+                "power", 125
+            ),  # Assumption: max power out is equal to power
             "max_state_of_charge": 0.95,  # Assumption: 5% from max and min
             "min_state_of_charge": 0.05,
             "energy_capacity": config["energy_capacity"],
-            "ramp_up_rate": 125,  # instant
-            "ramp_down_rate": 125,  # instant
+            "ramp_up_rate": config.get("power", 125),  # instant
+            "ramp_down_rate": config.get("power", 125),  # instant
             "efficiency": 0.90,
             "degradation_function": degradation_function,
         }

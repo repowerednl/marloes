@@ -32,12 +32,30 @@ class TESTSubReward(SubReward):
         solar_production = self._get_target(
             extractor.total_solar_production, extractor.i, True
         )
+        grid_production = self._get_target(
+            extractor.total_grid_production, extractor.i, True
+        )
+        battery_production = self._get_target(
+            extractor.total_battery_production, extractor.i, True
+        )
 
-        grid_production = self._get_target(extractor.grid_production, extractor.i, True)
+        demand = self._get_target(extractor.total_demand, extractor.i, True)
 
         solar_reward = solar_production
         grid_reward = -grid_production
 
         # Battery setpoint penalty
+        battery_action = sum(
+            extractor.__dict__[attr][extractor.i]
+            for attr in extractor.__dict__
+            if isinstance(getattr(extractor, attr), np.ndarray) and "Battery" in attr
+        )
 
-        return solar_reward + grid_reward
+        surplus = (solar_production + grid_production + battery_production) - demand
+        battery_setpoint_reward = -abs(battery_action - surplus)
+
+        # print("Solar Reward:", solar_reward)
+        # print("Grid Reward:", grid_reward)
+        # print("Battery Setpoint Reward:", battery_setpoint_reward)
+
+        return solar_reward / 2 + grid_reward + battery_setpoint_reward
