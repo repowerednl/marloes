@@ -22,6 +22,7 @@ class WorldDynamicsModel(nn.Module):
         action_dim: int,
         scalar_dims: list[int],
         global_dim: int,
+        forecast_dim: int,
     ) -> None:
         """
         Initialize the WorldDynamicsModel.
@@ -39,9 +40,8 @@ class WorldDynamicsModel(nn.Module):
         world_enc_dim = world_model_config.get("world_enc_dim", 64)
         hidden_size = world_model_config.get("world_dynamics_hidden_size", 128)
         # Only predict the next scalars for each agent
-        # We don't need to predict forecast
-        # TODO: Explain this in the paper
-        next_state_dim = sum(scalar_dims) + global_dim
+        # And the "new value" of the forecast (forecast_dim)
+        next_state_dim = sum(scalar_dims) + global_dim + forecast_dim
 
         self.shared_net = nn.Sequential(
             nn.Linear(world_enc_dim + action_dim, hidden_size),

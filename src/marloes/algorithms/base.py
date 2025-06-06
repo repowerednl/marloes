@@ -6,6 +6,9 @@ import numpy as np
 import torch
 
 from marloes.agents.battery import BatteryAgent
+from marloes.agents.demand import DemandAgent
+from marloes.agents.solar import SolarAgent
+from marloes.agents.wind import WindAgent
 from marloes.results.saver import Saver
 from marloes.valley.env import EnergyValley
 from marloes.data.replaybuffer import ReplayBuffer
@@ -42,6 +45,11 @@ class BaseAlgorithm(ABC):
         config["global_dim"] = self.environment.global_dim[0]
         config["agents_scalar_dim"] = self.environment.agents_scalar_dim
         config["forecasts"] = self.environment.forecasts
+        config["forecasted_agents"] = [
+            agent
+            for agent in self.environment.agent_dict.values()
+            if isinstance(agent, (SolarAgent, WindAgent, DemandAgent))
+        ]
 
         self.config = config
         device = config.get("device", "cpu")

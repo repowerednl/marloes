@@ -70,6 +70,7 @@ class WorldModel(nn.Module):
             config["action_dim"],
             agents_scalar_dim,
             global_dim,
+            len(config["forecasted_agents"]),
         )
         self.optimizer = Adam(
             self.parameters(),
@@ -276,10 +277,11 @@ def unflatten_state(original: dict, replacements: Iterator) -> dict:
         return {k: unflatten_state(v, replacements) for k, v in original.items()}
 
     elif isinstance(original, np.ndarray):
-        # We do not predict the forecast currently, so we need to shift the array
-        return np.append(original[1:], 0)  # Shift left, append 0
+        # We do not predict the entire foreceast, as it is not needed
+        # We can just shift it and only predict the new final value
+        return np.append(original[1:], next(replacements))  # Shift left, append value
 
-    elif isinstance(original, float):
+    elif isinstance(original, (float, int)):
         return next(replacements)  # Replace with next value from list
 
     else:
@@ -300,10 +302,10 @@ def flatten_state(state: dict) -> list[float]:
 
     if isinstance(state, dict):
         for key in state:
-            # We do not predict forecast, so skip it
-            if key == "forecast":
-                continue
             flattened.extend(flatten_state(state[key]))
+
+    elif isinstance(state, np.ndarray):
+        flattened.append(state[-1])  # Only take the last value of the forecast
 
     elif isinstance(state, (float, int)):
         flattened.append(float(state))
