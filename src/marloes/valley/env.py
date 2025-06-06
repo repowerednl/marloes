@@ -196,8 +196,8 @@ class EnergyValley(MultiAgentEnv):
                 DemandAgent: 3,
                 BatteryAgent: 2,
                 ElectrolyserAgent: 2,
-                CurtailmentAgent: 0,
                 GridAgent: -1,
+                CurtailmentAgent: -2,
             }
             return priority_map[target_agent_type]
 
