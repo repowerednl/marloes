@@ -69,9 +69,9 @@ def read_series(
         # Simulate dropouts in the series
         series = drop_out_series(
             series,
-            drop_prob=data_config.get("drop_prob"),
-            long_drop_prob=data_config.get("long_drop_prob"),
-            max_long_drop_days=data_config.get("max_long_drop_days"),
+            drop_prob=float(data_config.get("drop_prob")),
+            long_drop_prob=float(data_config.get("long_drop_prob")),
+            max_long_drop_days=int(data_config.get("max_long_drop_days")),
         )
 
     return series
@@ -79,7 +79,7 @@ def read_series(
 
 def drop_out_series(
     series: pd.Series,
-    drop_prob: float = 0,  # TODO: Adjust these parameters to simulate different dropout scenarios
+    drop_prob: float = 0,
     long_drop_prob: float = 0,
     max_long_drop_days: int = 5,
 ):
