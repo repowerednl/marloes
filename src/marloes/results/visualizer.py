@@ -97,6 +97,13 @@ class Visualizer:
                             start=start_times[uid], periods=len(data), freq="min"
                         ),
                     )
+                    if "power_nomination" in metric.lower():
+                        # Aggregate over 60 minutes
+                        data = data.resample("h").sum()
+                        data = -data.abs()
+                        if "cumulative" in metric.lower():
+                            # Cumulative sum for cumulative metrics
+                            data = data.cumsum()
                 aggregated_data[metric][uid] = data
 
         for metric, data_by_uid in aggregated_data.items():

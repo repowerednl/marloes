@@ -40,6 +40,11 @@ class Calculator:
         ],
         "total_solar_production": ["surplus", "negative_surplus"],
         "supply_available_power": ["negative_available_surplus"],
+        "net_power": [
+            "net_nomination",
+            "power_nomination_offset",
+            "cumulative_power_nomination_offset",
+        ],
     }
 
     def __init__(self, uid: int | None = None, dir: str = "results"):
@@ -159,6 +164,31 @@ class Calculator:
     def _get_reward_model(self, metric: str) -> SubReward | None:
         reward_class = self.REWARD_CLASSES.get(metric)
         return reward_class(active=True, scaling_factor=1) if reward_class else None
+
+    def net_nomination(self) -> np.ndarray:
+        """
+        Calculates the net nomination.
+        This is the total supply minus the total demand.
+        """
+        return (
+            self.extractor.total_demand_nomination
+            + self.extractor.total_solar_nomination
+            + self.extractor.total_wind_nomination
+        )
+
+    def power_nomination_offset(self) -> np.ndarray:
+        """
+        Calculates the power nomination offset.
+        This is the total supply minus the total demand, adjusted for battery production and intake.
+        """
+        return self.net_nomination() - self.extractor.net_power
+
+    def cumulative_power_nomination_offset(self) -> np.ndarray:
+        """
+        Calculates the cumulative power nomination offset.
+        This is the cumulative sum of the power nomination offset.
+        """
+        return self.power_nomination_offset()
 
     @staticmethod
     def _sanity_check(results: dict[str, np.ndarray | None]) -> dict[str, list[str]]:
