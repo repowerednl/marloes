@@ -48,6 +48,13 @@ class EvaluationApp(QWidget):
         self.scenario_dropdown = load_scenarios()
         layout.addWidget(self.scenario_dropdown)
 
+        # Extractor type dropdown
+        self.extractor_type_label = QLabel("Extractor Type:")
+        self.extractor_type_dropdown = QComboBox()
+        self.extractor_type_dropdown.addItems(["default", "extensive"])
+        layout.addWidget(self.extractor_type_label)
+        layout.addWidget(self.extractor_type_dropdown)
+
         # Number of evaluation steps
         layout.addWidget(QLabel("Number of evaluation steps:"))
         self.eval_steps_input = QSpinBox()
@@ -99,6 +106,10 @@ class EvaluationApp(QWidget):
         config["simulation_start_time"] = start_time
         config["start_time"] = start_time
         config["uid"] = uid
+
+        # Extractor type
+        extractor_type = self.extractor_type_dropdown.currentText()
+        config["extractor_type"] = extractor_type
 
         print(f"Loaded config: {config}")
 
