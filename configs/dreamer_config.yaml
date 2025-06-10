@@ -5,9 +5,9 @@ num_initial_random_steps: 1
 update_interval: 50
 horizon: 8
 batch_size: 32
-update_steps: 2
+update_steps: 1
 deterministic: False
-multiplication_factor_full_reward: 0.5
+multiplication_factor_full_reward: 1
 agents:
   # - type: solar
   #   AC: 9000
@@ -48,6 +48,9 @@ subrewards:
     active: False
     scaling_factor: 1
   TEST:
+    active: False
+    scaling_factor: 1
+  BA:
     active: True
     scaling_factor: 1
 replay_buffers:

@@ -182,22 +182,22 @@ class ActorCritic(nn.Module):
             flat_returns.std() + 1e-8
         )
 
-        # # Compute the 95th and 5th percentiles
-        # quantile_95 = torch.quantile(flat_returns, 0.95)
-        # quantile_5 = torch.quantile(flat_returns, 0.05)
-        # S = torch.clamp(
-        #     quantile_95 - quantile_5,
-        #     min=0.99,
-        # )
-        # # Initialize EMA on first nonzero raw_S
-        # if self.s_ema.item() == 0.0:
-        #     # fill_ keeps it as a buffer
-        #     self.s_ema.fill_(S)
-        # else:
-        #     # in-place EMA update: preserves buffer registration
-        #     self.s_ema.mul_(self.s_ema_alpha).add_((1 - self.s_ema_alpha) * S)
-        # print("S:", S.item(), "S_ema:", self.s_ema.item())
-        self.s_ema.fill_(1.0)  # For debugging purposes, set S to 1.0
+        # Compute the 95th and 5th percentiles
+        quantile_95 = torch.quantile(flat_returns, 0.95)
+        quantile_5 = torch.quantile(flat_returns, 0.05)
+        S = torch.clamp(
+            quantile_95 - quantile_5,
+            min=0.99,
+        )
+        # Initialize EMA on first nonzero raw_S
+        if self.s_ema.item() == 0.0:
+            # fill_ keeps it as a buffer
+            self.s_ema.fill_(S)
+        else:
+            # in-place EMA update: preserves buffer registration
+            self.s_ema.mul_(self.s_ema_alpha).add_((1 - self.s_ema_alpha) * S)
+
+        # self.s_ema.fill_(1.0)  # For debugging purposes, set S to 1.0
 
         # print("Adv stats:", advantages.min().item(), advantages.max().item(), advantages.mean().item())
 
