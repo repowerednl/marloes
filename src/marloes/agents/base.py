@@ -96,7 +96,7 @@ class Agent(ABC):
 
         if self.forecast is not None:
             # Get window of forecast
-            end_idx = time_stamp + timedelta(minutes=self.horizon)
+            end_idx = time_stamp + timedelta(minutes=self.horizon - 1)
             state["forecast"] = self.forecast.loc[time_stamp:end_idx].values.astype(
                 np.float32
             )
