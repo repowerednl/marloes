@@ -36,7 +36,8 @@ class Calculator:
         "reward": ["cumulative_reward", "reward_daily"],
         "total_grid_production": [
             "cumulative_grid_production",
-            "daily_grid_production",
+            "co2_emissions",
+            "cumulative_co2_emissions",
         ],
         "total_solar_production": ["surplus", "negative_surplus"],
         "supply_available_power": ["negative_available_surplus"],
@@ -131,20 +132,6 @@ class Calculator:
         series = series.resample("D").sum()
         return series.values
 
-    def daily_grid_production(self) -> np.ndarray:
-        """
-        Shows the daily improvement of the grid production.
-        """
-        series = pd.Series(self.extractor.total_grid_production)
-        index = pd.date_range(
-            start="2025-01-01",
-            periods=len(series),
-            freq="min",
-        )
-        series.index = index
-        series = series.resample("D").sum()
-        return series.values
-
     def surplus(self) -> np.ndarray:
         """
         Calculates the surplus.
@@ -189,6 +176,22 @@ class Calculator:
         This is the cumulative sum of the power nomination offset.
         """
         return self.power_nomination_offset()
+
+    def co2_emissions(self) -> np.ndarray:
+        """
+        Calculates the CO2 emissions in gCO2eq/kWh.
+        """
+        grid_production_kwh = (
+            self.extractor.total_grid_production / 60
+        )  # Convert from kW to kWh
+        co2_emissions = grid_production_kwh * 284.73
+        return co2_emissions
+
+    def cumulative_co2_emissions(self) -> np.ndarray:
+        """
+        Calculates the cumulative CO2 emissions in gCO2eq/kWh.
+        """
+        return np.cumsum(self.co2_emissions())
 
     @staticmethod
     def _sanity_check(results: dict[str, np.ndarray | None]) -> dict[str, list[str]]:
