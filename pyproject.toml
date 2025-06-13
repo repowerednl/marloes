@@ -11,7 +11,7 @@ python = "^3.11"
 pandas = "^2.2.3"
 numpy = "^1.22.0"
 matplotlib = "^3.5.1"
-simon = {version = "^0.2.0", source = "repowered"}
+simon = {version = "0.2.0", source = "repowered"}
 parameterized = "^0.9.0"
 torch = "^2.5.1"
 scipy = "^1.14.1"
