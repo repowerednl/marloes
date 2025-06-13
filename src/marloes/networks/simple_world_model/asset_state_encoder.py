@@ -18,7 +18,11 @@ class AssetStateEncoder(nn.Module):
     """
 
     def __init__(
-        self, world_model_config: dict, handler_scalar_dim: int, forecast: bool
+        self,
+        world_model_config: dict,
+        handler_scalar_dim: int,
+        forecast: bool,
+        use_gru: bool = True,
     ) -> None:
         """
         Initialize the AssetStateEncoder.
@@ -33,8 +37,11 @@ class AssetStateEncoder(nn.Module):
         """
         super(AssetStateEncoder, self).__init__()
         self.forecast = forecast
-        forecast_hidden_size = world_model_config.get("forecast_hidden_size", 64)
-        # forecast_hidden_size = 240
+        self.use_gru = use_gru
+        if self.use_gru:
+            forecast_hidden_size = world_model_config.get("forecast_hidden_size", 64)
+        else:
+            forecast_hidden_size = 240
         asset_enc_dim = world_model_config.get("asset_enc_dim", 16)
         hidden_size = world_model_config.get("asset_hidden_size", 64)
 
@@ -65,10 +72,12 @@ class AssetStateEncoder(nn.Module):
             torch.Tensor: Encoded handler state tensor of shape (batch_size, asset_enc_dim).
         """
         if self.forecast:
-            forecast_enc = self.forecast_encoder(forecast)
-            combined = torch.cat([forecast_enc, scalar_vars], dim=-1)
-            # forecast_flat = forecast.squeeze(-1)
-            # combined = torch.cat([forecast_flat, scalar_vars], dim=-1)
+            if self.use_gru:
+                forecast_enc = self.forecast_encoder(forecast)
+                combined = torch.cat([forecast_enc, scalar_vars], dim=-1)
+            else:
+                forecast_flat = forecast.squeeze(-1)
+                combined = torch.cat([forecast_flat, scalar_vars], dim=-1)
         else:
             combined = scalar_vars
 

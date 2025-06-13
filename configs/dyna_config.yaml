@@ -19,6 +19,7 @@ WorldModel:
   forecast_hidden_layers: 1
   forecast_hidden_size: 8
   lr: 0.004809193491417255
+  use_gru: true
   weight_decay: 0.0
   world_dynamics_hidden_size: 64
   world_enc_dim: 32

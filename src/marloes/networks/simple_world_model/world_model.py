@@ -52,11 +52,15 @@ class WorldModel(nn.Module):
         self.num_handlers = config["action_dim"]
         handlers_scalar_dim = config["handlers_scalar_dim"]
         forecasts = config["forecasts"]
+        use_gru = self.world_model_config.get("use_gru", True)
 
         self.asset_state_encoders = nn.ModuleList(
             [
                 AssetStateEncoder(
-                    self.world_model_config, handlers_scalar_dim[i], forecasts[i]
+                    self.world_model_config,
+                    handlers_scalar_dim[i],
+                    forecasts[i],
+                    use_gru,
                 )
                 for i in range(self.num_handlers)
             ]
