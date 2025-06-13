@@ -1,4 +1,4 @@
-"""Solar agent with functionality from Repowered's Simon"""
+"""Solar handler with functionality from Repowered's Simon"""
 
 from datetime import datetime
 
@@ -8,10 +8,10 @@ from simon.assets.supply import Supply
 
 from marloes.data.util import read_series
 
-from .base import Agent
+from .base import Handler
 
 
-class SolarAgent(Agent):
+class SolarHandler(Handler):
     def __init__(self, config: dict, start_time: datetime, data_config: dict = {}):
         series, forecast = self._get_production_series(config, data_config)
         super().__init__(Supply, config, start_time, series, forecast)

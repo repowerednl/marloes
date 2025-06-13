@@ -7,7 +7,7 @@ from simon.assets.demand import Demand
 from simon.datasource.data_source import (
     DummyDataSource,
 )
-from marloes.agents.demand import DemandAgent
+from marloes.handlers.demand import DemandHandler
 
 CONFIG = {
     "name": "DemandOne",
@@ -20,16 +20,16 @@ CONFIG = {
 
 
 @freeze_time("2023-01-01 12:00:00")
-class TestDemandAgent(unittest.TestCase):
+class TestDemandHandler(unittest.TestCase):
     @pytest.mark.slow
     def test_init(self):
-        demand_agent = DemandAgent(start_time=datetime.now(), config=CONFIG)
-        self.assertIsInstance(demand_agent.asset, Demand)
-        self.assertEqual(demand_agent.asset.name, "DemandOne")
-        self.assertIsInstance(demand_agent.asset.data_source, DummyDataSource)
-        self.assertEqual(demand_agent.asset.data_source.value, 5.0)
+        demand_handler = DemandHandler(start_time=datetime.now(), config=CONFIG)
+        self.assertIsInstance(demand_handler.asset, Demand)
+        self.assertEqual(demand_handler.asset.name, "DemandOne")
+        self.assertIsInstance(demand_handler.asset.data_source, DummyDataSource)
+        self.assertEqual(demand_handler.asset.data_source.value, 5.0)
         # also test the get_state() method
-        state = demand_agent.get_state(0)
+        state = demand_handler.get_state(0)
         # state should have forecast, nomination and nomination_fraction
         self.assertIn("forecast", state)
         self.assertIn("nomination", state)
@@ -40,6 +40,6 @@ class TestDemandAgent(unittest.TestCase):
         partial_config = {
             "profile": "Farm",
         }
-        demand_agent = DemandAgent(start_time=datetime.now(), config=partial_config)
-        self.assertIsInstance(demand_agent.asset, Demand)
-        self.assertFalse(demand_agent.asset.curtailable_by_solver)
+        demand_handler = DemandHandler(start_time=datetime.now(), config=partial_config)
+        self.assertIsInstance(demand_handler.asset, Demand)
+        self.assertFalse(demand_handler.asset.curtailable_by_solver)

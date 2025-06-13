@@ -44,18 +44,18 @@ class Priorities(BaseAlgorithm):
         Extracts the batteries from the observations for the Priorities algorithm.
         """
         batteries = defaultdict()
-        for key in [agent for agent in observations.keys() if "Battery" in agent]:
+        for key in [handler for handler in observations.keys() if "Battery" in handler]:
             # we need state of charge, capacity and max power out for these batteries
             batteries[key] = {}
             batteries[key]["energy_capacity"] = next(
-                agent.asset.energy_capacity
-                for agent in self.environment.agents
-                if agent.id == key
+                handler.asset.energy_capacity
+                for handler in self.environment.handlers
+                if handler.id == key
             )
             batteries[key]["max_power_out"] = next(
-                agent.asset.max_power_out
-                for agent in self.environment.agents
-                if agent.id == key
+                handler.asset.max_power_out
+                for handler in self.environment.handlers
+                if handler.id == key
             )
         return batteries
 

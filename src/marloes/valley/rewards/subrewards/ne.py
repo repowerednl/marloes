@@ -29,14 +29,14 @@ class NESubReward(SubReward):
         super().__init__(config, active, scaling_factor)
 
         max_solar_ac = sum(
-            agent.get("AC") * SOLAR_SCALE
-            for agent in self.config["agents"]
-            if agent.get("type") == "solar"
+            handler.get("AC") * SOLAR_SCALE
+            for handler in self.config["handlers"]
+            if handler.get("type") == "solar"
         )
         max_wind_ac = sum(
-            agent.get("AC") * SOLAR_SCALE
-            for agent in self.config["agents"]
-            if agent.get("type") == "wind"
+            handler.get("AC") * SOLAR_SCALE
+            for handler in self.config["handlers"]
+            if handler.get("type") == "wind"
         )
         self.max_nomination_divergence = max_solar_ac + max_wind_ac
 

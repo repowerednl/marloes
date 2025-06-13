@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 from marloes.algorithms.priorities import Priorities
-from marloes.agents.base import Agent
+from marloes.handlers.base import Handler
 
 from marloes.algorithms.util import get_net_forecasted_power
 from test.util import get_accurate_observation, get_mock_observation
@@ -13,7 +13,7 @@ def get_new_config() -> dict:
     return {
         "algorithm": "priorities",
         "training_steps": 100,
-        "agents": [
+        "handlers": [
             {
                 "type": "demand",
                 "scale": 1.5,
@@ -40,8 +40,8 @@ def get_new_config() -> dict:
 
 
 class TestPriorities(unittest.TestCase):
-    @patch("marloes.agents.solar.read_series", return_value=pd.Series())
-    @patch("marloes.agents.demand.read_series", return_value=pd.Series())
+    @patch("marloes.handlers.solar.read_series", return_value=pd.Series())
+    @patch("marloes.handlers.demand.read_series", return_value=pd.Series())
     @patch("simon.assets.supply.Supply.load_default_state")
     @patch("simon.assets.demand.Demand.load_default_state")
     def setUp(self, *mocks) -> None:
@@ -50,22 +50,22 @@ class TestPriorities(unittest.TestCase):
         ), patch("marloes.results.saver.Saver._validate_folder"), patch(
             "marloes.valley.env.EnergyValley._get_full_observation", return_value={}
         ), patch(
-            "marloes.agents.base.Agent.get_state", return_value={}
+            "marloes.handlers.base.Handler.get_state", return_value={}
         ), patch(
             "marloes.valley.env.Extractor.store_reward", return_value=None, create=True
         ):
-            Agent._id_counters = {}
+            Handler._id_counters = {}
             self.alg = Priorities(config=get_new_config())
 
     def test_init(self):
         self.assertEqual(self.alg.training_steps, 100)
-        self.assertEqual(len(self.alg.environment.agents), 3)
+        self.assertEqual(len(self.alg.environment.handlers), 3)
 
-    def test_agent_types(self):
-        self.assertEqual(len(self.alg.environment.agents), 3)
+    def test_handler_types(self):
+        self.assertEqual(len(self.alg.environment.handlers), 3)
         self.assertEqual(
-            [agent.__class__.__name__ for agent in self.alg.environment.agents],
-            ["DemandAgent", "SolarAgent", "BatteryAgent"],
+            [handler.__class__.__name__ for handler in self.alg.environment.handlers],
+            ["DemandHandler", "SolarHandler", "BatteryHandler"],
         )
         self.assertEqual(self.alg.environment.grid.asset.name, "Grid")
 
@@ -104,8 +104,8 @@ class TestPriorities(unittest.TestCase):
             net_power=3.0, batteries=batteries
         )
         self.assertEqual(
-            actions["BatteryAgent 0"],
-            self.alg.environment.agents[2].asset.energy_capacity,
+            actions["BatteryHandler 0"],
+            self.alg.environment.handlers[2].asset.energy_capacity,
         )
 
         battery_config = {
@@ -114,7 +114,7 @@ class TestPriorities(unittest.TestCase):
             "efficiency": 0.9,
             "power": 100,
         }
-        self.alg.environment._add_agent(battery_config)
+        self.alg.environment._add_handler(battery_config)
         obs = get_mock_observation(
             battery_soc=[0.5, 0.6], solar_power=3.0, wind_power=1.0
         )
@@ -122,8 +122,8 @@ class TestPriorities(unittest.TestCase):
         actions = self.alg._determine_battery_actions(
             net_power=3.0, batteries=batteries
         )
-        self.assertEqual(actions["BatteryAgent 0"], 500)
-        self.assertEqual(actions["BatteryAgent 1"], 250)
+        self.assertEqual(actions["BatteryHandler 0"], 500)
+        self.assertEqual(actions["BatteryHandler 1"], 250)
 
     def test__determine_battery_actions_discharge(self):
         obs = get_mock_observation(battery_soc=[0.5], solar_power=1.0, wind_power=1.0)
@@ -132,8 +132,8 @@ class TestPriorities(unittest.TestCase):
             net_power=-3.0, batteries=batteries
         )
         self.assertEqual(
-            actions["BatteryAgent 0"],
-            -self.alg.environment.agents[2].asset.energy_capacity,
+            actions["BatteryHandler 0"],
+            -self.alg.environment.handlers[2].asset.energy_capacity,
         )
 
         battery_config = {
@@ -142,7 +142,7 @@ class TestPriorities(unittest.TestCase):
             "efficiency": 0.9,
             "power": 100,
         }
-        self.alg.environment._add_agent(battery_config)
+        self.alg.environment._add_handler(battery_config)
         obs = get_mock_observation(
             battery_soc=[0.5, 0.6], solar_power=1.0, wind_power=1.0
         )
@@ -150,14 +150,14 @@ class TestPriorities(unittest.TestCase):
         actions = self.alg._determine_battery_actions(
             net_power=-3.0, batteries=batteries
         )
-        self.assertEqual(actions["BatteryAgent 0"], -500)
-        self.assertEqual(actions["BatteryAgent 1"], -250)
+        self.assertEqual(actions["BatteryHandler 0"], -500)
+        self.assertEqual(actions["BatteryHandler 1"], -250)
 
 
 @pytest.mark.slow
 class TestPrioritiesSlow(unittest.TestCase):
     def setUp(self) -> None:
-        Agent._id_counters = {}
+        Handler._id_counters = {}
         with patch(
             "marloes.results.saver.Saver._update_simulation_number", return_value=0
         ):
@@ -165,18 +165,18 @@ class TestPrioritiesSlow(unittest.TestCase):
 
     def test_get_actions(self):
         observations = get_accurate_observation(self.alg)
-        self.assertNotIn("forecast", observations["BatteryAgent 0"])
-        self.assertIn("forecast", observations["SolarAgent 0"])
-        self.assertIn("forecast", observations["DemandAgent 0"])
+        self.assertNotIn("forecast", observations["BatteryHandler 0"])
+        self.assertIn("forecast", observations["SolarHandler 0"])
+        self.assertIn("forecast", observations["DemandHandler 0"])
 
         actions = self.alg.get_actions(observations)
-        self.assertIn("BatteryAgent 0", actions)
+        self.assertIn("BatteryHandler 0", actions)
 
         mock_obs = get_mock_observation(
             battery_soc=[0.5], solar_power=3.0, wind_power=1.0
         )
         actions = self.alg.get_actions(mock_obs)
         self.assertEqual(
-            actions["BatteryAgent 0"],
-            self.alg.environment.agents[2].asset.energy_capacity,
+            actions["BatteryHandler 0"],
+            self.alg.environment.handlers[2].asset.energy_capacity,
         )

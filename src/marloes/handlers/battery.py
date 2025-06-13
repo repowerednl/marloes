@@ -1,4 +1,4 @@
-""" Battery agent with functionality from Repowered's Simon """
+""" Battery handler with functionality from Repowered's Simon """
 
 from datetime import datetime
 from functools import partial
@@ -7,10 +7,10 @@ import numpy as np
 from simon.assets.battery import Battery
 from simon.data.battery_data import BatteryState
 
-from .base import Agent
+from .base import Handler
 
 
-class BatteryAgent(Agent):
+class BatteryHandler(Handler):
     def __init__(self, config: dict, start_time: datetime, *args, **kwargs):
         super().__init__(Battery, config, start_time)
         self.asset.state_of_charge = 0

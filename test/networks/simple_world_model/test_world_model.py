@@ -13,7 +13,7 @@ from marloes.networks.simple_world_model.world_model import (
 @pytest.fixture
 def dummy_config():
     return {
-        "num_agents": 2,
+        "num_handlers": 2,
         "action_dim": 2,
         "global_dim": 4,
         "WorldModel": {
@@ -23,7 +23,7 @@ def dummy_config():
             "weight_decay": 0.0,
             "scalar_dim": 5,
         },
-        "agents_scalar_dim": [3, 3],
+        "handlers_scalar_dim": [3, 3],
         "forecasts": [True, False],
     }
 
@@ -31,15 +31,15 @@ def dummy_config():
 @pytest.fixture
 def dummy_forward_input(dummy_config):
     # Create dummy inputs for the forward pass.
-    num_agents = dummy_config["num_agents"]
+    num_handlers = dummy_config["num_handlers"]
     batch_size = 1
     scalar_dim = 3
     forecast_seq_len = 5
     forecast_input_dim = 1
-    scalars = [torch.randn(batch_size, scalar_dim) for _ in range(num_agents)]
+    scalars = [torch.randn(batch_size, scalar_dim) for _ in range(num_handlers)]
     forecasts = [
         torch.randn(batch_size, forecast_seq_len, forecast_input_dim)
-        for _ in range(num_agents)
+        for _ in range(num_handlers)
     ]
     global_context = torch.randn(batch_size, dummy_config["global_dim"])
     actions = torch.randn(batch_size, dummy_config["action_dim"])
@@ -59,13 +59,13 @@ class DummyTransition:
 def dummy_transition():
     # This is simplified version, but should match our state.
     state = {
-        "Agent 0": {
+        "Handler 0": {
             "power": 0.0,
             "available_power": 50.0,
             "forecast": np.array([1.0, 2.0, 3.0], dtype=np.float32),
             "nomination": 10.0,
         },
-        "Agent 1": {
+        "Handler 1": {
             "power": 0.0,
             "available_power": 20.0,
             "nomination": 5.0,
@@ -77,7 +77,7 @@ def dummy_transition():
             "minute": 2,
         },
     }
-    actions = {"Agent 0": 0.5, "Agent 1": -0.3}
+    actions = {"Handler 0": 0.5, "Handler 1": -0.3}
     reward = 1.0
     return DummyTransition(state, actions, reward, state)
 
@@ -86,7 +86,7 @@ def test_world_model_initialization(dummy_config):
     # Simple init testing
     model = WorldModel(dummy_config)
     assert isinstance(model, WorldModel)
-    assert len(model.agent_state_encoders) == dummy_config["num_agents"]
+    assert len(model.asset_state_encoders) == dummy_config["num_handlers"]
 
 
 def test_world_model_forward_dimensions(dummy_config, dummy_forward_input):
@@ -113,8 +113,10 @@ def test_flatten_unflatten_consistency(dummy_transition):
     state = dummy_transition.state
     flat = flatten_state(state)
     unflat = unflatten_state(state, iter(flat))
-    assert state["Agent 0"]["power"] == unflat["Agent 0"]["power"]
-    assert state["Agent 0"]["available_power"] == unflat["Agent 0"]["available_power"]
+    assert state["Handler 0"]["power"] == unflat["Handler 0"]["power"]
+    assert (
+        state["Handler 0"]["available_power"] == unflat["Handler 0"]["available_power"]
+    )
 
 
 def test_world_model_predict_executes(dummy_config, dummy_transition):

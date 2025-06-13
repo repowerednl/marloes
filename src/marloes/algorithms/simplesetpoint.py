@@ -18,9 +18,9 @@ class SimpleSetpoint(BaseAlgorithm):
 
     def get_actions(self, observations, deterministic: bool = False) -> dict:
         """
-        Generates random actions for each agent in the environment.
+        Generates random actions for each handler in the environment.
         """
-        return self.sample_actions(self.environment.agent_dict)
+        return self.sample_actions(self.environment.handler_dict)
 
     def perform_training_steps(self, step: int) -> None:
         """

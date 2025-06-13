@@ -5,10 +5,10 @@ import time
 import numpy as np
 import torch
 
-from marloes.agents.battery import BatteryAgent
-from marloes.agents.demand import DemandAgent
-from marloes.agents.solar import SolarAgent
-from marloes.agents.wind import WindAgent
+from marloes.handlers.battery import BatteryHandler
+from marloes.handlers.demand import DemandHandler
+from marloes.handlers.solar import SolarHandler
+from marloes.handlers.wind import WindHandler
 from marloes.results.saver import Saver
 from marloes.valley.env import EnergyValley
 from marloes.data.replaybuffer import ReplayBuffer
@@ -43,12 +43,12 @@ class BaseAlgorithm(ABC):
         config["state_dim"] = self.environment.state_dim[0]
         config["action_dim"] = self.environment.action_dim[0]
         config["global_dim"] = self.environment.global_dim[0]
-        config["agents_scalar_dim"] = self.environment.agents_scalar_dim
+        config["handlers_scalar_dim"] = self.environment.handlers_scalar_dim
         config["forecasts"] = self.environment.forecasts
-        config["forecasted_agents"] = [
-            agent
-            for agent in self.environment.agent_dict.values()
-            if isinstance(agent, (SolarAgent, WindAgent, DemandAgent))
+        config["forecasted_handlers"] = [
+            handler
+            for handler in self.environment.handler_dict.values()
+            if isinstance(handler, (SolarHandler, WindHandler, DemandHandler))
         ]
 
         self.config = config
@@ -146,7 +146,7 @@ class BaseAlgorithm(ABC):
             # --------------------
             if step < self.num_initial_random_steps:
                 # Initially do random actions for exploration
-                actions = self.sample_actions(self.environment.trainable_agent_dict)
+                actions = self.sample_actions(self.environment.trainable_handler_dict)
             else:
                 # Get actions from the algorithm
                 actions = self.get_actions(state)
@@ -221,8 +221,10 @@ class BaseAlgorithm(ABC):
         else:
             return BaseAlgorithm._registry[name](config)
 
-    def sample_actions(self, agent_dict: dict) -> dict:
+    def sample_actions(self, handler_dict: dict) -> dict:
         """
-        Generates random actions for each agent in the environment.
+        Generates random actions for each handler in the environment.
         """
-        return {agent_id: random.uniform(-1.0, 1.0) for agent_id in agent_dict.keys()}
+        return {
+            handler_id: random.uniform(-1.0, 1.0) for handler_id in handler_dict.keys()
+        }

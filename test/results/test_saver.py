@@ -14,7 +14,7 @@ class SaverTestCase(unittest.TestCase):
         self.config = {
             "algorithm": "model_based",
             "epochs": "100",
-            "agents": [
+            "handlers": [
                 {
                     "type": "demand",
                     "scale": 1.5,

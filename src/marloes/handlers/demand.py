@@ -1,4 +1,4 @@
-"""Demand 'agents' with functionality from Repowered's Simon"""
+"""Demand 'handlers' with functionality from Repowered's Simon"""
 
 from datetime import datetime
 
@@ -8,10 +8,10 @@ from simon.assets.demand import Demand
 
 from marloes.data.util import read_series
 
-from .base import Agent
+from .base import Handler
 
 
-class DemandAgent(Agent):
+class DemandHandler(Handler):
     def __init__(self, config: dict, start_time: datetime, data_config: dict = {}):
         series, forecast = self._get_demand_series(config, data_config)
         super().__init__(Demand, config, start_time, series, forecast)

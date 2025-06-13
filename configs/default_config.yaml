@@ -1,5 +1,5 @@
 algorithm: Priorities
-agents:
+handlers:
   - type: solar
     AC: 9000
     DC: 10000

@@ -1,5 +1,5 @@
 def validate_solar(config: dict) -> str:
-    """Validate the solar agent configuration."""
+    """Validate the solar handler configuration."""
     # Check if required keys are present
     required_keys = ["orientation", "DC", "AC"]
     for key in required_keys:

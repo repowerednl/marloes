@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.optim import Adam
 import torch.nn.functional as F
 
-from marloes.networks.simple_world_model.agent_state_encoder import AgentStateEncoder
+from marloes.networks.simple_world_model.asset_state_encoder import AssetStateEncoder
 from marloes.networks.simple_world_model.util import (
     parse_actions,
     parse_batch,
@@ -21,12 +21,12 @@ class WorldModel(nn.Module):
     """
     World model that combines all components to predict the next state and reward.
 
-    This model integrates agent state encoders, a world state encoder, and a world dynamics model
+    This model integrates handler state encoders, a world state encoder, and a world dynamics model
     to process environment states and actions, and predict the next state and reward.
 
     Attributes:
-        agent_state_encoders (nn.ModuleList): list of encoders for each agent's state.
-        world_state_encoder (WorldStateEncoder): Encoder for aggregating agent encodings and global context.
+        asset_state_encoders (nn.ModuleList): list of encoders for each handler's state.
+        world_state_encoder (WorldStateEncoder): Encoder for aggregating handler encodings and global context.
         world_dynamics_model (WorldDynamicsModel): Model for predicting the next state and reward.
         optimizer (Adam): Optimizer for training the model.
         loss (list[float]): list to store the loss values during training.
@@ -39,9 +39,9 @@ class WorldModel(nn.Module):
         Args:
             config (dict): Configuration dictionary containing:
                 - "WorldModel" (dict): Sub-configuration for the world model.
-                - "num_agents" (int): Number of agents in the environment.
-                - "agents_scalar_dim" (list[int]): list of scalar dimensions for each agent.
-                - "forecasts" (list[int]): list of forecast dimensions for each agent.
+                - "num_handlers" (int): Number of handlers in the environment.
+                - "handlers_scalar_dim" (list[int]): list of scalar dimensions for each handler.
+                - "forecasts" (list[int]): list of forecast dimensions for each handler.
                 - "action_dim" (int): Dimension of the action input.
                 - "global_dim" (int, optional): Dimension of the global context (default: 0).
         """
@@ -49,28 +49,28 @@ class WorldModel(nn.Module):
         self.name = "WorldModel"
         self.device = device
         self.world_model_config = config.get("WorldModel", {})
-        self.num_agents = config["action_dim"]
-        agents_scalar_dim = config["agents_scalar_dim"]
+        self.num_handlers = config["action_dim"]
+        handlers_scalar_dim = config["handlers_scalar_dim"]
         forecasts = config["forecasts"]
 
-        self.agent_state_encoders = nn.ModuleList(
+        self.asset_state_encoders = nn.ModuleList(
             [
-                AgentStateEncoder(
-                    self.world_model_config, agents_scalar_dim[i], forecasts[i]
+                AssetStateEncoder(
+                    self.world_model_config, handlers_scalar_dim[i], forecasts[i]
                 )
-                for i in range(self.num_agents)
+                for i in range(self.num_handlers)
             ]
         )
         global_dim = config.get("global_dim", 0)
         self.world_state_encoder = WorldStateEncoder(
-            self.world_model_config, self.num_agents, global_dim
+            self.world_model_config, self.num_handlers, global_dim
         )
         self.world_dynamics_model = WorldDynamicsModel(
             self.world_model_config,
             config["action_dim"],
-            agents_scalar_dim,
+            handlers_scalar_dim,
             global_dim,
-            len(config["forecasted_agents"]),
+            len(config["forecasted_handlers"]),
         )
         self.optimizer = Adam(
             self.parameters(),
@@ -117,8 +117,8 @@ class WorldModel(nn.Module):
         Perform a forward pass through the world model.
 
         Args:
-            scalar_list (list[torch.Tensor]): list of scalar tensors for each agent.
-            forecast_list (list[torch.Tensor]): list of forecast tensors for each agent.
+            scalar_list (list[torch.Tensor]): list of scalar tensors for each handler.
+            forecast_list (list[torch.Tensor]): list of forecast tensors for each handler.
             global_context (torch.Tensor): Global context tensor.
             actions (torch.Tensor): Action tensor of shape (batch_size, action_dim).
 
@@ -127,16 +127,16 @@ class WorldModel(nn.Module):
                 - Next state prediction tensor of shape (batch_size, next_state_dim).
                 - Reward prediction tensor of shape (batch_size, 1).
         """
-        # Encode each agent
-        agent_encodings = []
-        for i in range(self.num_agents):
-            agent_encoding = self.agent_state_encoders[i](
+        # Encode each handler
+        handler_encodings = []
+        for i in range(self.num_handlers):
+            handler_encoding = self.asset_state_encoders[i](
                 scalar_list[i], forecast_list[i]
             )
-            agent_encodings.append(agent_encoding)
+            handler_encodings.append(handler_encoding)
 
         # Aggregate in the world state encoder
-        world_state = self.world_state_encoder(agent_encodings, global_context)
+        world_state = self.world_state_encoder(handler_encodings, global_context)
 
         # Predict next state and reward
         next_state, reward = self.world_dynamics_model(world_state, actions)
@@ -164,9 +164,11 @@ class WorldModel(nn.Module):
         parsed_actions = parse_actions(actions, device=device)
 
         # Extract scalar variables and forecast from states
-        scalar_list = [agent["scalars"] for agent in parsed_states["agents"].values()]
+        scalar_list = [
+            handler["scalars"] for handler in parsed_states["handlers"].values()
+        ]
         forecast_list = [
-            agent["forecast"] for agent in parsed_states["agents"].values()
+            handler["forecast"] for handler in parsed_states["handlers"].values()
         ]
 
         # Extract global context if available
@@ -208,10 +210,11 @@ class WorldModel(nn.Module):
         # 1. Parse batch to fit world model expectations
         parsed_batch = parse_batch(transitions_batch, device)
         scalar_list = [
-            agent["scalars"] for agent in parsed_batch["state"]["agents"].values()
+            handler["scalars"] for handler in parsed_batch["state"]["handlers"].values()
         ]
         forecast_list = [
-            agent["forecast"] for agent in parsed_batch["state"]["agents"].values()
+            handler["forecast"]
+            for handler in parsed_batch["state"]["handlers"].values()
         ]
         global_context = parsed_batch["state"].get("global_context", None)
         actions = parsed_batch["actions"]

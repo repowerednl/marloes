@@ -1,16 +1,16 @@
 import torch
-from marloes.networks.simple_world_model.agent_state_encoder import AgentStateEncoder
+from marloes.networks.simple_world_model.asset_state_encoder import AssetStateEncoder
 
 
-def test_agent_state_encoder_dimensions():
+def test_asset_state_encoder_dimensions():
     # Use defaults for init
     config = {
         "forecast_hidden_size": 64,
         "scalar_dim": 3,
-        "agent_enc_dim": 16,
+        "asset_enc_dim": 16,
         "forecast_num_layers": 1,
     }
-    encoder = AgentStateEncoder(config, config["scalar_dim"], True)
+    encoder = AssetStateEncoder(config, config["scalar_dim"], True)
 
     batch_size = 4
     seq_length = 10
@@ -22,5 +22,5 @@ def test_agent_state_encoder_dimensions():
     # Forward pass
     output = encoder(scalar_vars, forecast)
 
-    # The output should have dimensions: (batch_size, agent_enc_dim)
-    assert output.shape == (batch_size, config["agent_enc_dim"])
+    # The output should have dimensions: (batch_size, asset_enc_dim)
+    assert output.shape == (batch_size, config["asset_enc_dim"])

@@ -8,7 +8,7 @@ Review
 
 ## Context
 
-The default parameters set in `agents/battery/py` for the default parameters of a Battery should be justified.
+The default parameters set in `handlers/battery/py` for the default parameters of a Battery should be justified.
 
 ## Decision
 

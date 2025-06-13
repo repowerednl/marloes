@@ -4,9 +4,9 @@ import numpy as np
 from simon.assets.demand import Demand
 
 
-class CurtailmentAgent:
+class CurtailmentHandler:
     """
-    CurtailmentAgent is an agent that allows the Solar Parks and Wind Farms to be curtailed in case no setpoints are used.
+    CurtailmentHandler is an handler that allows the Solar Parks and Wind Farms to be curtailed in case no setpoints are used.
     """
 
     def __init__(self, config: dict, start_time: datetime, *args, **kwargs):

@@ -14,8 +14,8 @@ SAC:
   value_lr: 5.827701759665525e-06
   weight_decay: 6.379692677316514e-06
 WorldModel:
-  agent_enc_dim: 8
-  agent_hidden_size: 32
+  asset_enc_dim: 8
+  asset_hidden_size: 32
   forecast_hidden_layers: 1
   forecast_hidden_size: 8
   lr: 0.004809193491417255
@@ -23,7 +23,7 @@ WorldModel:
   world_dynamics_hidden_size: 64
   world_enc_dim: 32
   world_hidden_size: 128
-agents:
+handlers:
 - AC: 3000
   DC: 3000
   orientation: EW

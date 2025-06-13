@@ -32,14 +32,14 @@ class WorldDynamicsModel(nn.Module):
                 - "world_enc_dim" (int, optional): Dimension of the encoded world state (default: 64).
                 - "world_dynamics_hidden_size" (int, optional): Hidden size of the shared network (default: 128).
             action_dim (int): Dimension of the action input.
-            scalar_dims (list[int]): List of scalar dimensions for each agent, used to determine the
+            scalar_dims (list[int]): List of scalar dimensions for each handler, used to determine the
                 output size for the next state prediction.
             global_dim (int): Dimension of the global context, also used in the output size.
         """
         super().__init__()
         world_enc_dim = world_model_config.get("world_enc_dim", 64)
         hidden_size = world_model_config.get("world_dynamics_hidden_size", 128)
-        # Only predict the next scalars for each agent
+        # Only predict the next scalars for each handler
         # And the "new value" of the forecast (forecast_dim)
         next_state_dim = sum(scalar_dims) + global_dim + forecast_dim
 

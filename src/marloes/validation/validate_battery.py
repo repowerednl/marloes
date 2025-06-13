@@ -1,5 +1,5 @@
 def validate_battery(config: dict) -> str:
-    """Validate the battery agent configuration."""
+    """Validate the battery handler configuration."""
     # Check if required keys are present
     required_keys = [
         "energy_capacity",

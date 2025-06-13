@@ -28,14 +28,24 @@ class SSSubReward(SubReward):
         super().__init__(config, active, scaling_factor)
         self.r_mean = 0
         max_demand = sum(
-            agent.get("scale", 1) * MAX_DEMAND
-            for agent in self.config["agents"]
-            if agent.get("type") == "demand"
+            handler.get("scale", 1) * MAX_DEMAND
+            for handler in self.config["handlers"]
+            if handler.get("type") == "demand"
         )
         max_battery = sum(
-            agent.get("power") * BATTERY_SCALE
-            for agent in self.config["agents"]
-            if agent.get("type") == "battery"
+            handler.get("power") * BATTERY_SCALE
+            for handler in self.config["handlers"]
+            if handler.get("type") == "battery"
+        )
+        max_solar = sum(
+            handler.get("AC") * BATTERY_SCALE
+            for handler in self.config["handlers"]
+            if handler.get("type") == "solar"
+        )
+        max_wind = sum(
+            handler.get("AC") * BATTERY_SCALE
+            for handler in self.config["handlers"]
+            if handler.get("type") == "wind"
         )
         self.max_intake = max_demand + max_battery
 
@@ -58,9 +68,9 @@ class SSSubReward(SubReward):
             if input_dict["net_grid_state"] > 0:
                 # Calculate the running mean
                 raw_reward = -import_frac
-                self.r_mean = (ALPHA * self.r_mean) + (1 - ALPHA) * raw_reward
-                reward = raw_reward - self.r_mean
-                return reward
+                # self.r_mean = (ALPHA * self.r_mean) + (1 - ALPHA) * raw_reward
+                # reward = raw_reward - self.r_mean
+                return raw_reward
             else:
                 # Diminishing returns
                 surplus_kwh = abs(input_dict["net_grid_state"])

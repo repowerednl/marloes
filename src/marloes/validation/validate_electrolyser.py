@@ -1,5 +1,5 @@
 def validate_electrolyser(config: dict) -> str:
-    """Validate the electrolyser agent configuration."""
+    """Validate the electrolyser handler configuration."""
     # Check if required keys are present
     required_keys = [
         "energy_capacity",

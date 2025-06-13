@@ -1,5 +1,5 @@
 def validate_demand(config: dict) -> str:
-    """Validate the demand agent configuration."""
+    """Validate the demand handler configuration."""
     # Check if required keys are present
     required_keys = ["profile", "scale"]
     for key in required_keys:

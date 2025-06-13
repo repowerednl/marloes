@@ -4,14 +4,14 @@ from sklearn.model_selection import ParameterGrid
 
 
 class GridSearch:
-    def __init__(self, agents: int, coverage: float):
-        self.agents = agents
+    def __init__(self, handlers: int, coverage: float):
+        self.handlers = handlers
         self.coverage = coverage
         self.results = []
 
     def load_config(self):
         """Load the configuration for the grid search."""
-        with open(f"config_{self.agents}agents.yaml", "r") as file:
+        with open(f"config_{self.handlers}handlers.yaml", "r") as file:
             self.config = yaml.safe_load(file)
 
     def _get_combinations(self):

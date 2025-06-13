@@ -36,7 +36,7 @@ class WorldModelTestCase(TestCase):
         # = 2880 + 6 + 2 + 4 + 4 = 2896
         # Any additional info...
         cls.observation_shape = (2896,)
-        # Action Space: 6 agents, 6 actions
+        # Action Space: 6 handlers, 6 actions
         cls.action_shape = (6,)
         # initialize a replay buffer to get the observations, actions, rewards and dones
         cls.replay_buffer = ReplayBuffer(100, "cpu")

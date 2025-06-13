@@ -12,15 +12,20 @@ from simon.assets.demand import Demand
 from simon.assets.battery import Battery
 from simon.assets.supply import Supply
 
-from marloes.agents import (
-    BatteryAgent,
-    GridAgent,
-    SolarAgent,
-    WindAgent,
-    ElectrolyserAgent,
-    DemandAgent,
+from marloes.handlers import (
+    BatteryHandler,
+    GridHandler,
+    SolarHandler,
+    WindHandler,
+    ElectrolyserHandler,
+    DemandHandler,
 )
-from marloes.agents.base import Agent, SupplyAgents, StorageAgents, DemandAgents
+from marloes.handlers.base import (
+    Handler,
+    SupplyHandlers,
+    StorageHandlers,
+    DemandHandlers,
+)
 from marloes.algorithms.util import get_net_forecasted_power, get_net_power
 from marloes.data.extensive_data import ExtensiveDataStore
 from marloes.results.util import get_latest_uid
@@ -109,7 +114,7 @@ class Extractor:
             model, Battery
         )
 
-        # Get available power of supply agents
+        # Get available power of supply handlers
         self.supply_available_power[self.i] = sum(
             [
                 asset.state.available_power
@@ -161,7 +166,7 @@ class Extractor:
         return uid
 
     def from_observations(
-        self, observations: dict, trainable_agents: list[Agent]
+        self, observations: dict, trainable_handlers: list[Handler]
     ) -> None:
         """
         Save the necessary information from the observations.
@@ -172,9 +177,9 @@ class Extractor:
             raise IndexError("Extractor has reached its maximum capacity.")
 
         nominations = self._get_total_nomination_by_type(observations)
-        self.total_solar_nomination[self.i] = nominations["SolarAgent"]
-        self.total_wind_nomination[self.i] = nominations["WindAgent"]
-        self.total_demand_nomination[self.i] = nominations["DemandAgent"]
+        self.total_solar_nomination[self.i] = nominations["SolarHandler"]
+        self.total_wind_nomination[self.i] = nominations["WindHandler"]
+        self.total_demand_nomination[self.i] = nominations["DemandHandler"]
 
         # sum all nomination_fractions in observations together
         for key, value in observations.items():
@@ -182,11 +187,11 @@ class Extractor:
                 self.total_nomination_fraction[self.i] += value["nomination_fraction"]
 
         # Setpoints
-        for agent in trainable_agents:
-            if not hasattr(self, f"{agent.id}_setpoints"):
-                setattr(self, f"{agent.id}_setpoints", np.zeros(self.size))
-            getattr(self, f"{agent.id}_setpoints")[self.i] = (
-                agent.asset.setpoint.value if agent.asset.setpoint else 0.0
+        for handler in trainable_handlers:
+            if not hasattr(self, f"{handler.id}_setpoints"):
+                setattr(self, f"{handler.id}_setpoints", np.zeros(self.size))
+            getattr(self, f"{handler.id}_setpoints")[self.i] = (
+                handler.asset.setpoint.value if handler.asset.setpoint else 0.0
             )
 
     def store_loss(self, loss_dict: dict) -> None:
@@ -205,22 +210,22 @@ class Extractor:
     @staticmethod
     def _get_total_nomination_by_type(observations: dict) -> dict[str, float]:
         """
-        At a timestep, sums the nomination of all Supply and Demand agents
-        - SolarAgent
-        - WindAgent
-        - DemandAgent
+        At a timestep, sums the nomination of all Supply and Demand handlers
+        - SolarHandler
+        - WindHandler
+        - DemandHandler
         """
-        supply_nominations = {agent.value: 0.0 for agent in SupplyAgents}
-        demand_nominations = {agent.value: 0.0 for agent in DemandAgents}
+        supply_nominations = {handler.value: 0.0 for handler in SupplyHandlers}
+        demand_nominations = {handler.value: 0.0 for handler in DemandHandlers}
 
-        for agent_id, observation in observations.items():
-            agent_type = agent_id.split(" ")[0]
-            if agent_type in supply_nominations:
-                supply_nominations[agent_type] += observation[
+        for handler_id, observation in observations.items():
+            handler_type = handler_id.split(" ")[0]
+            if handler_type in supply_nominations:
+                supply_nominations[handler_type] += observation[
                     "nomination"
                 ]  # TODO: what if no nomination?
-            if agent_type in demand_nominations:
-                demand_nominations[agent_type] += observation["nomination"]
+            if handler_type in demand_nominations:
+                demand_nominations[handler_type] += observation["nomination"]
 
         return supply_nominations | demand_nominations
 
@@ -304,23 +309,23 @@ class ExtensiveExtractor(Extractor):
         self.extensive_data.stash_chunk()
 
     def from_observations(
-        self, observations: dict, trainable_agents: list[Agent]
+        self, observations: dict, trainable_handlers: list[Handler]
     ) -> None:
-        super().from_observations(observations, trainable_agents)
+        super().from_observations(observations, trainable_handlers)
 
         # Fill in the forecast data
         # Since forecast does not change, we can just iteratively add the first value of the forecast series
         # to the forecast array
-        for agent_id, observation in observations.items():
+        for handler_id, observation in observations.items():
             if "forecast" in observation:
                 forecast = observation["forecast"]
                 if isinstance(forecast, np.ndarray):
                     forecast = forecast[0]
-                if agent_id.startswith("SolarAgent"):
+                if handler_id.startswith("SolarHandler"):
                     self.solar_forecast[self.i] = forecast
-                elif agent_id.startswith("WindAgent"):
+                elif handler_id.startswith("WindHandler"):
                     self.wind_forecast[self.i] = forecast
-                elif agent_id.startswith("DemandAgent"):
+                elif handler_id.startswith("DemandHandler"):
                     self.demand_forecast[self.i] = forecast
 
         self.net_forecasted_power[self.i] = get_net_forecasted_power(observations)

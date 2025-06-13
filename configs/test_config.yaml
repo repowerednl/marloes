@@ -1,5 +1,5 @@
 algorithm: Priorities
-agents:
+handlers:
   - type: battery
     energy_capacity: 2000
     power: 1800

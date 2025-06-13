@@ -8,7 +8,7 @@ class ActorNetwork(SACBaseNetwork):
     """
     Actor network (policy) for the Soft Actor-Critic (SAC) algorithm.
 
-    This network is used for generating actions for the agents based on the input state.
+    This network is used for generating actions for the handlers based on the input state.
     It outputs the mean and log standard deviation (log_std) of a Gaussian distribution,
     which is used to sample actions stochastically.
 

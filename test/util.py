@@ -71,19 +71,19 @@ def get_mock_observation(
     - demand has forecast nomination and power
     """
     observation = {
-        "SolarAgent 0": {
+        "SolarHandler 0": {
             "forecast": [solar_power] * 3,
             "power": solar_power,
             "available_power": 0.1,
             "nomination": solar_nomination,
         },
-        "WindAgent 0": {
+        "WindHandler 0": {
             "forecast": [wind_power] * 3,
             "power": wind_power,
             "available_power": 0.1,
             "nomination": wind_nomination,
         },
-        "DemandAgent 0": {
+        "DemandHandler 0": {
             "forecast": [-2.0, -3.0, -4.0],
             "nomination": -3.0,
             "power": 0.1,
@@ -91,7 +91,7 @@ def get_mock_observation(
     }
 
     for i, soc in enumerate(battery_soc):
-        observation[f"BatteryAgent {i}"] = {
+        observation[f"BatteryHandler {i}"] = {
             "state_of_charge": soc,
             "degradation": 0.2,
         }
@@ -101,10 +101,10 @@ def get_mock_observation(
 
 def get_new_config():
     """
-    Function to return a configuration of agents for creating an Environment/Model.
+    Function to return a configuration of handlers for creating an Environment/Model.
     """
     return {
-        "agents": [
+        "handlers": [
             {
                 "type": "demand",
                 "scale": 1.5,

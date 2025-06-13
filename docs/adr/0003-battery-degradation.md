@@ -8,7 +8,7 @@ TBJ
 
 ## Context
 
-The `battery_degradation` function in `agents/battery.py` which linearly degrades a battery to 60% performance based on the total lifetime should be justified.
+The `battery_degradation` function in `handlers/battery.py` which linearly degrades a battery to 60% performance based on the total lifetime should be justified.
 
 ## Decision
 

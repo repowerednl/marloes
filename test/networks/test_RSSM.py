@@ -71,7 +71,7 @@ class RSSMTestCase(TestCase):
             x_shape=10,
         )
         # input should be of size RSSM_LD.hidden["recurrent"]["input_size"] (256 + 64 + 6 right now) = torch.cat(h_t, z_t, a_t)
-        a_t = torch.randn(1, 1, 6)  # 6 agents
+        a_t = torch.randn(1, 1, 6)  # 6 handlers
         h_t = torch.randn(1, 1, 256)
         z_t = torch.randn(1, 1, 64)
 

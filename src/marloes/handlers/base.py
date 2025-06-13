@@ -11,21 +11,21 @@ from simon.data.asset_data import AssetSetpoint
 from marloes.data.util import convert_to_hourly_nomination
 
 
-class SupplyAgents(Enum):
-    SOLAR = "SolarAgent"
-    WIND = "WindAgent"
+class SupplyHandlers(Enum):
+    SOLAR = "SolarHandler"
+    WIND = "WindHandler"
 
 
-class DemandAgents(Enum):
-    DEMAND = "DemandAgent"
+class DemandHandlers(Enum):
+    DEMAND = "DemandHandler"
 
 
-class StorageAgents(Enum):
-    BATTERY = "BatteryAgent"
-    ELECTROLYSER = "ElectrolyserAgent"
+class StorageHandlers(Enum):
+    BATTERY = "BatteryHandler"
+    ELECTROLYSER = "ElectrolyserHandler"
 
 
-class Agent(ABC):
+class Handler(ABC):
     _id_counters = {}
 
     def __init__(
@@ -37,7 +37,7 @@ class Agent(ABC):
         forecast: pd.Series = None,
     ):
         """
-        Base Agent class.
+        Base Handler class.
 
         :param asset_class: The SIMON `Asset` class you are wrapping (e.g. Demand, Battery, etc.)
         :param config: Configuration dict for the asset.
@@ -45,15 +45,15 @@ class Agent(ABC):
         :param series: (Optional) the main time series that drives the asset, e.g. actual consumption.
         :param forecast: (Optional) a time series representing a forecast for this asset.
         """
-        # Set the agent's ID by keeping count of each asset
+        # Set the handler's ID by keeping count of each asset
         cls_name = self.__class__.__name__
-        if cls_name not in Agent._id_counters:
-            Agent._id_counters[cls_name] = 0
+        if cls_name not in Handler._id_counters:
+            Handler._id_counters[cls_name] = 0
 
-        self.id = f"{cls_name} {Agent._id_counters[cls_name]}"
-        Agent._id_counters[cls_name] += 1
+        self.id = f"{cls_name} {Handler._id_counters[cls_name]}"
+        Handler._id_counters[cls_name] += 1
 
-        default_config = self.get_default_config(config, self.id.replace("Agent", ""))
+        default_config = self.get_default_config(config, self.id.replace("Handler", ""))
         config = self.merge_configs(default_config, config)
 
         # Build Simon asset, with optional series
@@ -90,7 +90,7 @@ class Agent(ABC):
 
     def get_state(self, time_stamp: datetime) -> dict:
         """
-        Get the current state of the agent. Can be overwritten to also include other information.
+        Get the current state of the handler. Can be overwritten to also include other information.
         """
         state = self.asset.state.model_dump()
 
@@ -105,7 +105,7 @@ class Agent(ABC):
             hour = time_stamp.replace(minute=0, second=0, microsecond=0)
             state["nomination"] = self.nominated_volume.get(hour, 0.0)
 
-            # only add the attribute to the agent if a forecast is present
+            # only add the attribute to the handler if a forecast is present
             if not hasattr(self, "nomination_fraction"):
                 self.nomination_fraction = 0.0
 
@@ -125,7 +125,7 @@ class Agent(ABC):
             # Add the current nomination fraction to the state
             state["nomination_fraction"] = self.nomination_fraction
 
-        # remove 'time' from the state since this is the same for all agents
+        # remove 'time' from the state since this is the same for all handlers
         if "time" in state:
             state.pop("time")
 

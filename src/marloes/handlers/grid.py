@@ -9,11 +9,11 @@ def patched_get_state(self):
     return copy.deepcopy(self.state)
 
 
-class GridAgent:
+class GridHandler:
     """
-    GridAgent is an agent that represents the Grid.
+    GridHandler is an handler that represents the Grid.
     config requires:
-    - name: name of the agent
+    - name: name of the handler
     - max_power_in: maximum power that can be drawn from the grid
     - max_power_out: maximum power that can be fed back to the grid
     """

@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from marloes.agents.battery import BatteryAgent
+from marloes.handlers.battery import BatteryHandler
 from marloes.util import timethis
 
 from .base import BaseAlgorithm
@@ -77,7 +77,7 @@ class Dyna(BaseAlgorithm):
 
     def get_actions(self, state: dict, deterministic: bool = False) -> dict:
         """
-        Generates actions based on the current observation using the SAC agent.
+        Generates actions based on the current observation using the SAC handler.
 
         Args:
             state (dict): Current state of the environment.
@@ -98,12 +98,12 @@ class Dyna(BaseAlgorithm):
             [self.real_RB.dict_to_tens(state) for state in states]
         ).to(self.device)
 
-        # Get actions from the SAC agent
+        # Get actions from the SAC handler
         actions = self.sac.act(state_tensors, deterministic=deterministic)
 
         # Convert actions back to the original format
         action_list = actions.cpu().tolist()
-        keys = list(self.environment.trainable_agent_dict.keys())
+        keys = list(self.environment.trainable_handler_dict.keys())
         batched = [
             {keys[i]: action_list[b][i] for i in range(len(keys))}
             for b in range(len(action_list))
@@ -154,7 +154,7 @@ class Dyna(BaseAlgorithm):
         for _ in range(self.k):
             # Generate synthetic actions TODO: decide if random or policy
             synthetic_actions = [
-                self.sample_actions(self.environment.trainable_agent_dict)
+                self.sample_actions(self.environment.trainable_handler_dict)
                 for _ in range(self.batch_size)
             ]
             # Use policy actions

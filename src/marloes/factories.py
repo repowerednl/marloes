@@ -44,7 +44,7 @@ class ConnectionFactory(AssetFactory):
     class Meta:
         model = Connection
 
-    name = factory.Sequence(lambda n: f"GridAgent {n}")
+    name = factory.Sequence(lambda n: f"GridHandler {n}")
     max_power_in = 1000
     max_power_out = 1000
 
@@ -57,7 +57,7 @@ class SolarFactory(AssetFactory):
     class Meta:
         model = Supply
 
-    name = factory.Sequence(lambda n: f"SolarAgent {n}")
+    name = factory.Sequence(lambda n: f"SolarHandler {n}")
     constant_supply = 900
     max_power_out = 1000
 
@@ -70,7 +70,7 @@ class BatteryFactory(AssetFactory):
     class Meta:
         model = Battery
 
-    name = factory.Sequence(lambda n: f"BatteryAgent {n}")
+    name = factory.Sequence(lambda n: f"BatteryHandler {n}")
     max_power_in = 1000
     max_power_out = 1000
     max_state_of_charge = 0.95
@@ -89,7 +89,7 @@ class DemandFactory(AssetFactory):
     class Meta:
         model = Demand
 
-    name = factory.Sequence(lambda n: f"DemandAgent {n}")
+    name = factory.Sequence(lambda n: f"DemandHandler {n}")
     max_power_in = 1000
     constant_demand = 900
 

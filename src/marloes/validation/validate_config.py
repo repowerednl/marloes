@@ -34,8 +34,8 @@ def validate_config(config: dict) -> str:
         ):
             raise ValueError("Error: 'learning_rate' must be a positive float")
 
-    # Validate each agent configuration
-    for agent in config["agents"]:
-        globals().get(f"validate_{agent['type']}")(agent)
+    # Validate each handler configuration
+    for handler in config["handlers"]:
+        globals().get(f"validate_{handler['type']}")(handler)
 
     return "Configuration is valid"

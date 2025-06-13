@@ -15,19 +15,19 @@ class BalanceSubReward(SubReward):
     def __init__(self, config: dict, active: bool = False, scaling_factor: float = 1.0):
         super().__init__(config, active, scaling_factor)
         self.total_battery_power = sum(
-            agent.get("power")
-            for agent in self.config["agents"]
-            if agent.get("type") == "battery"
+            handler.get("power")
+            for handler in self.config["handlers"]
+            if handler.get("type") == "battery"
         )
         self.max_demand = sum(
-            agent.get("scale", 1) * MAX_DEMAND
-            for agent in self.config["agents"]
-            if agent.get("type") == "demand"
+            handler.get("scale", 1) * MAX_DEMAND
+            for handler in self.config["handlers"]
+            if handler.get("type") == "demand"
         )
         self.max_supply = sum(
-            agent.get("AC")
-            for agent in self.config["agents"]
-            if agent.get("type") in ["solar", "wind"]
+            handler.get("AC")
+            for handler in self.config["handlers"]
+            if handler.get("type") in ["solar", "wind"]
         )
 
     def calculate(self, extractor, actual: bool, **kwargs) -> float | np.ndarray:
@@ -52,23 +52,25 @@ class BalanceSubReward(SubReward):
         solar_action = sum(
             extractor.__dict__[attr][extractor.i]
             for attr in extractor.__dict__
-            if isinstance(getattr(extractor, attr), np.ndarray) and "SolarAgent" in attr
+            if isinstance(getattr(extractor, attr), np.ndarray)
+            and "SolarHandler" in attr
         )
         wind_action = sum(
             extractor.__dict__[attr][extractor.i]
             for attr in extractor.__dict__
-            if isinstance(getattr(extractor, attr), np.ndarray) and "WindAgent" in attr
+            if isinstance(getattr(extractor, attr), np.ndarray)
+            and "WindHandler" in attr
         )
         supply_action = solar_action + wind_action
 
-        # Get all attributes from extractor that contain "BatteryAgent"
+        # Get all attributes from extractor that contain "BatteryHandler"
         battery_charge_action = 0
         battery_discharge_action = 0
 
         for attr in extractor.__dict__:
             if (
                 isinstance(getattr(extractor, attr), np.ndarray)
-                and "BatteryAgent" in attr
+                and "BatteryHandler" in attr
             ):
                 action = getattr(extractor, attr)[extractor.i]
                 # Discharge is positive, charge is negative

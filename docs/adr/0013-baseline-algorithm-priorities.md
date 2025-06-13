@@ -16,4 +16,4 @@ The basic rule is; if there is more energy available (supply assets like solar/w
 
 ## Consequences
 
-Some basic functionality for the batteries in Simon to work with priorities. This is not done for ElectrolyserAgent yet, but should work the same way.
+Some basic functionality for the batteries in Simon to work with priorities. This is not done for ElectrolyserHandler yet, but should work the same way.

@@ -17,7 +17,7 @@ class EncoderDecoderTestCase(TestCase):
     def setUpClass(cls):
         state = {"nom": 1, "test": 2}
         state_2 = {"nom": 3, "test": 4, "extra": 5}
-        cls.observation = {"agent1": state, "agent2": state_2}
+        cls.observation = {"handler1": state, "handler2": state_2}
         cls.tensor = ReplayBuffer.dict_to_tens(cls.observation)
 
         cls.z_t_size = RSSM_LD.hidden["dense"]["out_features"]

@@ -4,29 +4,29 @@ import numpy as np
 
 def parse_state(state_list: list[dict], device: str) -> dict[str, dict]:
     """
-    Divide state into scalars and forecast per agent and convert to tensors.
+    Divide state into scalars and forecast per handler and convert to tensors.
 
     Args:
         state_list (list[dict[str, Any]]): list of state dictionaries, where each dictionary contains
-            agent-specific data including scalars and forecasts.
+            handler-specific data including scalars and forecasts.
         device (str, optional): Device to place the tensors on (default: "cpu").
 
     Returns:
-        dict[str, dict[str, dict[str, torch.Tensor]]]: A dictionary containing tensors for each agent's
+        dict[str, dict[str, dict[str, torch.Tensor]]]: A dictionary containing tensors for each handler's
             scalars and forecasts.
     """
-    agent_data = {}
+    handler_data = {}
     global_context_list = []
 
     for state_dict in state_list:
-        # Add agent data
-        for agent_name, agent_info in state_dict.items():
-            if agent_name not in agent_data:
-                agent_data[agent_name] = {"scalars": [], "forecast": []}
+        # Add handler data
+        for handler_name, handler_info in state_dict.items():
+            if handler_name not in handler_data:
+                handler_data[handler_name] = {"scalars": [], "forecast": []}
             scalars = []
             forecast_array = None
 
-            for k, v in agent_info.items():
+            for k, v in handler_info.items():
                 if k == "forecast":
                     # GRU expects (.., seq_length, num_features), not (.., num_features, seq_length)
                     # So we reshape
@@ -34,8 +34,8 @@ def parse_state(state_list: list[dict], device: str) -> dict[str, dict]:
                 else:
                     scalars.append(float(v))
 
-            agent_data[agent_name]["scalars"].append(scalars)
-            agent_data[agent_name]["forecast"].append(forecast_array)
+            handler_data[handler_name]["scalars"].append(scalars)
+            handler_data[handler_name]["forecast"].append(forecast_array)
 
         # Add global context
         context = state_dict["global_context"]
@@ -43,9 +43,9 @@ def parse_state(state_list: list[dict], device: str) -> dict[str, dict]:
         global_context_list.append(vector)
 
     # Now convert tensors; stack along batch dim
-    final_dict = {"agents": {}}
+    final_dict = {"handlers": {}}
 
-    for agent_name, data in agent_data.items():
+    for handler_name, data in handler_data.items():
         scalar = np.array(data["scalars"], dtype=np.float32)
         scalar_tensor = torch.from_numpy(scalar).to(device)
 
@@ -57,7 +57,7 @@ def parse_state(state_list: list[dict], device: str) -> dict[str, dict]:
             forecast = np.stack(forecast_list, axis=0)
             forecast_tensor = torch.from_numpy(forecast).to(device)
 
-        final_dict["agents"][agent_name] = {
+        final_dict["handlers"][handler_name] = {
             "scalars": scalar_tensor,
             "forecast": forecast_tensor,
         }
@@ -76,25 +76,25 @@ def parse_actions(action_list: list[dict[str, float]], device: str) -> torch.Ten
     Turn actions into a tensor.
 
     Args:
-        action_list (list[dict[str, float]]): list of dictionaries containing actions for each agent.
+        action_list (list[dict[str, float]]): list of dictionaries containing actions for each handler.
         device (str, optional): Device to place the tensor on (default: "cpu").
 
     Returns:
-        torch.Tensor: Tensor of shape (batch_size, num_agents) containing the actions.
+        torch.Tensor: Tensor of shape (batch_size, num_handlers) containing the actions.
     """
     # Sort to ensure consistency
-    all_agents = list(action_list[0].keys())
+    all_handlers = list(action_list[0].keys())
     action_tensors = []
 
-    for agent in all_agents:
-        actions = [float(actions_dict[agent]) for actions_dict in action_list]
+    for handler in all_handlers:
+        actions = [float(actions_dict[handler]) for actions_dict in action_list]
         # Also reshape; network requires (batch_size, feature_dim)
-        # Here, feature_dim is 1 since we have a single action per agent
-        agent_array = np.array(actions, dtype=np.float32).reshape(-1, 1)
-        agent_tensor = torch.from_numpy(agent_array).to(device)
-        action_tensors.append(agent_tensor)
+        # Here, feature_dim is 1 since we have a single action per handler
+        handler_array = np.array(actions, dtype=np.float32).reshape(-1, 1)
+        handler_tensor = torch.from_numpy(handler_array).to(device)
+        action_tensors.append(handler_tensor)
 
-    # Actions can be a single tensor with shape (batch_size, num_agents)
+    # Actions can be a single tensor with shape (batch_size, num_handlers)
     final_actions = torch.cat(action_tensors, dim=-1)
     return final_actions
 

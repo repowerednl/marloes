@@ -1,5 +1,5 @@
 def validate_wind(config: dict) -> str:
-    """Validate the Wind agent configuration."""
+    """Validate the Wind handler configuration."""
     # Check if required keys are present
     required_keys = ["location", "AC", "power"]
     for key in required_keys:

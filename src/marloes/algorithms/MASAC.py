@@ -11,15 +11,15 @@ from marloes.util import timethis
 
 class MultiAgentSAC:
     """
-    SAC with one ActorNetwork per agent, but shared central critic + value.
+    SAC with one ActorNetwork per handler, but shared central critic + value.
     Adhering to the sCTCE (sequential centralized training with centralized execution) paradigm.
-    This is a multi-agent version of the Soft Actor-Critic (SAC) algorithm.
+    This is a multi-handler version of the Soft Actor-Critic (SAC) algorithm.
     """
 
     def __init__(self, config: dict, device: str):
         self.n = config[
             "action_dim"
-        ]  # Number of agents is equal to action_dim, because continuous
+        ]  # Number of handlers is equal to action_dim, because continuous
         self.action_dim = config["action_dim"]
         self.device = device
 
@@ -40,7 +40,7 @@ class MultiAgentSAC:
         self.critic_1_network = CriticNetwork(config).to(device)
         self.critic_2_network = CriticNetwork(config).to(device)
 
-        # NB: Separate actor networks for each agent
+        # NB: Separate actor networks for each handler
         self.actors = torch.nn.ModuleList(
             [ActorNetwork(config).to(device) for _ in range(self.n)]
         )
@@ -212,13 +212,13 @@ class MultiAgentSAC:
         """
         # Loop over all actors while keeping other actors fixed
         for i, (actor, optimizer) in enumerate(zip(self.actors, self.actor_optimizers)):
-            # Sample this agent with gradient so that we can backpropagate
+            # Sample this handler with gradient so that we can backpropagate
             a_i, log_pi_i = actor.sample(batch["state"])
 
             # Sample actions (no gradient) from the other actors
             actions, _ = self._sample_joint_action(batch["state"])
 
-            # Construct the joint action, using the fixed actions of the other agents
+            # Construct the joint action, using the fixed actions of the other handlers
             joint_action = torch.cat(
                 [
                     actions[:, :i].detach(),
@@ -272,7 +272,7 @@ class MultiAgentSAC:
     def _sample_joint_action(self, state):
         """
         Sample a joint action from the actor networks.
-        This is extra functionality required for the multi-agent setting.
+        This is extra functionality required for the multi-handler setting.
         It combines the actions from all actors into a single joint action.
         """
         actions, log_pis = [], []

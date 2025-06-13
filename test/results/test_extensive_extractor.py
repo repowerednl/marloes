@@ -74,10 +74,10 @@ class TestExtensiveExtractor(unittest.TestCase):
 
         # Check aggregated power
         expected_power_data = {
-            "SolarAgent": 125.0,
-            "GridAgent": 200.0,
-            "BatteryAgent": 0.0,
-            "DemandAgent": 0.0,
+            "SolarHandler": 125.0,
+            "GridHandler": 200.0,
+            "BatteryHandler": 0.0,
+            "DemandHandler": 0.0,
         }
 
         actual_power_data = self.extractor.get_current_power_by_type(self.model)

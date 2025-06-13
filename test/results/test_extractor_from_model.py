@@ -19,7 +19,7 @@ MINUTES_IN_A_YEAR = 525600
 class TestExtractorFromModel(unittest.TestCase):
     def setUp(self):
         """
-        Set up a Model instance with a single Connection, Supply, and BatteryAgent using factories.
+        Set up a Model instance with a single Connection, Supply, and BatteryHandler using factories.
         """
         # Initialize the Model
         self.model = Model()
@@ -69,10 +69,10 @@ class TestExtractorFromModel(unittest.TestCase):
         self.extractor.from_model(self.model)
 
         expected_power_data = {
-            "SolarAgent": 125.0,
-            "GridAgent": 200.0,
-            "BatteryAgent": 0.0,
-            "DemandAgent": 0.0,
+            "SolarHandler": 125.0,
+            "GridHandler": 200.0,
+            "BatteryHandler": 0.0,
+            "DemandHandler": 0.0,
         }
 
         actual_power_data = self.extractor.get_current_power_by_type(self.model)

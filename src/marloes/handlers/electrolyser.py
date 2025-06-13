@@ -1,4 +1,4 @@
-"""Electrolyser agent with functionality from Repowered's Simon"""
+"""Electrolyser handler with functionality from Repowered's Simon"""
 
 from datetime import datetime
 import numpy as np
@@ -6,10 +6,10 @@ from simon.assets.battery import Battery
 from simon.data.battery_data import BatteryState
 
 from functools import partial
-from .base import Agent
+from .base import Handler
 
 
-class ElectrolyserAgent(Agent):
+class ElectrolyserHandler(Handler):
     def __init__(self, config: dict, start_time: datetime, *args, **kwargs):
         super().__init__(Battery, config, start_time)
         # the internal clock is to keep track of the start-up time of the electrolyser

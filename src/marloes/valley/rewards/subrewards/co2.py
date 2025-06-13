@@ -34,14 +34,14 @@ class CO2SubReward(SubReward):
         """
         super().__init__(config, active, scaling_factor)
         max_demand = sum(
-            agent.get("scale", 1) * MAX_DEMAND
-            for agent in self.config["agents"]
-            if agent.get("type") == "demand"
+            handler.get("scale", 1) * MAX_DEMAND
+            for handler in self.config["handlers"]
+            if handler.get("type") == "demand"
         )
         max_battery = sum(
-            agent.get("power") * BATTERY_SCALE
-            for agent in self.config["agents"]
-            if agent.get("type") == "battery"
+            handler.get("power") * BATTERY_SCALE
+            for handler in self.config["handlers"]
+            if handler.get("type") == "battery"
         )
         self.max_emmissions = (max_demand + max_battery) * self.EMISSION_COEFFICIENTS[
             "grid"

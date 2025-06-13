@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 from marloes.algorithms.dreamer import Dreamer
-from marloes.agents.base import Agent
+from marloes.handlers.base import Handler
 from marloes.networks.dreamer.ActorCritic import ActorCritic
 from marloes.networks.dreamer.WorldModel import WorldModel
 from marloes.data.replaybuffer import ReplayBuffer
@@ -17,7 +17,7 @@ def get_new_config() -> dict:
     return {
         "algorithm": "dreamer",
         "epochs": 10,
-        "agents": [
+        "handlers": [
             {
                 "type": "demand",
                 "scale": 1.5,
@@ -64,14 +64,14 @@ class DreamerTestCase(TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        Agent._id_counters = {}
+        Handler._id_counters = {}
         with patch(
             "marloes.results.saver.Saver._update_simulation_number", return_value=0
         ):
             cls.alg = Dreamer(config=get_new_config())
 
     def test_init(self):
-        self.assertEqual(len(self.alg.environment.agents), 6)
+        self.assertEqual(len(self.alg.environment.handlers), 6)
         # environment should have state dim
         self.assertEqual(self.alg.environment.state_dim, (7215,))
         # environment should have action_space torch.Size([3])
@@ -88,16 +88,18 @@ class DreamerTestCase(TestCase):
         obs = ReplayBuffer.dict_to_tens(obs, concatenate_all=True)
         actions = self.alg.get_actions(
             obs
-        )  # Calls actor(model_state).sample() which returns shape: (#agents,)
+        )  # Calls actor(model_state).sample() which returns shape: (#handlers,)
         self.assertIsInstance(actions, dict)
-        # one action for each agent
+        # one action for each handler
         self.assertEqual(len(actions), 6)
 
     def test_perform_training_steps(self):
         """
         Testing the training steps.
         """
-        actions = {agent_id: 0.5 for agent_id in self.alg.environment.agent_dict.keys()}
+        actions = {
+            handler_id: 0.5 for handler_id in self.alg.environment.handler_dict.keys()
+        }
         # fill the replaybuffer with 100 elements
         for i in range(1000):
             obs, rew, _, _ = self.alg.environment.step(actions)

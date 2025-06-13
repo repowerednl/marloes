@@ -13,31 +13,39 @@ from marloes.networks.simple_world_model.util import (
 def example_state():
     return [
         {
-            "SolarAgent 0": {
+            "SolarHandler 0": {
                 "power": 0.0,
                 "available_power": 43.21193509915177,
                 "forecast": np.array([1.0, 2.0, 3.0], dtype=np.float32),
                 "nomination": 10.510129678863084,
             },
-            "SolarAgent 1": {
+            "SolarHandler 1": {
                 "power": 0.0,
                 "available_power": 0.0,
                 "forecast": np.array([4.0, 5.0, 6.0], dtype=np.float32),
                 "nomination": 8.267004187266336,
             },
-            "WindAgent 0": {"power": 0.0, "available_power": 7.765112675967633},
-            "DemandAgent 0": {
+            "WindHandler 0": {"power": 0.0, "available_power": 7.765112675967633},
+            "DemandHandler 0": {
                 "power": 0.0,
                 "forecast": np.array([7.0, 8.0, 9.0], dtype=np.float32),
                 "nomination": -30.37188596955736,
             },
-            "DemandAgent 1": {
+            "DemandHandler 1": {
                 "power": 0.0,
                 "forecast": np.array([10.0, 11.0, 12.0], dtype=np.float32),
                 "nomination": -5.02699144260975,
             },
-            "BatteryAgent 0": {"power": 0.0, "state_of_charge": 0.5, "degradation": 0},
-            "BatteryAgent 1": {"power": 0.0, "state_of_charge": 0.5, "degradation": 0},
+            "BatteryHandler 0": {
+                "power": 0.0,
+                "state_of_charge": 0.5,
+                "degradation": 0,
+            },
+            "BatteryHandler 1": {
+                "power": 0.0,
+                "state_of_charge": 0.5,
+                "degradation": 0,
+            },
             "global_context": {
                 "month": 1,
                 "day": 1,
@@ -50,14 +58,14 @@ def example_state():
 
 def test_parse_state(example_state):
     parsed = parse_state(example_state, "cpu")
-    assert "agents" in parsed
-    assert "SolarAgent 0" in parsed["agents"]
-    assert parsed["agents"]["SolarAgent 0"]["scalars"].shape == (1, 3)
-    assert parsed["agents"]["SolarAgent 0"]["forecast"].shape == (1, 3, 1)
+    assert "handlers" in parsed
+    assert "SolarHandler 0" in parsed["handlers"]
+    assert parsed["handlers"]["SolarHandler 0"]["scalars"].shape == (1, 3)
+    assert parsed["handlers"]["SolarHandler 0"]["forecast"].shape == (1, 3, 1)
 
 
 def test_parse_actions():
-    action_list = [{"SolarAgent 0": 1.0, "BatteryAgent 0": -0.5}]
+    action_list = [{"SolarHandler 0": 1.0, "BatteryHandler 0": -0.5}]
     parsed = parse_actions(action_list, "cpu")
     assert isinstance(parsed, torch.Tensor)
     assert parsed.shape == (1, 2)  # 1 batch, 2 actions
@@ -82,7 +90,7 @@ def test_parse_batch(example_state):
     sample = [
         DummyTransition(
             state=example_state[0],
-            actions={"SolarAgent 0": 1.0, "BatteryAgent 0": -0.5},
+            actions={"SolarHandler 0": 1.0, "BatteryHandler 0": -0.5},
             rewards=1.0,
             next_state=example_state[0],
         )
