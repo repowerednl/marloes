@@ -3,4 +3,4 @@ name: default
 noise: 0.01
 drop_prob: 0.005
 long_drop_prob: 1e-4
-max_long_drop_days: 5
+max_long_drop_days: 2
