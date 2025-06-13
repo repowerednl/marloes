@@ -12,7 +12,7 @@ from marloes.util import timethis
 class MultiAgentSAC:
     """
     SAC with one ActorNetwork per handler, but shared central critic + value.
-    Adhering to the sCTCE (sequential centralized training with centralized execution) paradigm.
+    Adhering to the sCTDE (sequential centralized training with centralized execution) paradigm.
     This is a multi-handler version of the Soft Actor-Critic (SAC) algorithm.
     """
 

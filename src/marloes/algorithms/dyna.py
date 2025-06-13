@@ -32,8 +32,8 @@ class Dyna(BaseAlgorithm):
         self.world_model = WorldModel(self.config, self.device).to(self.device)
         dyna_config = config.get("dyna", {})
 
-        # Use MultiAgentSAC if sCTCE is enabled
-        if dyna_config.get("sCTCE", False):
+        # Use MultiAgentSAC if sCTDE is enabled
+        if dyna_config.get("sCTDE", False):
             self.sac = MultiAgentSAC(self.config, device=self.device)
         else:
             self.sac = SAC(self.config, device=self.device)

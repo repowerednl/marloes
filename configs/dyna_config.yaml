@@ -30,11 +30,6 @@ handlers:
   orientation: EW
   trainable: true
   type: solar
-# - AC: 1000
-#   DC: 1000
-#   orientation: EW
-#   trainable: true
-#   type: solar
 - profile: Farm
   scale: 15
   trainable: false
@@ -49,7 +44,7 @@ chunk_size: 5000
 dyna:
   k: 6
   real_sample_ratio: 0.8
-  sCTCE: false
+  sCTDE: false
   update_interval: 10
   updates_per_step: 18
   world_model_update_frequency: 1

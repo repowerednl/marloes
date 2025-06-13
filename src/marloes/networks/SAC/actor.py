@@ -32,7 +32,7 @@ class ActorNetwork(SACBaseNetwork):
                     - "log_std_max" (float, optional): Maximum value for log_std (default: 2).
         """
         state_dim = config["state_dim"]
-        if config["dyna"].get("sCTCE", False):
+        if config["dyna"].get("sCTDE", False):
             action_dim = 1
         else:
             action_dim = config["action_dim"]
