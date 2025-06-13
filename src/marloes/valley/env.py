@@ -104,7 +104,7 @@ class EnergyValley:
             config=config.get("grid", {}), start_time=self.start_time
         )
         self.handlers.append(self.grid)
-        if algorithm_type == "Priorities":
+        if algorithm_type == "PrioFlow":
             self.handlers.append(CurtailmentHandler({}, self.start_time))
 
         for handler_config in config.get("handlers", []):
@@ -129,16 +129,16 @@ class EnergyValley:
     def _initialize_model(self, algorithm_type: str) -> None:
         """
         Function to initialize the Model imported from Simon.
-        It adds all handlers to the model, and dynamically adds priorities to handler connections.
+        It adds all handlers to the model, and dynamically adds PrioFlow to handler connections.
         """
         logging.info("Constructing the networkx model...")
         self.model = Model()
-        # Add handlers to the model, temporarily add the grid handler and curtailment if algorithm is priorities
+        # Add handlers to the model, temporarily add the grid handler and curtailment if algorithm is PrioFlow
         for handler in self.handlers:
             self.model.add_asset(handler.asset, self._get_targets(handler))
-        # Remove the grid handler and curtailment if algorithm is priorities
+        # Remove the grid handler and curtailment if algorithm is PrioFlow
         self.handlers.pop(0)
-        if algorithm_type == "Priorities":
+        if algorithm_type == "PrioFlow":
             self.handlers.pop(0)
 
     def _get_targets(self, handler: Handler) -> list[tuple[Handler, int]]:

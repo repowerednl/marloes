@@ -27,7 +27,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         mock_series = pd.Series([100], index=[self.start_time])
         mock_demand.return_value = mock_series
         mock_solar.return_value = mock_series
-        self.env = EnergyValley(get_new_config(), "Priorities")
+        self.env = EnergyValley(get_new_config(), "PrioFlow")
         self.demand_handler = self.env.handlers[0]
         self.solar_handler = self.env.handlers[1]
         self.battery_handler = self.env.handlers[2]
@@ -158,7 +158,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
         """
         Test the priority mapping.
         """
-        # SolarHandler targets in non-priorities mode
+        # SolarHandler targets in non-PrioFlow mode
         solar_targets = self.env._get_targets(self.solar_handler)
         self.assertEqual(
             solar_targets + [(self.grid_handler.asset, -1)],
@@ -170,7 +170,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
             ],
         )
 
-        # BatteryHandler targets in non-priorities mode
+        # BatteryHandler targets in non-PrioFlow mode
         battery_targets = self.env._get_targets(self.battery_handler)
         self.assertEqual(
             battery_targets + [(self.grid_handler.asset, -1)],
@@ -181,7 +181,7 @@ class TestEnergyValleyEnv(unittest.TestCase):
             ],
         )
 
-        # GridHandler targets in non-priorities mode
+        # GridHandler targets in non-PrioFlow mode
         grid_targets = self.env._get_targets(self.grid_handler)
         self.assertEqual(
             grid_targets,
@@ -212,7 +212,7 @@ class TestEnergyValleyEnvWithTwoBatteries(unittest.TestCase):
                 "energy_capacity": 1000,
             }
         )
-        self.env = EnergyValley(config, "Priorities")
+        self.env = EnergyValley(config, "PrioFlow")
         self.demand_handler = self.env.handlers[0]
         self.solar_handler = self.env.handlers[1]
         self.battery_handler = self.env.handlers[2]
@@ -288,7 +288,7 @@ class TestEnergyValleyEnvWithWind(unittest.TestCase):
                 "curtailable_by_solver": True,
             }
         )
-        self.env = EnergyValley(config, "Priorities")
+        self.env = EnergyValley(config, "PrioFlow")
         self.demand_handler = self.env.handlers[0]
         self.solar_handler = self.env.handlers[1]
         self.battery_handler = self.env.handlers[2]

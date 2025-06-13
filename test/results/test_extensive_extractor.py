@@ -31,7 +31,7 @@ class TestExtensiveExtractor(unittest.TestCase):
         self.battery = BatteryFactory()
         self.demand = DemandFactory()
 
-        # Add assets to the model with target connections and priorities
+        # Add assets to the model with target connections and PrioFlow
         self.model.add_asset(
             self.grid, targets=[(self.battery, 1.0), (self.demand, 1.0)]
         )

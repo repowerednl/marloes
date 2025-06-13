@@ -4,19 +4,19 @@ from collections import defaultdict
 import math
 
 
-class Priorities(BaseAlgorithm):
+class PrioFlow(BaseAlgorithm):
     """
-    Priority-based algorithm that solves energy flows using pre-defined priorities.
+    Priority-based algorithm that solves energy flows using pre-defined PrioFlow.
     """
 
-    __name__ = "Priorities"
+    __name__ = "PrioFlow"
 
     def __init__(self, config: dict, evaluate: bool = False):
         """
-        Initializes the Priorities algorithm.
+        Initializes the PrioFlow algorithm.
         """
         super().__init__(config, evaluate)
-        self.normalize = False  # No normalization needed for priorities
+        self.normalize = False  # No normalization needed for PrioFlow
 
     @staticmethod
     def _determine_battery_actions(
@@ -41,7 +41,7 @@ class Priorities(BaseAlgorithm):
 
     def _get_batteries(self, observations: dict) -> dict:
         """
-        Extracts the batteries from the observations for the Priorities algorithm.
+        Extracts the batteries from the observations for the PrioFlow algorithm.
         """
         batteries = defaultdict()
         for key in [handler for handler in observations.keys() if "Battery" in handler]:
@@ -61,7 +61,7 @@ class Priorities(BaseAlgorithm):
 
     def get_actions(self, observations: dict, deterministic: bool = False) -> dict:
         """
-        No explicit actions are needed as the priorities are predefined.
+        No explicit actions are needed as the PrioFlow are predefined.
         The Simon Battery needs setpoints in order to work. To define a baseline we define logical steps for the battery.
         If based on forecasts, the net power is positive, the battery should charge.
         If based on forecasts, the net power is negative, the battery should discharge.

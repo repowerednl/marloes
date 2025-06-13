@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 import pandas as pd
 import pytest
-from marloes.algorithms.priorities import Priorities
+from marloes.algorithms.prioflow import PrioFlow
 from marloes.handlers.base import Handler
 
 from marloes.algorithms.util import get_net_forecasted_power
@@ -11,7 +11,7 @@ from test.util import get_accurate_observation, get_mock_observation
 
 def get_new_config() -> dict:
     return {
-        "algorithm": "priorities",
+        "algorithm": "PrioFlow",
         "training_steps": 100,
         "handlers": [
             {
@@ -39,7 +39,7 @@ def get_new_config() -> dict:
     }
 
 
-class TestPriorities(unittest.TestCase):
+class TestPrioFlow(unittest.TestCase):
     @patch("marloes.handlers.solar.read_series", return_value=pd.Series())
     @patch("marloes.handlers.demand.read_series", return_value=pd.Series())
     @patch("simon.assets.supply.Supply.load_default_state")
@@ -55,7 +55,7 @@ class TestPriorities(unittest.TestCase):
             "marloes.valley.env.Extractor.store_reward", return_value=None, create=True
         ):
             Handler._id_counters = {}
-            self.alg = Priorities(config=get_new_config())
+            self.alg = PrioFlow(config=get_new_config())
 
     def test_init(self):
         self.assertEqual(self.alg.training_steps, 100)
@@ -155,13 +155,13 @@ class TestPriorities(unittest.TestCase):
 
 
 @pytest.mark.slow
-class TestPrioritiesSlow(unittest.TestCase):
+class TestPrioFlowSlow(unittest.TestCase):
     def setUp(self) -> None:
         Handler._id_counters = {}
         with patch(
             "marloes.results.saver.Saver._update_simulation_number", return_value=0
         ):
-            self.alg = Priorities(config=get_new_config())
+            self.alg = PrioFlow(config=get_new_config())
 
     def test_get_actions(self):
         observations = get_accurate_observation(self.alg)
