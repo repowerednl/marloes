@@ -16,7 +16,7 @@ export MKL_NUM_THREADS=1
 
 TRIALS=200
 
-poetry run python run_experiment.py \
+poetry run python experiments/dyna_run_experiment.py \
     --experiment hyperparam_search \
     --config configs/dyna_config.yaml \
     --parallel \

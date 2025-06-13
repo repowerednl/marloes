@@ -15,7 +15,7 @@ export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 
 # Runs all methods, both data scenarios, all seeds in parallel
-poetry run python run_experiment.py \
+poetry run python experiments/dyna_run_experiment.py \
     --experiment main \
     --config configs/dyna_config.yaml \
     --parallel \

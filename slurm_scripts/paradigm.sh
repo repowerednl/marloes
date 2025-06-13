@@ -15,7 +15,7 @@ export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 
 # Will run (sCTDE on/off) x (3,6,12 assets)
-poetry run python run_experiment.py \
+poetry run python experiments/dyna_run_experiment.py \
     --experiment paradigm \
     --config configs/dyna_config.yaml \
     --parallel \

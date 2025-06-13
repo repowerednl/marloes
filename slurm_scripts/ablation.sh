@@ -15,7 +15,7 @@ export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 
 # Will run withGRU and noGRU, for seeds 10-19
-poetry run python run_experiment.py \
+poetry run python experiments/dyna_run_experiment.py \
     --experiment ablation \
     --config configs/dyna_config.yaml \
     --parallel \
