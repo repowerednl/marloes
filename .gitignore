@@ -172,6 +172,7 @@ cython_debug/
 /src/marloes/data/cached/
 *.DS_Store
 /mermaid/
+/habrok_results/
 
 # Jetbrains
 .idea
