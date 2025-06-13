@@ -34,6 +34,7 @@ class AgentStateEncoder(nn.Module):
         super(AgentStateEncoder, self).__init__()
         self.forecast = forecast
         forecast_hidden_size = world_model_config.get("forecast_hidden_size", 64)
+        # forecast_hidden_size = 240
         agent_enc_dim = world_model_config.get("agent_enc_dim", 16)
         hidden_size = world_model_config.get("agent_hidden_size", 64)
 
@@ -66,6 +67,8 @@ class AgentStateEncoder(nn.Module):
         if self.forecast:
             forecast_enc = self.forecast_encoder(forecast)
             combined = torch.cat([forecast_enc, scalar_vars], dim=-1)
+            # forecast_flat = forecast.squeeze(-1)
+            # combined = torch.cat([forecast_flat, scalar_vars], dim=-1)
         else:
             combined = scalar_vars
 
