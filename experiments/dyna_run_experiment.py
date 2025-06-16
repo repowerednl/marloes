@@ -4,6 +4,7 @@ import logging
 from zoneinfo import ZoneInfo
 import yaml
 import os
+import copy
 import random
 import numpy as np
 import torch
@@ -46,6 +47,10 @@ def run_training(config, scenario_name):
     algorithm = BaseAlgorithm.get_algorithm(config["algorithm"], config)
     algorithm.train()
     Handler._id_counters = {}
+    print(
+        f"Training completed for {scenario_name} with UID: {algorithm.saver.uid}",
+        flush=True,
+    )
     return algorithm.saver.uid
 
 
@@ -56,20 +61,24 @@ def run_evaluation(config, scenario_name):
     start_time = datetime(2025, 9, 1, tzinfo=ZoneInfo("UTC"))
     config["start_time"] = start_time
     config["simulation_start_time"] = start_time
-    config["extractor_type"] = "extensive"
+    config["extractor_type"] = "extensive"  # TODO: Fix this error
     Handler._id_counters = {}
     logging.getLogger().setLevel(logging.WARNING)
     algorithm = BaseAlgorithm.get_algorithm(config["algorithm"], config, evaluate=True)
     algorithm.eval()
     logging.getLogger().setLevel(logging.INFO)
+    print(
+        f"Evaluation completed for {scenario_name} with UID: {algorithm.saver.uid}",
+        flush=True,
+    )
+    return algorithm.saver.uid
 
 
 def run_single_trial(config, scenario_name):
-    run_training(config, scenario_name)
-    run_evaluation(config, scenario_name)
-    return config.get("uid", None) or config.get(
-        "seed", None
-    )  # Return some identifier for logging
+    eval_config = copy.deepcopy(config)
+    uid = run_training(config, scenario_name)
+    run_evaluation(eval_config, scenario_name)
+    return uid
 
 
 def load_base_config(config_file):
@@ -87,7 +96,6 @@ def update_config(config, args, **kwargs):
     """Helper function to update the config dictionary with parameters."""
     for key, value in kwargs.items():
         if value is not None:
-            # Supports nested keys like 'world_model.use_gru'
             if "." in key:
                 default = config
                 *parts, last = key.split(".")
@@ -157,7 +165,7 @@ def ablation(args):
         for seed in range(args.seed_start, args.seed_end + 1):
             config = yaml.safe_load(yaml.safe_dump(base))
             config["seed"] = seed
-            update_config(config, args, **{"world_model.use_gru": use_gru})
+            update_config(config, args, **{"WorldModel.use_gru": use_gru})
             jobs.append((config, "default"))
 
     workers = decide_worker_count(args.workers) if args.parallel else 1
@@ -176,17 +184,20 @@ def ablation(args):
 
 def paradigm(args):
     base = load_base_config(args.config)
+    base_6 = load_base_config("configs/dyna_config_6.yaml")
+    base_12 = load_base_config("configs/dyna_config_12.yaml")
     jobs = []
     for sctde in [False, True]:
         for n_assets in [3, 6, 12]:
             for seed in range(args.seed_start, args.seed_end + 1):
-                config = yaml.safe_load(yaml.safe_dump(base))
+                if n_assets == 3:
+                    config = yaml.safe_load(yaml.safe_dump(base))
+                elif n_assets == 6:
+                    config = yaml.safe_load(yaml.safe_dump(base_6))
+                elif n_assets == 12:
+                    config = yaml.safe_load(yaml.safe_dump(base_12))
                 config["seed"] = seed
-                update_config(
-                    config,
-                    args,
-                    **{"env_config.n_assets": n_assets, "dyna.sCTDE": sctde},
-                )
+                update_config(config, args, **{"dyna.sCTDE": sctde})
                 jobs.append((config, "default"))
 
     workers = decide_worker_count(args.workers) if args.parallel else 1
@@ -206,10 +217,20 @@ def main_exp(args):
     base = load_base_config(args.config)
     configs = [
         {"algorithm": "PrioFlow"},
-        {"dyna.sCTDE": True},
+        {
+            "dyna.sCTDE": True,
+            "dyna.real_sample_ratio": 1.0,
+            "dyna.k": 0,
+            "dyna.world_model_update_frequency": 50000,
+        },
         {"dyna.sCTDE": True, "dyna.real_sample_ratio": 0.8},
         {"dyna.sCTDE": True, "dyna.real_sample_ratio": 0.5},
-        {"dyna.sCTDE": False},
+        {
+            "dyna.sCTDE": False,
+            "dyna.real_sample_ratio": 1.0,
+            "dyna.k": 0,
+            "dyna.world_model_update_frequency": 50000,
+        },
         {"dyna.sCTDE": False, "dyna.real_sample_ratio": 0.8},
         {"dyna.sCTDE": False, "dyna.real_sample_ratio": 0.5},
     ]
