@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim import Adam
+from torch.optim import AdamW
 
 from marloes.networks.util import compute_lambda_returns
 import copy
@@ -30,18 +30,21 @@ class ActorCritic(nn.Module):
         """
         super(ActorCritic, self).__init__()
         self.actor = Actor(input, output, config.get("actor_hidden_size", hidden_size))
-        self.critic = Critic(input, config.get("critic_hidden_size", hidden_size))
+        self.n_bins = config.get("n_bins", 50)  # Number of bins for the critic
+        self.critic = Critic(
+            input, config.get("critic_hidden_size", hidden_size), self.n_bins
+        )
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_ema_update = config.get("ema_update", 0.98)  # DreamerV3 uses 0.98
         for param in self.critic_target.parameters():
             param.requires_grad = False  # Freeze the target network
 
-        self.actor_optim = Adam(
+        self.actor_optim = AdamW(
             self.actor.parameters(),
             lr=config.get("actor_lr", 1e-4),
             weight_decay=config.get("actor_weight_decay", 0.0),
         )
-        self.critic_optim = Adam(
+        self.critic_optim = AdamW(
             self.critic.parameters(),
             lr=config.get("critic_lr", 1e-4),
             weight_decay=config.get("critic_weight_decay", 0.0),
@@ -59,7 +62,7 @@ class ActorCritic(nn.Module):
         )
 
         # EMA for S
-        self.s_ema = torch.zeros(1, device="cpu")  # Initialize S as a zero tensor
+        self.register_buffer("s_ema", torch.zeros(1))  # Initialize S as a zero tensor
         self.s_ema_alpha = config.get("s_ema_alpha", 0.98)  # EMA decay for S
 
         # Store losses
@@ -69,10 +72,18 @@ class ActorCritic(nn.Module):
         """
         Resets the actor and critic losses.
         """
-        self.actor_loss = []
+        if not hasattr(self, "i"):
+            self.i = 0
+        else:
+            self.i += 1
+        if self.i % 5 == 0:
+            self.actor_loss = []
+
         self.critic_loss = []
 
-    def act(self, model_state: torch.Tensor, deterministic: bool) -> torch.Tensor:
+    def act(
+        self, model_state: torch.Tensor, deterministic: bool
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predicts actions using the Actor network.
 
@@ -82,72 +93,47 @@ class ActorCritic(nn.Module):
         Returns:
             torch.Tensor: Predicted actions.
         """
-        if deterministic:
-            # Use the actor in deterministic mode (only the mean)
-            return self.actor(model_state, True)
-        else:
-            return self.actor(model_state, False).sample()
+        return self.actor.sample(model_state, deterministic)
 
     def learn(self, trajectories: list) -> dict[str, torch.Tensor]:
-        """
-        Performs a learning step for the ActorCritic module.
-
-        Args:
-            trajectories (list): Batch of trajectories.
-
-        Returns:
-            dict: Dictionary containing actor, critic, and total losses.
-        """
-        # TODO: not ideal to squeeze() afterwards, but stack adds a dimension.
-        # Unpack the states into a batched tensor for the critic
-        states = torch.stack([t["states"] for t in trajectories], dim=0).squeeze()
-        # Unpack the actions into a batched tensor for the loss computing
+        # Unpack batched tensors
+        states = torch.stack([t["state"] for t in trajectories], dim=0).squeeze()
         actions = torch.stack([t["actions"] for t in trajectories], dim=0).squeeze(2)
-        # Unpack the rewards into a batched tensor for the loss computing
         rewards = torch.stack([t["rewards"] for t in trajectories], dim=0).squeeze(-1)
 
-        # rew is negative. Transform it to positive rewards (with lower being worse)
-        # worst = rewards.min()
-        # rewards = rewards - worst  # make the worst reward zero, and the rest positive
-
-        # Obtaining the target values from the frozen critic target (v3)
+        # Compute targets with frozen critic
         with torch.no_grad():
-            # Use the critic target to compute the values
-            target_values = self.critic_target(states)
-            # Compute the advantages (lambda-returns)
+            _, target_values = self.critic_target(states)
             returns, advantages = self._compute_advantages(rewards, target_values)
 
-        # Compute the values using the critic
-        # values = self.critic(states)
+        # Actor update only when i % 5 == 0
+        if self.i % 5 == 0 and self.i > 0:
+            actor_loss = self._compute_actor_loss(states, actions, advantages, returns)
+            self.actor_optim.zero_grad()
+            actor_loss.backward()
+            torch.nn.utils.clip_grad_norm_(
+                self.actor.parameters(), self.actor_clip_grad
+            )
+            self.actor_optim.step()
+            self.actor_loss.append(actor_loss.item())
+        if self.i == 0:
+            self.actor_loss = [0]  # Reset actor loss on first iteration
 
-        # Compute the actor and critic losses
-        actor_loss = self._compute_actor_loss(states, actions, advantages, returns)
-        # critic_loss = self._compute_critic_loss(values, returns)
-        critic_loss = self._compute_critic_loss(
-            self.critic(states[:, 0, :]), returns[:, 0, :]
-        )  # Critic only updates on first step
-
-        # Actor loss
-        self.actor_optim.zero_grad()
-        actor_loss.backward()
-
-        # add gradient clipping
-        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), self.actor_clip_grad)
-        self.actor_optim.step()
-
-        self.actor_loss.append(actor_loss.item())
-
-        # Critic loss
+        # Critic update using two-hot encoded cross-entropy
+        B, T, D = states.shape
+        states_flat = states.view(B * T, D)
+        returns_flat = returns.view(B * T)
+        logits_flat, _ = self.critic(states_flat)
+        critic_loss = self._compute_critic_loss(logits_flat, returns_flat)
         self.critic_optim.zero_grad()
         critic_loss.backward()
-        # add gradient clipping
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), self.critic_clip_grad)
         self.critic_optim.step()
-
-        # Update the network with EMA
-        self.update_critic_target()
-
         self.critic_loss.append(critic_loss.item())
+
+        # EMA target update
+        if self.i % 5 == 0 and self.i > 0:
+            self.update_critic_target()
 
     def _compute_actor_loss(self, states, actions, advantages, returns) -> torch.Tensor:
         """
@@ -165,23 +151,28 @@ class ActorCritic(nn.Module):
         Returns:
             torch.Tensor: Computed actor loss.
         """
-        policy_dist = self.actor(states)
-        if not self.deterministic:
-            log_probs = policy_dist.log_prob(actions)
-        else:
-            log_probs = 1  # actions are just the mean of the layer TODO: what should log_probs be in deterministic mode?
-        # get entropy as a scalar
-        entropy = policy_dist.base_dist.entropy().sum(-1).mean()
+        mu, log_std = self.actor.forward(states)
+        std = torch.exp(log_std)
+        dist = torch.distributions.Normal(mu, std)
+        # invert tanh to get pre-tanh values
+        pre_tanh = 0.5 * (torch.log1p(actions) - torch.log1p(-actions))
+        log_prob = dist.log_prob(pre_tanh).sum(
+            dim=-1, keepdim=True
+        )  # log probability of actions
+        # correction
+        log_prob -= torch.log(1 - actions.pow(2) + 1e-6).sum(dim=-1, keepdim=True)
+
+        entropy = dist.entropy().sum(
+            dim=-1, keepdim=True
+        )  # entropy of the distribution
 
         # Scale factor S=EMA( Per(returns, 95) - Per(returns, 5) )
         # where Per(x, p) is the p-th percentile of x (detaching to prevent gradient flow)
         flat_returns = returns.detach().view(-1)
-
         # Standardize returns
         flat_returns = (flat_returns - flat_returns.mean()) / (
             flat_returns.std() + 1e-8
         )
-
         # Compute the 95th and 5th percentiles
         quantile_95 = torch.quantile(flat_returns, 0.95)
         quantile_5 = torch.quantile(flat_returns, 0.05)
@@ -189,6 +180,7 @@ class ActorCritic(nn.Module):
             quantile_95 - quantile_5,
             min=0.99,
         )
+
         # Initialize EMA on first nonzero raw_S
         if self.s_ema.item() == 0.0:
             # fill_ keeps it as a buffer
@@ -197,38 +189,40 @@ class ActorCritic(nn.Module):
             # in-place EMA update: preserves buffer registration
             self.s_ema.mul_(self.s_ema_alpha).add_((1 - self.s_ema_alpha) * S)
 
-        # self.s_ema.fill_(1.0)  # For debugging purposes, set S to 1.0
+        # Reduce entropy coefficient over time
+        # if not hasattr(self, "entropy_decay"):
+        #     self.entropy_decay = self.entropy_coef  # Initialize entropy decay
+        # self.entropy_decay *= 0.999  # Decay factor (adjust as needed)
 
-        # print("Adv stats:", advantages.min().item(), advantages.max().item(), advantages.mean().item())
-
-        # print([p.shape for p in self.actor_optim.param_groups[0]['params']])
-
-        # print("S (EMA):", self.s_ema.item())
-        # set s_ema to one for debugging
         actor_loss = (
-            -((advantages.detach() / self.s_ema) * log_probs).mean()
-            - self.entropy_coef * entropy
-        )
+            -(
+                (
+                    advantages.detach()
+                    / torch.maximum(self.s_ema, torch.ones_like(self.s_ema))
+                )
+                * log_prob
+            ).mean()
+            - entropy  # * self.entropy_coef
+        ).mean()  # Mean over batch and time
         return actor_loss
 
     def _compute_critic_loss(
-        self, values: torch.Tensor, returns: torch.Tensor
+        self, logits: torch.Tensor, target_returns: torch.Tensor
     ) -> torch.Tensor:
         """
-        Computes the critic loss.
-
-        First implementation: simple MSE loss.
+        Critic loss using two-hot cross-entropy between predicted logits and soft targets.
 
         Args:
-            values (torch.Tensor): Predicted values tensor.
-            returns (torch.Tensor): Returns tensor.
+            logits (torch.Tensor): [N, n_bins] raw outputs from critic.
+            target_returns (torch.Tensor): [N] continuous returns.
 
         Returns:
-            torch.Tensor: Computed critic loss.
+            torch.Tensor: scalar loss.
         """
-        # print(f"Value prediction: {values[0][0][0]}, Return: {returns[0][0][0]}")
-        critic_loss = F.mse_loss(values, returns)
-        return critic_loss
+        twohot = self._twohot_encode(target_returns, self.critic.bins)
+        logp = F.log_softmax(logits, dim=-1)
+        loss = -(twohot * logp).sum(dim=-1).mean()
+        return loss
 
     def _compute_advantages(
         self, rewards: torch.Tensor, values: torch.Tensor
@@ -256,6 +250,41 @@ class ActorCritic(nn.Module):
                 param.data * (1.0 - self.critic_ema_update)
             )
 
+    def _twohot_encode(self, target: torch.Tensor, bins: torch.Tensor) -> torch.Tensor:
+        """
+        Converts a tensor of target values into a two-hot encoded tensor based on the provided bins.
+
+        Args:
+            target (torch.Tensor): Tensor containing continuous target values. [B,1]
+            bins (torch.Tensor): Tensor containing the bins (sorted ascending)
+
+        Returns:
+            torch.Tensor: Tensor of shape [B, bins.size(0)] with two weights
+        """
+        # flatten
+        y = target.view(-1).contiguous()  # make sure y is contiguous in memory
+        # For each y, find the bin indices k where bins[k] <= y < bins[k+1]
+        idx = torch.bucketize(y, bins)  # gives insertion index in [1..n_bins]
+        idx_lo = torch.clamp(idx - 1, 0, bins.size(0) - 1)
+        idx_hi = torch.clamp(idx, 0, bins.size(0) - 1)
+
+        # Gather bin values
+        b_lo = bins[idx_lo]
+        b_hi = bins[idx_hi]
+
+        # Compute weights
+        # if b_hi == b_lo (edge cases), put all mass on lo
+        denom = (b_hi - b_lo).clamp(min=1e-8)
+        w_hi = ((y - b_lo) / denom).clamp(0.0, 1.0)
+        w_lo = 1.0 - w_hi
+
+        twohot = torch.zeros(
+            y.size(0), bins.size(0), device=y.device, dtype=torch.float32
+        )
+        twohot.scatter_(1, idx_lo.unsqueeze(1), w_lo.unsqueeze(1))
+        twohot.scatter_(1, idx_hi.unsqueeze(1), w_hi.unsqueeze(1))
+        return twohot
+
 
 class Actor(nn.Module):
     """
@@ -274,15 +303,13 @@ class Actor(nn.Module):
         super(Actor, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, hidden_size)
         self.fc_mean = nn.Linear(hidden_size, output_size)
-        self.log_std = nn.Parameter(torch.zeros(output_size))
-        self.log_std.requires_grad = True  # Allow log_std to be learned
+        self.log_std = nn.Linear(hidden_size, output_size)
         # initialize the weights of log_std with a small negative value to encourage exploration
-        nn.init.constant_(self.log_std, -0.5)
+        self.log_std.weight.data.fill_(-0.5)
 
-    def forward(
-        self, x, deterministic: bool = False
-    ) -> torch.distributions.Normal | torch.Tensor:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass through the Actor network.
 
@@ -290,22 +317,47 @@ class Actor(nn.Module):
             x (torch.Tensor): Input tensor.
 
         Returns:
-            torch.distributions.Normal: Gaussian policy distribution.
+            a tuple containing:
+                - mu (torch.Tensor): Mean of the Gaussian distribution for actions.
+                - log_std (torch.Tensor): Log standard deviation of the Gaussian distribution for actions.
         """
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        # Apply tanh bound to keep actions in [-1, 1]
+        x = F.relu(self.fc3(x))
         mu = self.fc_mean(x)
-        mu = torch.tanh(mu)
-        if deterministic:
-            return mu
-        std = torch.exp(self.log_std)
+        log_std = self.log_std(x)
+
+        log_std = torch.clamp(
+            log_std, -10, 10
+        )  # Clamping log_std to prevent extreme values
+
+        return mu, log_std
+
+    def sample(
+        self, x, deterministic: bool = False
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Samples actions from the Actor network, using the reparameterization trick.
+        Forwarding through the layers, and returning the actions and the transformed log_probs.
+        """
+        mu, log_std = self.forward(x)
+        std = torch.exp(log_std)
         normal = torch.distributions.Normal(mu, std)
-        # wrap in TanhTransform to ensure actions are in the range [-1, 1]
-        dist = torch.distributions.TransformedDistribution(
-            normal, torch.distributions.transforms.TanhTransform(cache_size=1)
-        )
-        return dist
+        if deterministic:
+            x = mu
+            actions = torch.tanh(mu)
+        else:
+            x = normal.rsample()  # reparam trick
+            actions = torch.tanh(x)
+
+        log_prob = normal.log_prob(x).sum(-1, keepdim=True)
+        correction = torch.log(1 - actions.pow(2) + 1e-6).sum(
+            dim=-1, keepdim=True
+        )  # Correction for tanh
+
+        log_prob -= correction  # Adjust log probability for the tanh transformation
+
+        return actions, log_prob
 
 
 class Critic(nn.Module):
@@ -313,7 +365,7 @@ class Critic(nn.Module):
     Critic network for predicting the value of the current state.
     """
 
-    def __init__(self, input_size: int, hidden_size: int = 256):
+    def __init__(self, input_size: int, hidden_size: int = 256, n_bins: int = 50):
         """
         Initializes the Critic network.
 
@@ -324,7 +376,13 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc_value = nn.Linear(hidden_size, 1)
+        # self.fc_value = nn.Linear(hidden_size, 1)
+        # for two hot encoding loss
+        self.fc_out = nn.Linear(hidden_size, n_bins)
+        # create the spaved bins
+        self.register_buffer(
+            "bins", torch.linspace(-20, 20, n_bins)
+        )  # Bins for two-hot encoding
 
     def forward(self, x):
         """
@@ -338,4 +396,10 @@ class Critic(nn.Module):
         """
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        return self.fc_value(x)
+        # logits are the raw outputs of the critic, representing the log probabilities of the bins
+        logits = self.fc_out(x)
+        probs = F.softmax(logits, dim=-1)
+        # predicted scalar value
+        value = (probs * self.bins).sum(dim=-1, keepdim=True)
+
+        return logits, value

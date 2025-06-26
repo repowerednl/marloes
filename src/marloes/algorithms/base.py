@@ -100,8 +100,8 @@ class BaseAlgorithm(ABC):
 
         # Main testing loop
         for step in range(self.eval_steps):
-            if step % (self.eval_steps // 100) == 0:
-                logging.info(f"Reached step {step}/{self.eval_steps}...")
+            # if step % (self.eval_steps // 100) == 0:
+            #     logging.info(f"Reached step {step}/{self.eval_steps}...")
 
             # Get actions from the algorithm
             actions, _ = self.get_actions(
@@ -136,15 +136,15 @@ class BaseAlgorithm(ABC):
 
         # Main training loop
         for step in range(self.training_steps):
-            if step % (self.training_steps // 100) == 0:
-                logging.info(f"Reached step {step}/{self.training_steps}...")
+            # if step % (self.training_steps // 100) == 0:
+            #     logging.info(f"Reached step {step}/{self.training_steps}...")
 
             # 1. Collect data from environment
             # --------------------
             if step < self.num_initial_random_steps:
                 # Initially do random actions for exploration
                 actions = self.sample_actions(self.environment.trainable_agent_dict)
-                info = None
+                info = {}
             else:
                 # Get actions from the algorithm
                 actions, info = self.get_actions(state)
