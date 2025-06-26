@@ -1,5 +1,5 @@
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from zoneinfo import ZoneInfo
 import yaml
@@ -42,6 +42,11 @@ search_space = {
 
 def run_training(config, scenario_name):
     """Run a single trial with the given configuration."""
+    start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+    random_minutes = random.randint(0, 4 * 30 * 24 * 60)
+    start_time += timedelta(minutes=random_minutes)
+    config["start_time"] = start_time
+    config["simulation_start_time"] = start_time
     config["data_config"] = get_data_scenario(scenario_name)
     config["device"] = "cuda" if torch.cuda.is_available() else "cpu"
     algorithm = BaseAlgorithm.get_algorithm(config["algorithm"], config)
@@ -54,9 +59,10 @@ def run_training(config, scenario_name):
     return algorithm.saver.uid
 
 
-def run_evaluation(config, scenario_name):
+def run_evaluation(config, scenario_name, uid):
     """Run a single evaluation with the given configuration."""
     config["data_config"] = get_data_scenario(scenario_name)
+    config["uid"] = uid
     config["eval_steps"] = 50000
     start_time = datetime(2025, 9, 1, tzinfo=ZoneInfo("UTC"))
     config["start_time"] = start_time
@@ -77,7 +83,7 @@ def run_evaluation(config, scenario_name):
 def run_single_trial(config, scenario_name):
     eval_config = copy.deepcopy(config)
     uid = run_training(config, scenario_name)
-    run_evaluation(eval_config, scenario_name)
+    run_evaluation(eval_config, scenario_name, uid)
     return uid
 
 
@@ -253,7 +259,10 @@ def main_exp(args):
     )
 
     for i, uid in enumerate(results):
-        print(f"MAIN_EXP | Trial {i} | UID: {uid}", flush=True)
+        print(
+            f"MAIN_EXP | Trial {i} | UID: {uid} | Config: {jobs[i][0]} | Scenario: {jobs[i][1]}",
+            flush=True,
+        )
 
 
 def parse_args():
