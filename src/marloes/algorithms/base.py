@@ -29,8 +29,9 @@ class BaseAlgorithm(ABC):
         logging.info(
             f"Initializing {self.__class__.__name__} algorithm and setting up the environment..."
         )
-        seed = config.get("uid", 42)
+        seed = config.get("seed", config.get("uid", 42))
         np.random.seed(seed)
+        np.random.default_rng(seed)
         random.seed(seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)

@@ -38,14 +38,16 @@ class Calculator:
             "cumulative_grid_production",
             "co2_emissions",
             "cumulative_co2_emissions",
+            "daily_grid_production",
         ],
-        "total_solar_production": ["surplus", "negative_surplus"],
+        "total_solar_production": ["actual_surplus", "negative_surplus"],
         "supply_available_power": ["negative_available_surplus"],
         "net_power": [
             "net_nomination",
             "power_nomination_offset",
             "cumulative_power_nomination_offset",
         ],
+        "net_forecasted_power": ["forecasted_surplus"],
     }
 
     def __init__(self, uid: int | None = None, dir: str = "results"):
@@ -132,7 +134,21 @@ class Calculator:
         series = series.resample("D").sum()
         return series.values
 
-    def surplus(self) -> np.ndarray:
+    def daily_grid_production(self) -> np.ndarray:
+        """
+        Shows the daily improvement of the grid production.
+        """
+        series = pd.Series(self.extractor.total_grid_production)
+        index = pd.date_range(
+            start="2025-01-01",
+            periods=len(series),
+            freq="min",
+        )
+        series.index = index
+        series = series.resample("D").sum()
+        return series.values
+
+    def actual_surplus(self) -> np.ndarray:
         """
         Calculates the surplus.
         """
@@ -192,6 +208,9 @@ class Calculator:
         Calculates the cumulative CO2 emissions in gCO2eq/kWh.
         """
         return np.cumsum(self.co2_emissions())
+
+    def forecasted_surplus(self) -> np.ndarray:
+        return self.extractor.net_forecasted_power
 
     @staticmethod
     def _sanity_check(results: dict[str, np.ndarray | None]) -> dict[str, list[str]]:

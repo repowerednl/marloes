@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import yaml
 
 from marloes.results.calculator import Calculator
 from marloes.data.metrics import Metrics
@@ -200,7 +201,7 @@ class Visualizer:
             else:
                 fig.add_trace(
                     go.Scatter(
-                        x=series.index,
+                        x=list(range(len(series))),
                         y=series.values,
                         mode="lines",
                         name=metric.replace("_", " ").title(),
@@ -209,9 +210,13 @@ class Visualizer:
 
         fig.update_layout(
             title=f"All Metrics for UID {uid}",
+            # title="CO₂ Emissions, Forecast/Actual Surplus and Battery Intake on a Typical Summer Day - PrioFlow",
             xaxis_title="Time",
             yaxis_title="Value",
-            font=dict(size=14, color="black"),
+            # font=dict(size=14, color="black"),
+            font=dict(family="Times New Roman, Times, serif", size=35),
+            legend=dict(font=dict(size=35)),
+            title_font=dict(size=45),
         )
         fig.show()
 

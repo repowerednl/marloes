@@ -67,5 +67,5 @@ subrewards:
   BA:
     active: true
     scaling_factor: 10
-training_steps: 10000
+training_steps: 50000
 # device: cuda

@@ -24,7 +24,7 @@ from gui.success_screen import SuccessScreen
 from gui.util import load_scenarios
 from src.marloes.algorithms.dreamer import Dreamer
 from src.marloes.algorithms.base import BaseAlgorithm
-from src.marloes.algorithms.priorities import Priorities
+from src.marloes.algorithms.prioflow import PrioFlow
 from src.marloes.algorithms.simplesetpoint import SimpleSetpoint
 
 from src.marloes.algorithms.dyna import Dyna
@@ -77,7 +77,7 @@ class ExperimentSetupApp(QWidget):
         self.algorithm_label = QLabel("Select Algorithm:")
         self.algorithm_dropdown = QComboBox(self)
         self.algorithm_dropdown.addItems(
-            ["Priorities", "SimpleSetpoint", "Dyna", "Dreamer"]
+            ["PrioFlow", "SimpleSetpoint", "Dyna", "Dreamer"]
         )
         layout.addWidget(self.algorithm_label)
         layout.addWidget(self.algorithm_dropdown)
@@ -160,8 +160,8 @@ class ExperimentSetupApp(QWidget):
         logging.info(f"Training took {end_time - start_time:.2f} seconds")
 
         # Show success message after training has finished
-        self.success_screen = SuccessScreen()
-        self.success_screen.show()
+        # self.success_screen = SuccessScreen()
+        # self.success_screen.show()
         self.close()
 
     def collect_config(self):
@@ -208,7 +208,7 @@ class ExperimentSetupApp(QWidget):
         # Algorithm choice
         algorithm_choice = self.algorithm_dropdown.currentText()
         if algorithm_choice:
-            if not config.get("algorithm") or algorithm_choice != "Priorities":
+            if not config.get("algorithm") or algorithm_choice != "PrioFlow":
                 config["algorithm"] = algorithm_choice
 
         # Scenario choice

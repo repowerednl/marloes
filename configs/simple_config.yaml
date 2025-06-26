@@ -1,4 +1,4 @@
-algorithm: Priorities
+algorithm: PrioFlow
 handlers:
   - type: solar
     AC: 9000

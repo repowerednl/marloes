@@ -1,4 +1,4 @@
-algorithm: Priorities
+algorithm: PrioFlow
 handlers:
   - type: battery
     energy_capacity: 2000
