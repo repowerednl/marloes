@@ -90,6 +90,7 @@ class WorldModel(nn.Module):
 
         Args:
             starting_points (torch.Tensor): Batch of initial states.
+            beliefs (list): List of belief states, each containing the hidden state and latent state.
             actor (Actor): Actor model to sample actions.
             horizon (int, optional): Length of the imagined trajectory. Defaults to 16.
 
@@ -101,7 +102,7 @@ class WorldModel(nn.Module):
             # we have a batch of starting points
             for x, belief_info in zip(starting_points, beliefs):
                 imagined = {
-                    "states": [],
+                    "state": [],
                     "rewards": [],
                     "actions": [],
                 }
@@ -121,7 +122,7 @@ class WorldModel(nn.Module):
                 # model state is the concatenation of h_t and z_t
                 s = torch.cat([h_0, z_0], dim=-1)
 
-                a_0 = actor(s).sample()  # shape (batch=1, action_dim)
+                a_0, _ = actor.sample(s)  # shape (batch=1, action_dim)
 
                 # should be of shapes [1, length] before passing to rssm
                 h_t, z_hat_t, _ = self.rssm.forward(h_0, z_0, a_0)
@@ -139,10 +140,10 @@ class WorldModel(nn.Module):
                 for t in range(horizon):
                     # get the action from the model state
                     s = torch.cat([h_t, z_t], dim=-1)
-                    a_t = actor(s).sample()
+                    a_t, _ = actor.sample(s)
 
                     # Store the imagined states, actions and rewards
-                    imagined["states"].append(s)
+                    imagined["state"].append(s)
                     imagined["actions"].append(a_t)
 
                     # Get h_t from sequence model (transition)
@@ -154,7 +155,7 @@ class WorldModel(nn.Module):
                     imagined["rewards"].append(r_t)
 
                 # Stack the imagined states, actions and rewards
-                imagined["states"] = torch.stack(imagined["states"], dim=0)
+                imagined["state"] = torch.stack(imagined["state"], dim=0)
                 imagined["actions"] = torch.stack(imagined["actions"], dim=0)
                 imagined["rewards"] = torch.stack(imagined["rewards"], dim=0)
                 # Append the imagined sequence to the batch
@@ -175,70 +176,38 @@ class WorldModel(nn.Module):
         x = torch.stack([sequence["state"] for sequence in sample], dim=0)
         # extract the rewards and done signals as tensors into rew
         rew = torch.stack([sequence["rewards"] for sequence in sample], dim=0)
-        # rew is negative. Transform it to positive rewards (with lower being worse)
-        # worst = rew.min()
-        # rew = rew - worst  # make the worst reward zero, and the rest positive
 
         # | -----------------------------------------------------------------------------|#
         # | Step 1: Perform rollout in RSSM                                              |#
-        # |  - Obtain predicted latent states [h_t-1, z_t-1, a_t-1] -> h_t -> z_hat_t    |#
-        # |  - And actual latent states [h_t, x_t] -> z_t                                |#
         # | ---------------------------------------------------------------------------- |#
         results = self.rssm.rollout(sample)
-        # returns a dictionary with predicted and actual latent states, recurrent states, and their details
 
         # | -----------------------------------------------------------------------------|#
-        # | Step 2: Predict Reward (and Continue signal)                                 |#
-        # |  - Obtain predicted reward [h_t,z_t] -> r_t                                  |#
-        # |  - Obtain Continue signal [h_t,z_t] -> c_t    #TODO or TOREMOVE              |#
+        # | Step 2: Predict Reward                                                       |#
         # | ---------------------------------------------------------------------------- |#
         h = results["recurrent_states"]
-        # z = results["actual"]
+        z = results["actual"]
         z_hat = results["predicted"]
-        r_ts = self.reward_predictor(h, z_hat)
+
+        r_ts = self.reward_predictor(h, z)
 
         # | -----------------------------------------------------------------------------|#
         # | Step 3: Decode the predicted latent state to the observations                |#
-        # |  - Obtain predicted observations [z] -> x_hat_t                              |#
         # | ---------------------------------------------------------------------------- |#
         x_hat_t = self.decoder(z_hat)
 
         # | -----------------------------------------------------------------------------|#
         # | Step 4: Compute the loss functions                                           |#
-        # |  - L_dyn: KL-divergence between predicted and true latent state              |#
-        # |  - L_rep: KL-divergence between predicted and true latent state              |#
-        # |  - L_pred: prediction loss (symlog squared loss)                             |#
         # | ---------------------------------------------------------------------------- |#
-        # unpack the predicted latent states, and distribution (in details)
-        # z_hat = results["predicted"]
-
         def unpack_details(details: list[dict]) -> tuple[torch.Tensor, torch.Tensor]:
-            """
-            Takes a list of dictionaries. The dictionary contains the mean and logvar of the latent state.
-            Should return mean and logvar (tensors) separately as a batch (lenth of the list).
-
-            Args:
-                details (list[dict]): List of dictionaries containing mean and logvar.
-
-            Returns:
-                tuple[torch.Tensor, torch.Tensor]: Mean and logvar tensors.
-            """
             mean = torch.stack([d["mean"] for d in details], dim=0)
             logvar = torch.stack([d["logvar"] for d in details], dim=0)
             return mean, logvar
 
         z_hat_mean, z_hat_logvar = unpack_details(results["predicted_details"])
         z_mean, z_logvar = unpack_details(results["actual_details"])
-        """
-        First loss function, the dynamics loss trains the sequence model to predict the next representation:
-        KL-divergence between the predicted latent state and the true latent state (with stop-gradient operator)
-                L_dyn = max(1,KL[sg(z_t) || z_hat_t])
-        [stop gradient (sg) can be implemented with detach()]
-        """
-        # dynamic_loss = torch.nn.functional.kl_div(
-        #     z_hat, z.detach(), reduction="batchmean"
-        # )
-        # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
+
+        # Dynamics loss
         pre_kl = gaussian_kl_divergence(
             z_mean.detach(),
             z_logvar.detach(),
@@ -247,16 +216,7 @@ class WorldModel(nn.Module):
         )
         dynamic_loss = kl_free_bits(kl=pre_kl, free_bits=self.free_bits)
 
-        """
-        Second loss function, the representation loss trains the representations to be more predictable
-        KL-divergence between the predicted latent state and the true latent state
-                L_rep = max(1,KL[z_t || sg(z_hat_t)])
-        [stop gradient can be implemented with detach()]
-        """
-        # representation_loss = torch.nn.functional.kl_div(
-        #     z_hat.detach(), z, reduction="batchmean"
-        # )
-        # alternative: KL with free bits (using the mu and logvar from the details gaussian distribution)
+        # Representation loss
         pre_kl = gaussian_kl_divergence(
             z_hat_mean.detach(),
             z_hat_logvar.detach(),
@@ -264,13 +224,15 @@ class WorldModel(nn.Module):
             z_logvar,
         )
         representation_loss = kl_free_bits(kl=pre_kl, free_bits=self.free_bits)
-        """
-        Third loss function, the prediction loss is end-to-end training of the model
-        trains the decoder and reward predictor via the symlog squared loss and the continue predictor via logistic regression (not implemented)
-        """
+
+        # Prediction loss
         prediction_loss = symlog_squared_loss(x_hat_t, x) + symlog_squared_loss(
             r_ts, rew
         )
+
+        # Normalize by latent dimension
+        dynamic_loss = dynamic_loss.mean() / z_hat_mean.shape[-1]
+        representation_loss = representation_loss.mean() / z_hat_mean.shape[-1]
 
         total_loss = (
             self.beta_weights["dyn"] * dynamic_loss
@@ -281,7 +243,6 @@ class WorldModel(nn.Module):
         # Backpropagate the total loss
         self.optim.zero_grad()
         total_loss.backward()
-        # add gradient clipping
         torch.nn.utils.clip_grad_norm_(
             self.parameters(),
             max_norm=self.clip_grad,
