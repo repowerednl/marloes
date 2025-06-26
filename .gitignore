@@ -173,6 +173,9 @@ cython_debug/
 *.DS_Store
 /mermaid/
 /habrok_results/
+/results_old/
+/evaluate_old/
+/habrok_evaluate/
 
 # Jetbrains
 .idea
