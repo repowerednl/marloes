@@ -1,0 +1,84 @@
+SAC:
+  actor_hidden_dim: 64
+  actor_lr: 5.345900816301471e-05
+  alpha_lr: 6.645703636014919e-05
+  critic_actor_update_ratio: 3
+  critic_lr: 8.428371612670029e-05
+  eps: 1.0692360714165112e-07
+  gamma: 0.99
+  hidden_dim: 64
+  log_std_max: 2
+  log_std_min: -5
+  num_layers: 3
+  tau: 0.02
+  value_lr: 5.827701759665525e-06
+  weight_decay: 6.379692677316514e-06
+WorldModel:
+  asset_enc_dim: 8
+  asset_hidden_size: 32
+  forecast_hidden_layers: 1
+  forecast_hidden_size: 8
+  lr: 0.004809193491417255
+  use_gru: true
+  weight_decay: 0.0
+  world_dynamics_hidden_size: 64
+  world_enc_dim: 32
+  world_hidden_size: 128
+handlers:
+- AC: 3000
+  DC: 3000
+  orientation: EW
+  trainable: true
+  type: solar
+- profile: Farm
+  scale: 15
+  trainable: false
+  type: demand
+- energy_capacity: 2000
+  power: 1000
+  type: battery
+  trainable: true
+- AC: 3000
+  DC: 3000
+  orientation: EW
+  trainable: true
+  type: solar
+- profile: Farm
+  scale: 15
+  trainable: false
+  type: demand
+- energy_capacity: 2000
+  power: 1000
+  type: battery
+  trainable: true
+algorithm: Dyna
+batch_size: 64
+chunk_size: 5000
+dyna:
+  k: 6
+  real_sample_ratio: 0.8
+  sCTDE: false
+  update_interval: 10
+  updates_per_step: 18
+  world_model_update_frequency: 1
+grid:
+  name: Grid
+num_initial_random_steps: 2000
+replay_buffers:
+  model_capacity: 100000
+  real_capacity: 100000
+subrewards:
+  CO2:
+    active: false
+    scaling_factor: 1
+  NE:
+    active: false
+    scaling_factor: 10
+  SS:
+    active: false
+    scaling_factor: 1
+  BA:
+    active: true
+    scaling_factor: 10
+training_steps: 50000
+# device: cuda

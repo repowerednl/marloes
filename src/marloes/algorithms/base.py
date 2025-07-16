@@ -199,13 +199,6 @@ class BaseAlgorithm(ABC):
         """
         pass
 
-    def load(self, uid: str) -> None:
-        """
-        Loads a parameter configuration from a file.
-        TODO: Implement loading of model parameters.
-        """
-        pass
-
     @staticmethod
     def get_algorithm(
         name: str, config: dict, evaluate: bool = False

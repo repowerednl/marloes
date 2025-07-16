@@ -1,8 +1,42 @@
+from datetime import datetime
 import unittest
 from unittest.mock import patch
 import numpy as np
 from marloes.factories import ExtractorFactory, RewardFactory
 from marloes.valley.rewards.reward import Reward
+
+
+def get_new_config() -> dict:
+    return {
+        "algorithm": "PrioFlow",
+        "training_steps": 100,
+        "handlers": [
+            {
+                "type": "demand",
+                "scale": 1.5,
+                "profile": "Farm",
+            },
+            {
+                "type": "solar",
+                "AC": 900,
+                "DC": 1000,
+                "orientation": "EW",
+            },
+            {
+                "type": "battery",
+                "energy_capacity": 1000,
+                "efficiency": 0.9,
+                "power": 100,
+            },
+        ],
+        "replay_buffers": {
+            "real_capacity": 1000,
+            "model_capacity": 1000,
+        },
+    }
+
+
+config = get_new_config()
 
 
 class TestReward(unittest.TestCase):
@@ -15,51 +49,17 @@ class TestReward(unittest.TestCase):
         # Default scaling factors
         self.default_scaling = {"active": True, "scaling_factor": 1.0}
 
-    def test_co2_reward(self):
-        """
-        Test the CO2 penalty calculation.
-        """
-        ## Test actual
-        # Also test whether not passing a scaling factor defaults to 1.0
-        reward = Reward(actual=True, CO2={"active": True})
-        reward.sub_rewards[
-            "CO2"
-        ].EMISSION_COEFFICIENTS = RewardFactory.EMISSION_COEFFICIENTS
-        result = reward.get(self.extractor)
-
-        # Expected CO2 penalty:
-        # - (solar: 30*0.2 + wind: 25*0.1 + battery: 20*0.3 + grid: 15*0.5)
-        expected = -(30 * 0.2 + 25 * 0.1 + 20 * 0.3 + 15 * 0.5)
-        self.assertAlmostEqual(result, expected, places=5)
-
-        ## Test not actual
-        reward = Reward(actual=False, CO2=self.default_scaling)
-        reward.sub_rewards[
-            "CO2"
-        ].EMISSION_COEFFICIENTS = RewardFactory.EMISSION_COEFFICIENTS
-        result = reward.get(self.extractor)
-
-        # Expected CO2 penalty:
-        # - (solar: [10, 20, 30]*0.2 + wind: [5, 15, 25]*0.1 + battery: [0, 10, 20]*0.3 + grid: [-5, 5, 15]*0.5)
-        # Expect to return array of penalties summed per index
-        expected = -np.array(
-            [
-                10 * 0.2 + 5 * 0.1 + 0 * 0.3 + -5 * 0.5,
-                20 * 0.2 + 15 * 0.1 + 10 * 0.3 + 5 * 0.5,
-                30 * 0.2 + 25 * 0.1 + 20 * 0.3 + 15 * 0.5,
-            ]
-        )
-        np.testing.assert_array_almost_equal(result, expected, decimal=5)
+        self.timestamp = datetime(2023, 10, 1, 12, 0, 0)
 
     def test_ss_reward(self):
         """
         Test the self-sufficiency penalty.
         """
         ## Test actual
-        reward = Reward(actual=True, SS=self.default_scaling)
+        reward = Reward(config, actual=True, SS=self.default_scaling)
 
         # For SS we have to simulate the loop
-        result = reward.get(self.extractor)
+        result = reward.get(self.extractor, self.timestamp)
 
         # Cumulative grid state: -10 + 5 + 10 -> max(0, cumulative)
         # Cumulative is skipped because no in between updates: 10 * -1 = -10
@@ -68,7 +68,7 @@ class TestReward(unittest.TestCase):
 
         ## Test not actual
         reward = Reward(actual=False, SS=self.default_scaling)
-        result = reward.get(self.extractor)
+        result = reward.get(self.extractor, self.timestamp)
 
         # Cumulative grid state: [-10, 5, 10] -> max(0, cumulative)
         expected = -np.maximum(0, np.cumsum(self.extractor.grid_state))
@@ -79,8 +79,8 @@ class TestReward(unittest.TestCase):
         Test the net-congestion penalty.
         """
         ## Test actual
-        reward = Reward(actual=True, NC=self.default_scaling)
-        result = reward.get(self.extractor)
+        reward = Reward(config, actual=True, NC=self.default_scaling)
+        result = reward.get(self.extractor, self.timestamp)
 
         # Latest grid state (negative part only): min(0, 10) -> 0
         expected = np.minimum(0, self.extractor.grid_state[-1])
@@ -88,31 +88,10 @@ class TestReward(unittest.TestCase):
 
         ## Test not actual
         reward = Reward(actual=False, NC=self.default_scaling)
-        result = reward.get(self.extractor)
+        result = reward.get(self.extractor, self.timestamp)
 
         # Grid state: [-10, 5, 10] -> min(0, grid_state)
         expected = np.minimum(0, self.extractor.grid_state)
-        np.testing.assert_array_almost_equal(result, expected, decimal=5)
-
-    def test_nb_reward(self):
-        """
-        Test the net-balance reward.
-        """
-        ## Test actual
-        reward = Reward(actual=True, NB=self.default_scaling)
-        result = reward.get(self.extractor)
-
-        # Cumulative grid state: -10 + 5 + 10
-        # Again, cumulative is skipped because no in between updates: -10
-        expected = -(10)
-        self.assertAlmostEqual(result, expected, places=5)
-
-        ## Test not actual
-        reward = Reward(actual=False, NB=self.default_scaling)
-        result = reward.get(self.extractor)
-
-        # Cumulative grid state: [-10, 5, 10]
-        expected = -np.cumsum(self.extractor.grid_state)
         np.testing.assert_array_almost_equal(result, expected, decimal=5)
 
     def test_ne_reward(self):
@@ -133,7 +112,7 @@ class TestReward(unittest.TestCase):
         new_extractor.i = 60
 
         ## Test actual (full hour)
-        reward = Reward(actual=True, NE=self.default_scaling)
+        reward = Reward(config, actual=True, NE=self.default_scaling)
         result = reward.get(new_extractor)
         # total production = 30 + 25 - 39 = 16 * 60 = 960
         # total nomination = 20 + 30 - 40 = 10 * 60 = 600
@@ -142,7 +121,7 @@ class TestReward(unittest.TestCase):
 
         # Test actual (intermediate)
         new_extractor.i = 30
-        reward = Reward(actual=True, NE=self.default_scaling)
+        reward = Reward(config, actual=True, NE=self.default_scaling)
         result = reward.get(new_extractor)
         # total nomination = 30 + 20 - 40 = 10
         # expected nomination fraction = 10 / 60 * (30 % 60) = 5
@@ -152,7 +131,7 @@ class TestReward(unittest.TestCase):
         self.assertAlmostEqual(result, expected_penalty, places=5)
 
         ## Test not actual
-        reward = Reward(actual=False, NE=self.default_scaling)
+        reward = Reward(config, actual=False, NE=self.default_scaling)
         result = reward.get(new_extractor)
         # result should be np.array, with all zeros except for the hour where the penalty is calculated
         expected = np.zeros(61)
@@ -166,57 +145,41 @@ class TestReward(unittest.TestCase):
         """
         ## Test actual
         reward = Reward(
+            config,
             actual=True,
-            CO2={"active": True, "scaling_factor": 2.0},
             SS={"active": True, "scaling_factor": 1.5},
             NC={"active": True, "scaling_factor": 1.0},
             NB={"active": True, "scaling_factor": 0.5},
         )
-        reward.sub_rewards[
-            "CO2"
-        ].EMISSION_COEFFICIENTS = RewardFactory.EMISSION_COEFFICIENTS
-        result = reward.get(self.extractor)
+        result = reward.get(self.extractor, self.timestamp)
 
         # Sub-rewards:
-        co2_penalty = 2.0 * -(30 * 0.2 + 25 * 0.1 + 20 * 0.3 + 15 * 0.5)
         ss_penalty = 1.5 * -10
         nc_penalty = 1.0 * np.minimum(0, self.extractor.grid_state[-1])
         nb_reward = 0.5 * -10
 
         # Total reward
-        expected = co2_penalty + ss_penalty + nc_penalty + nb_reward
+        expected = ss_penalty + nc_penalty + nb_reward
 
         self.assertAlmostEqual(result, expected, places=5)
 
         ## Test not actual
         reward = Reward(
+            config,
             actual=False,
-            CO2={"active": True, "scaling_factor": 2.0},
             SS={"active": True, "scaling_factor": 1.5},
             NC={"active": True, "scaling_factor": 1.0},
             NB={"active": True, "scaling_factor": 0.5},
         )
-        reward.sub_rewards[
-            "CO2"
-        ].EMISSION_COEFFICIENTS = RewardFactory.EMISSION_COEFFICIENTS
-        result = reward.get(self.extractor)
+        result = reward.get(self.extractor, self.timestamp)
 
         # Sub-rewards:
-        co2_penalty = (
-            -np.array(
-                [
-                    10 * 0.2 + 5 * 0.1 + 0 * 0.3 + -5 * 0.5,
-                    20 * 0.2 + 15 * 0.1 + 10 * 0.3 + 5 * 0.5,
-                    30 * 0.2 + 25 * 0.1 + 20 * 0.3 + 15 * 0.5,
-                ]
-            )
-            * 2.0
-        )
+
         ss_penalty = 1.5 * -np.maximum(0, np.cumsum(self.extractor.grid_state))
         nc_penalty = 1.0 * np.minimum(0, self.extractor.grid_state)
         nb_reward = 0.5 * -np.cumsum(self.extractor.grid_state)
 
         # Total reward
-        expected = co2_penalty + ss_penalty + nc_penalty + nb_reward
+        expected = ss_penalty + nc_penalty + nb_reward
 
         np.testing.assert_array_almost_equal(result, expected, decimal=5)

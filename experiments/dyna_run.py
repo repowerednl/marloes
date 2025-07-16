@@ -12,11 +12,11 @@ import torch
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
 
-from src.marloes.algorithms.dreamer import Dreamer
-from src.marloes.algorithms.base import BaseAlgorithm
-from src.marloes.algorithms.prioflow import PrioFlow
-from src.marloes.algorithms.simplesetpoint import SimpleSetpoint
-from src.marloes.algorithms.dyna import Dyna
+from marloes.algorithms.dreamer import Dreamer
+from marloes.algorithms.base import BaseAlgorithm
+from marloes.algorithms.prioflow import PrioFlow
+from marloes.algorithms.simplesetpoint import SimpleSetpoint
+from marloes.algorithms.dyna import Dyna
 from marloes.handlers.base import Handler
 
 search_space = {

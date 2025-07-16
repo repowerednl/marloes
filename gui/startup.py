@@ -63,7 +63,7 @@ class ExperimentSetupApp(QWidget):
         layout.addWidget(QLabel("Select configuration:"))
         self.config_dropdown = QComboBox()
         self.config_dropdown.addItems(
-            ["dyna_config", "default_config", "simple_config", "test_config"]
+            ["dyna_config", "default_config", "simple_config"]
         )
         layout.addWidget(self.config_dropdown)
 

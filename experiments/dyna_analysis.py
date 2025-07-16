@@ -1,30 +1,31 @@
 from __future__ import annotations
+
 import argparse
 import logging
 import os
+import time
 from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+from rliable.metrics import probability_of_improvement
 from scipy.stats import (
-    sem,
-    shapiro,
-    ttest_rel,
     f_oneway,
-    wilcoxon,
-    ttest_ind,
-    mannwhitneyu,
-    trim_mean,
     kruskal,
     levene,
+    mannwhitneyu,
+    sem,
+    shapiro,
+    trim_mean,
+    ttest_ind,
+    ttest_rel,
+    wilcoxon,
 )
-from statsmodels.stats.multitest import multipletests
-from rliable.metrics import probability_of_improvement
-from statsmodels.stats.multitest import multipletests
 from sklearn.utils import resample
-import time
+from statsmodels.stats.multitest import multipletests
 
+from experiments.uid_data import ablation_uids, main_uids, paradigm_uids
 from marloes.results.calculator import Calculator
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
@@ -50,272 +51,6 @@ colors_main = [
     ("rgb(0, 158, 115)", "solid"),  # green for DynaSAC (rho=0.8)
     ("rgb(204, 121, 167)", "solid"),  # orange for DynaSAC (rho=0.5)
 ]
-
-ablation_uids_old: Dict[str, List[int]] = {
-    "with GRU": [3246, 3248, 3250, 3252, 3254, 3256, 3258, 3260, 3262, 3264],
-    "no GRU": [3326, 3328, 3330, 3332, 3334, 3336, 3338, 3340, 3342, 3344],
-}
-
-paradigm_uids_old: Dict[str, List[int]] = {
-    # "DynaSAC (3 agents)": [3750, 3752, 3760, 3762, 3764, 3766, 3770, 3772, 3774, 3778],
-    "DynaSAC (3 agents)": [3246, 3248, 3250, 3252, 3254, 3256, 3258, 3260, 3262, 3264],
-    "DynaSAC (6 agents)": [3754, 3756, 3758, 3768, 3776, 3860, 3862, 3864, 3866, 3868],
-    "DynaSAC (12 agents)": [3870, 3872, 3874, 3876, 3878, 3900, 3902, 3904, 3906, 3908],
-    "DynaMASAC (3 agents)": [
-        3970,
-        3972,
-        3974,
-        3976,
-        3978,
-        4020,
-        4022,
-        4030,
-        4036,
-        4044,
-    ],
-    "DynaMASAC (6 agents)": [
-        4046,
-        4052,
-        4054,
-        4056,
-        4058,
-        4060,
-        4062,
-        4064,
-        4066,
-        4068,
-    ],
-    "DynaMASAC (12 agents)": [
-        4096,
-        4112,
-        4114,
-        4116,
-        4118,
-        4120,
-        4154,
-        4158,
-        4164,
-        4168,
-    ],
-    # "PrioFlow (3 agents)": [4122, 424, 4126, 4128, 4130, 4132, 4134, 4136, 4138, 4140],
-    # "PrioFlow (6 agents)": [5000],
-    # "PrioFlow (12 agents)": [5002],
-}
-
-main_uids_old: Dict[str, List[int]] = {
-    "zero_noise": {
-        "PrioFlow": [3780, 3782, 3784, 3786, 3788, 3790, 3792, 3794, 3796, 3798],
-        "SAC": [3980, 3982, 3984, 3986, 3988, 3990, 3992, 3994, 3996, 3998],
-        "DynaSAC (rho=0.8)": [
-            4024,
-            4026,
-            4028,
-            4032,
-            4034,
-            4038,
-            4040,
-            4042,
-            4048,
-            4050,
-        ],
-        "DynaSAC (rho=0.5)": [
-            4090,
-            4092,
-            4094,
-            4098,
-            4100,
-            4102,
-            4104,
-            4106,
-            4108,
-            4110,
-        ],
-        # "MASAC": [3800, 3802, 3804, 3806, 3808, 3810, 3812, 3814, 3816, 3818],
-        # "DynaMASAC (rho=0.8)": [3840, 3842, 3844, 3846, 3848, 3850, 3852, 3854, 3856, 3858],
-        # "DynaMASAC (rho=0.5)": [3910, 3912, 3914, 3916, 3918, 3920, 3922, 3924, 3926, 3928],
-    },
-    "default": {
-        "PrioFlow": [4122, 4124, 4126, 4128, 4130, 4132, 4134, 4136, 4138, 4140],
-        "SAC": [4212, 4214, 4216, 4218, 4220, 4222, 4224, 4226, 4228, 4230],
-        "DynaSAC (rho=0.8)": [
-            3246,
-            3248,
-            3250,
-            3252,
-            3254,
-            3256,
-            3258,
-            3260,
-            3262,
-            3264,
-        ],
-        "DynaSAC (rho=0.5)": [
-            4232,
-            4234,
-            4236,
-            4238,
-            4240,
-            4242,
-            4244,
-            4246,
-            4248,
-            4250,
-        ],
-        # "MASAC": [4142, 4144, 4146, 4148, 4150, 4152, 4156, 4160, 4162, 4166],
-        # "DynaMASAC (rho=0.8)": [4170, 4172, 4174, 4176, 4178, 4180, 4182, 4184, 4186, 4188],
-        # "DynaMASAC (rho=0.5)": [4030, 4036, 4190, 4192],
-    },
-}
-
-ablation_uids_default = {
-    "with GRU": [4432, 4440, 4434, 4450, 4446, 4444, 4448, 4438, 4442, 4436],
-    "no GRU": [4672, 4674, 4676, 4682, 4684, 4688, 4692, 4694, 4698, 4700],
-}
-ablation_uids = {
-    "with GRU": [4896, 4902, 4904, 4908, 4910, 4912, 4918, 4922, 4926, 4930],
-    "no GRU": [4892, 4894, 4898, 4900, 4906, 4914, 4916, 4920, 4924, 4928],
-}
-# ablation_uids = {'with GRU': [4896, 4902, 4904, 4908, 4910, 4912, 4918, 4922, 4926, 4930, 5054, 5056, 5062, 5064, 5068, 5070, 5074, 5076, 5078, 5090, 5092, 5096, 5100, 5104, 5108, 5110, 5112, 5114, 5122, 5126], 'no GRU': [4892, 4894, 4898, 4900, 4906, 4914, 4916, 4920, 4924, 4928, 5052, 5058, 5060, 5066, 5072, 5080, 5082, 5084, 5086, 5088, 5094, 5098, 5102, 5106, 5116, 5118, 5120, 5124, 5128, 5130]}
-paradigm_uids_default = {
-    "DynaSAC (3 assets)": [4252, 4256, 4260, 4262, 4264, 4266, 4270, 4272, 4276, 4280],
-    "DynaSAC (6 assets)": [4254, 4258, 4268, 4274, 4278, 4372, 4374, 4380, 4384, 4386],
-    "DynaSAC (12 assets)": [4392, 4398, 4404, 4406, 4408, 4602, 4604, 4606, 4608, 4610],
-    "DynaMASAC (3 assets)": [
-        4710,
-        4714,
-        4728,
-        4732,
-        4742,
-        4782,
-        4784,
-        4786,
-        4788,
-        4790,
-    ],
-    "DynaMASAC (6 assets)": [
-        4792,
-        4794,
-        4796,
-        4798,
-        4800,
-        4804,
-        4808,
-        4812,
-        4816,
-        4818,
-    ],
-    "DynaMASAC (12 assets)": [
-        4822,
-        4824,
-        4826,
-        4828,
-        4830,
-        4852,
-        4854,
-        4856,
-        4860,
-        4868,
-    ],
-}
-paradigm_uids = {
-    "DynaSAC (3 assets)": [4934, 4936, 4946, 4958, 4968, 4974, 4978, 4980, 4982, 4988],
-    "DynaSAC (6 assets)": [4932, 4940, 4942, 4944, 4948, 4952, 4954, 4966, 4972, 4986],
-    "DynaSAC (12 assets)": [4938, 4950, 4956, 4960, 4962, 4964, 4970, 4976, 4984, 4990],
-    "DynaMASAC (3 assets)": [
-        4992,
-        4994,
-        4996,
-        4998,
-        5000,
-        5002,
-        5004,
-        5006,
-        5008,
-        5010,
-    ],
-    "DynaMASAC (6 assets)": [
-        5012,
-        5014,
-        5016,
-        5018,
-        5020,
-        5022,
-        5024,
-        5026,
-        5028,
-        5030,
-    ],
-    "DynaMASAC (12 assets)": [
-        5032,
-        5034,
-        5036,
-        5038,
-        5040,
-        5042,
-        5044,
-        5046,
-        5048,
-        5050,
-    ],
-}
-main_uids = {
-    "zero_noise": {
-        "PrioFlow": [4486, 4490, 4494, 4496, 4500, 4506, 4512, 4514, 4516, 4524],
-        "SAC": [4484, 4488, 4498, 4502, 4504, 4518, 4520, 4522, 4530, 4532],
-        "DynaSAC (rho=0.8)": [
-            4492,
-            4508,
-            4510,
-            4526,
-            4528,
-            4538,
-            4540,
-            4544,
-            4546,
-            4548,
-        ],
-        "DynaSAC (rho=0.5)": [
-            4542,
-            4550,
-            4552,
-            4554,
-            4556,
-            4622,
-            4624,
-            4626,
-            4628,
-            4630,
-        ],
-    },
-    "default": {
-        "PrioFlow": [4632, 4634, 4636, 4638, 4640, 4642, 4644, 4646, 4648, 4650],
-        "SAC": [4654, 4656, 4658, 4662, 4666, 4708, 4716, 4718, 4720, 4722],
-        "DynaSAC (rho=0.8)": [
-            4726,
-            4730,
-            4734,
-            4736,
-            4738,
-            4740,
-            4744,
-            4746,
-            4748,
-            4750,
-        ],
-        "DynaSAC (rho=0.5)": [
-            4762,
-            4764,
-            4766,
-            4768,
-            4770,
-            4772,
-            4774,
-            4776,
-            4778,
-            4780,
-        ],
-    },
-}
 EXPERIMENTS = {
     "ablation": ablation_uids,
     "paradigm": paradigm_uids,
@@ -590,7 +325,6 @@ def t_test_summary(
     print(f"Cohen's d: {d:.3f}")
     print(f"Probability of Improvement: {poi:.3f}")
 
-    # TODO: HOLM-ADJUSTED WHEN?
     return stat, p, d
 
 
@@ -666,9 +400,7 @@ def efficiency_summary(
         for uid in uids:
             calc = Calculator(uid, dir="results")
             # Wall time in hours
-            wall_time = (
-                calc.get_metrics(["elapsed_time"])["elapsed_time"][-1] / 3600
-            )  # sec → hr
+            wall_time = calc.get_metrics(["elapsed_time"])["elapsed_time"][-1] / 3600
             wall_times.append(wall_time)
             # Emissions for AULC
             emissions = np.array(calc.get_metrics(["co2_emissions"])["co2_emissions"])
@@ -710,7 +442,6 @@ def efficiency_summary(
 
     # Do statistical tests if pairs are provided
     if pairs:
-        # --- Wall time ---
         print("\n=== Wall time pairwise tests ===")
         for l1, l2 in pairs:
             t_test_summary(
@@ -795,14 +526,14 @@ def main():
     # Set log level to warning to avoid cluttering output
     logging.getLogger().setLevel(logging.WARNING)
     # Plot
-    # plot_groups_ci(
-    #     groups,
-    #     metric=metric,
-    #     scenario=args.scenario,
-    #     rolling=True,
-    #     save_png=args.save_png,
-    #     experiment=args.experiment,
-    # )
+    plot_groups_ci(
+        groups,
+        metric=metric,
+        scenario=args.scenario,
+        rolling=True,
+        save_png=args.save_png,
+        experiment=args.experiment,
+    )
 
     # Summary table
     summary(groups, metric, args.scenario)

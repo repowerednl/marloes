@@ -7,7 +7,6 @@ import pandas as pd
 import yaml
 
 from marloes.valley.rewards.subrewards import (
-    CO2SubReward,
     NBSubReward,
     NCSubReward,
     SSSubReward,
@@ -25,7 +24,6 @@ class Calculator:
     """
 
     REWARD_CLASSES = {
-        "CO2": CO2SubReward,
         "SS": SSSubReward,
         "NC": NCSubReward,
         "NB": NBSubReward,

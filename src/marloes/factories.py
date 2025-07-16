@@ -12,7 +12,6 @@ from marloes.results.extractor import Extractor
 from marloes.results.calculator import Calculator
 from marloes.valley.rewards.reward import Reward
 from marloes.valley.rewards.subrewards import (
-    CO2SubReward,
     NBSubReward,
     NCSubReward,
     SSSubReward,
@@ -192,7 +191,6 @@ class RewardFactory(factory.Factory):
 
         # Create the sub-reward instances
         sub_rewards = {
-            "CO2": CO2SubReward(**sub_rewards_config.get("CO2", {})),
             "SS": SSSubReward(**sub_rewards_config.get("SS", {})),
             "NC": NCSubReward(**sub_rewards_config.get("NC", {})),
             "NB": NBSubReward(**sub_rewards_config.get("NB", {})),

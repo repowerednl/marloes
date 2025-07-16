@@ -5,7 +5,6 @@ import numpy as np
 
 from marloes.results.extractor import Extractor
 from marloes.valley.rewards.subrewards import (
-    CO2SubReward,
     NBSubReward,
     NCSubReward,
     SSSubReward,
@@ -21,7 +20,6 @@ class Reward:
     """
 
     VALID_SUB_REWARDS = {
-        "CO2": CO2SubReward,
         "SS": SSSubReward,
         "NC": NCSubReward,
         "NB": NBSubReward,

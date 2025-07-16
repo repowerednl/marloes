@@ -6,8 +6,7 @@ MAX_DEMAND = 30
 
 class BalanceSubReward(SubReward):
     """
-    Simple sub‐reward: negative normalized absolute mismatch
-    between total supply and demand.
+    Balance sub-reward, also known as the CO2 sub-reward.
     """
 
     name = "Balance"
