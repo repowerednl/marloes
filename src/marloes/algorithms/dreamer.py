@@ -33,6 +33,7 @@ class Dreamer(BaseAlgorithm):
         self.horizon = self.config.get("horizon", 16)
         self.losses = None
         self.update_steps = self.config.get("update_steps", 1)
+        self.ratio_real_imagined = self.config.get("ratio_real_imagined", 0)
 
     def _initialize_world_model(self, config: dict):
         """
@@ -180,9 +181,20 @@ class Dreamer(BaseAlgorithm):
             # |  - Should return a batch of imagined sequences        |#
             # | ----------------------------------------------------- |#
             starting_points = self.real_RB.sample(self.batch_size)
+            # only select the ratio
+            n_real = int(self.ratio_real_imagined * self.batch_size)
+            n_imag = self.batch_size - n_real
+            # select batch_size - n_real starting points to pass to imagine
+            state_starts = starting_points["state"][:n_imag]
+            belief_starts = (
+                starting_points["belief"][:n_imag]
+                if "belief" in starting_points
+                else {}
+            )
+
             imagined_sequences = self.world_model.imagine(
-                starting_points["state"],
-                starting_points["belief"],
+                state_starts,  # starting_points["state"]
+                belief_starts,  # starting_points["belief"]
                 self.actor_critic.actor,
                 self.horizon,
             )
@@ -193,8 +205,16 @@ class Dreamer(BaseAlgorithm):
             # Only update with imagined trajectories
             # (updating with real trajectories should be implemented for:
             # - environments where the reward is tricky to predict)
+            # states (latent states), actions, rewards of the real trajectory
+            # make sure real_sample is converted to the right format (as returned by imagine)
+            seq = (
+                imagined_sequences
+                + self.world_model.convert_samples(real_sample[:n_real])
+                if n_real > 0
+                else imagined_sequences
+            )
 
-            self.actor_critic.learn(imagined_sequences)
+            self.actor_critic.learn(seq)
 
         # | ----------------------------------------------------- |#
         # | Step 5: Save the losses                               |#

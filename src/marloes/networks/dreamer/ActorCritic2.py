@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import AdamW
 
-from marloes.networks.util import compute_lambda_returns
+from marloes.networks.util import compute_lambda_returns, symlog
 import copy
 
 
@@ -107,17 +107,15 @@ class ActorCritic2(nn.Module):
             returns, advantages = self._compute_advantages(rewards, target_values)
 
         # Actor update only when i % 5 == 0
-        if self.i % 5 == 0 and self.i > 0:
-            actor_loss = self._compute_actor_loss(states, actions, advantages, returns)
-            self.actor_optim.zero_grad()
-            actor_loss.backward()
-            torch.nn.utils.clip_grad_norm_(
-                self.actor.parameters(), self.actor_clip_grad
-            )
-            self.actor_optim.step()
-            self.actor_loss.append(actor_loss.item())
-        if self.i == 0:
-            self.actor_loss = [0]  # Reset actor loss on first iteration
+        # if self.i % 5 == 0 and self.i > 0:
+        actor_loss = self._compute_actor_loss(states, actions, advantages, returns)
+        self.actor_optim.zero_grad()
+        actor_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), self.actor_clip_grad)
+        self.actor_optim.step()
+        self.actor_loss.append(actor_loss.item())
+        # if self.i == 0:
+        #     self.actor_loss = [0]  # Reset actor loss on first iteration
 
         # Critic update using two-hot encoded cross-entropy
         B, T, D = states.shape
@@ -132,8 +130,8 @@ class ActorCritic2(nn.Module):
         self.critic_loss.append(critic_loss.item())
 
         # EMA target update
-        if self.i % 5 == 0 and self.i > 0:
-            self.update_critic_target()
+        # if self.i % 5 == 0 and self.i > 0:
+        self.update_critic_target()
 
     def _compute_actor_loss(self, states, actions, advantages, returns) -> torch.Tensor:
         """
@@ -154,6 +152,9 @@ class ActorCritic2(nn.Module):
         mu, log_std = self.actor.forward(states)
         std = torch.exp(log_std)
         dist = torch.distributions.Normal(mu, std)
+        # invert tanh to get pre-tanh values
+        eps = 1e-6  # small epsilon to avoid numerical issues
+        actions = torch.clamp(actions, -1 + eps, 1 - eps).detach()
         # invert tanh to get pre-tanh values
         pre_tanh = 0.5 * (torch.log1p(actions) - torch.log1p(-actions))
         log_prob = dist.log_prob(pre_tanh).sum(
@@ -190,20 +191,16 @@ class ActorCritic2(nn.Module):
             self.s_ema.mul_(self.s_ema_alpha).add_((1 - self.s_ema_alpha) * S)
 
         # Reduce entropy coefficient over time
-        # if not hasattr(self, "entropy_decay"):
-        #     self.entropy_decay = self.entropy_coef  # Initialize entropy decay
-        # self.entropy_decay *= 0.999  # Decay factor (adjust as needed)
+        if not hasattr(self, "entropy_decay"):
+            self.entropy_decay = self.entropy_coef  # Initialize entropy decay
+        self.entropy_decay *= 0.999  # Decay factor (adjust as needed)
 
-        actor_loss = (
-            -(
-                (
-                    advantages.detach()
-                    / torch.maximum(self.s_ema, torch.ones_like(self.s_ema))
-                )
-                * log_prob
-            ).mean()
-            - entropy  # * self.entropy_coef
-        ).mean()  # Mean over batch and time
+        scale_factor = torch.maximum(
+            self.s_ema, torch.tensor(1.0, device=self.s_ema.device)
+        )
+        weighted_advantages = (advantages.detach() / scale_factor) * log_prob
+        entropy_term = entropy * self.entropy_decay
+        actor_loss = -(weighted_advantages.mean() + entropy_term.mean())
         return actor_loss
 
     def _compute_critic_loss(
@@ -297,6 +294,8 @@ class Actor(nn.Module):
     def __init__(self, input_size: int, output_size: int, hidden_size: int = 256):
         super(Actor, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
+        # dropout layer
+        self.dropout = nn.Dropout(p=0.1)
         # self.fc2 = nn.Linear(hidden_size, hidden_size)
 
         self.output_size = output_size
@@ -333,6 +332,7 @@ class Actor(nn.Module):
         """
         x = F.relu(self.fc1(x))
         # x = F.relu(self.fc2(x))
+        x = self.dropout(x)
 
         mus = []
         log_stds = []
@@ -347,7 +347,10 @@ class Actor(nn.Module):
 
         mu = torch.cat(mus, dim=-1)
         log_std = torch.cat(log_stds, dim=-1)
-        log_std = torch.clamp(log_std, -10, 10)
+        log_std = torch.clamp(log_std, -2, 2)
+        # Replace NaN and inf values with specific values
+        mu = torch.nan_to_num(mu, nan=0.0, posinf=5.0, neginf=-5.0)
+        log_std = torch.nan_to_num(log_std, nan=-1.0, posinf=2.0, neginf=-2.0)
 
         return mu, log_std
 

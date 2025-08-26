@@ -303,8 +303,8 @@ class ExtensiveExtractor(Extractor):
         super().clear()
         self.extensive_data.stash_chunk()
 
-    def from_observations(self, observations):
-        super().from_observations(observations)
+    def from_observations(self, observations: dict, trainable_agents: list[Agent]):
+        super().from_observations(observations, trainable_agents)
 
         # Fill in the forecast data
         # Since forecast does not change, we can just iteratively add the first value of the forecast series

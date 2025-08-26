@@ -258,10 +258,11 @@ class ExperimentSetupApp(QWidget):
 
         # Start time some minute in the first 4 months of 2025
         if "start_time" not in config:
-            start_time = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
-            random_minutes = random.randint(0, 4 * 30 * 24 * 60)
+            start_time = datetime(2025, 3, 1, tzinfo=ZoneInfo("UTC"))
+            # random_minutes = random.randint(0, 4 * 30 * 24 * 60)
+            random_minutes = 60 * 0
             start_time += timedelta(minutes=random_minutes)
-            config["start_time"] = start_time
+            # config["start_time"] = start_time
             config["simulation_start_time"] = start_time
 
         self.config = config

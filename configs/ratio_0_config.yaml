@@ -1,0 +1,90 @@
+ActorCritic:
+  actor_clip_grad: 1
+  actor_hidden_size: 64
+  actor_lr: 0.0005
+  actor_weight_decay: 0.005
+  critic_clip_grad: 1
+  critic_hidden_size: 64
+  critic_lr: 0.0001
+  critic_weight_decay: 0.005
+  ema_update: 0.995
+  entropy_coef: 1
+  gamma: 0.997
+  lambda: 0.99
+  n_bins: 50
+  new: false
+  s_ema_alpha: 0.95
+WorldModel:
+  RSSM:
+    Encoder:
+      clamp_lower: -5.0
+      clamp_upper: 5.0
+    LayerDetails:
+      batch_first: true
+      bias: true
+      bidirectional: false
+      dropout: 0.01
+      latent_size: 32
+      num_layers: 2
+      recurrent_size: 64
+    clamp_lower: -5.0
+    clamp_upper: 5.0
+  beta_weights:
+    dyn: 1.0
+    pred: 1.0
+    rep: 0.1
+  clip_grad: 1.0
+  free_bits: 1.0
+  lr: 0.001
+  weight_decay: 0.005
+agents:
+- AC: 3000
+  DC: 3000
+  orientation: EW
+  trainable: true
+  type: solar
+- profile: Farm
+  scale: 15
+  trainable: false
+  type: demand
+- energy_capacity: 2000
+  power: 1000
+  trainable: true
+  type: battery
+algorithm: Dreamer
+batch_size: 64
+chunk_size: 1000
+data_config:
+  drop_prob: 0.0
+  long_drop_prob: 0.0
+  max_long_drop_days: 0
+  name: zero_noise
+  noise: 0.0
+deterministic: false
+device: cpu
+grid:
+  name: Grid
+horizon: 8
+multiplication_factor_full_reward: 1
+num_initial_random_steps: 1440
+replay_buffers:
+  model_capacity: 100000
+  real_capacity: 100000
+start_time: 2025-03-01 00:00:00+00:00
+subrewards:
+  BA:
+    active: true
+    scaling_factor: 10
+  CO2:
+    active: false
+    scaling_factor: 1
+  NE:
+    active: false
+    scaling_factor: 1
+  TEST:
+    active: false
+    scaling_factor: 1
+training_steps: 10000
+update_interval: 60
+update_steps: 1
+ratio_real_imagined: 0

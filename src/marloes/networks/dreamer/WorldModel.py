@@ -269,6 +269,40 @@ class WorldModel(nn.Module):
             "total_world_loss": [],
         }
 
+    def convert_samples(self, sample: list[dict]) -> list[dict]:
+        """
+        Converts the samples (sequences) to the same return as the 'imagine':
+        For actor learning.
+        Args:
+            sample (list[dict]): List of dictionary with a sequence of states, actions, rewards and beliefs.
+        Returns:
+            list[dict]: Dictionary containing states, actions, and rewards as tensors.
+        """
+        with torch.no_grad():
+            batch = []
+
+            for sequence in sample:
+                converted_sequence = {}
+                # Use state (x_t) and belief (h_t) for the Encoder to get the latent states for each element in sequence
+                x_t = sequence["state"]
+                belief_info = sequence["belief"]
+                # Extract h_t from the list in belief_info
+                for b in belief_info:
+                    if b.get("h_t") is None:
+                        # If h_t is not available, initialize it
+                        b["h_t"] = self.rssm._init_state(1)[-1]
+                # stack the hidden states of the states in the trajectory/sequence
+                h_t = torch.stack([b["h_t"].squeeze(0) for b in belief_info], dim=0)
+                states = torch.cat([x_t, h_t], dim=-1)
+                states, _ = self.rssm.encoder(states)
+                model_state = torch.cat([h_t, states], dim=-1)
+                converted_sequence["state"] = model_state.unsqueeze(1)
+                converted_sequence["actions"] = sequence["actions"].unsqueeze(1)
+                converted_sequence["rewards"] = sequence["rewards"].unsqueeze(1)
+
+                batch.append(converted_sequence)
+            return batch
+
 
 class Decoder(BaseNetwork):
     """

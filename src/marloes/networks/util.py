@@ -17,14 +17,14 @@ def dist(mu, raw_logvar):
     return mu + eps * std
 
 
+def symlog(x):
+    return torch.sign(x) * torch.log1p(torch.abs(x))
+
+
 def symlog_squared_loss(x, y):
     """
     Symlog squared loss function for Prediction loss in the World Model.
     """
-
-    def symlog(x):
-        return torch.sign(x) * torch.log1p(torch.abs(x))
-
     return torch.nn.functional.mse_loss(symlog(x), symlog(y))
 
 

@@ -31,35 +31,35 @@ class BalanceSubReward(SubReward):
         )
 
     def calculate(self, extractor, actual: bool, **kwargs) -> float | np.ndarray:
-        solar = extractor.total_solar_production[extractor.i]
-        wind = extractor.total_wind_production[extractor.i]
-        supply = solar + wind
+        # solar = extractor.total_solar_production[extractor.i]
+        # wind = extractor.total_wind_production[extractor.i]
+        # supply = solar + wind
         available_supply = extractor.supply_available_power[extractor.i]
         demand = extractor.total_demand[extractor.i]
 
-        battery_production = extractor.total_battery_production[extractor.i]
-        battery_intake = extractor.total_battery_intake[extractor.i]
-        battery_actual = battery_production - battery_intake
+        # battery_production = extractor.total_battery_production[extractor.i]
+        # battery_intake = extractor.total_battery_intake[extractor.i]
+        # battery_actual = battery_production - battery_intake
 
-        battery_prev_actual = (
-            extractor.total_battery_production[extractor.i - 1]
-            - extractor.total_battery_intake[extractor.i - 1]
-        )
+        # battery_prev_actual = (
+        #     extractor.total_battery_production[extractor.i - 1]
+        #     - extractor.total_battery_intake[extractor.i - 1]
+        # )
 
         grid_production = extractor.total_grid_production[extractor.i]
-        grid_state = extractor.grid_state[extractor.i]
+        # grid_state = extractor.grid_state[extractor.i]
 
-        solar_action = sum(
-            extractor.__dict__[attr][extractor.i]
-            for attr in extractor.__dict__
-            if isinstance(getattr(extractor, attr), np.ndarray) and "SolarAgent" in attr
-        )
-        wind_action = sum(
-            extractor.__dict__[attr][extractor.i]
-            for attr in extractor.__dict__
-            if isinstance(getattr(extractor, attr), np.ndarray) and "WindAgent" in attr
-        )
-        supply_action = solar_action + wind_action
+        # solar_action = sum(
+        #     extractor.__dict__[attr][extractor.i]
+        #     for attr in extractor.__dict__
+        #     if isinstance(getattr(extractor, attr), np.ndarray) and "SolarAgent" in attr
+        # )
+        # wind_action = sum(
+        #     extractor.__dict__[attr][extractor.i]
+        #     for attr in extractor.__dict__
+        #     if isinstance(getattr(extractor, attr), np.ndarray) and "WindAgent" in attr
+        # )
+        # supply_action = solar_action + wind_action
 
         # Get all attributes from extractor that contain "BatteryAgent"
         battery_charge_action = 0
@@ -90,15 +90,18 @@ class BalanceSubReward(SubReward):
         # battery_setpoint_penalty = charge_setpoint_penalty + discharge_setpoint_penalty
 
         # positive surplus → want charge; negative surplus → want discharge
-        battery_action = battery_discharge_action + battery_charge_action
-        battery_setpoint_penalty = (
-            -abs(battery_action + surplus) / self.total_battery_power
-        )
+        if not battery_charge_action and not battery_discharge_action:
+            battery_action = battery_discharge_action + battery_charge_action
+            battery_setpoint_penalty = (
+                -abs(battery_action + surplus) / self.total_battery_power
+            )
+        else:
+            battery_setpoint_penalty = 0.0
 
-        same_sign = np.sign(grid_state) == np.sign(battery_action)
-        battery_direction_penalty = (
-            0.0 if same_sign else -abs(battery_action) / self.total_battery_power
-        )
+        # same_sign = np.sign(grid_state) == np.sign(battery_action)
+        # battery_direction_penalty = (
+        #     0.0 if same_sign else -abs(battery_action) / self.total_battery_power
+        # )
 
         # feasability_penalty = -(abs(battery_action - battery_actual) / self.total_battery_power) * 2
 
@@ -111,9 +114,9 @@ class BalanceSubReward(SubReward):
 
         grid_production_penalty = -grid_production / self.max_demand
 
-        maximize_renewables_penalty = (
-            supply_action - self.max_supply
-        ) / self.max_supply
+        # maximize_renewables_penalty = (
+        #     supply_action - self.max_supply
+        # ) / self.max_supply
         return (
-            grid_production_penalty + battery_setpoint_penalty
+            grid_production_penalty * 2 + battery_setpoint_penalty
         )  # + maximize_renewables_penalty # setpoint_penalty # + feasability_penalty # + cycle_penalty + feasability_penalty§
