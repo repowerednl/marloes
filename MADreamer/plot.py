@@ -738,7 +738,7 @@ def plot_performance(
             fig.add_trace(
                 go.Scatter(
                     x=steps,
-                    y=avg + err,
+                    y=(avg + err) * (284.73 if metric_name == "CO2 emissions" else 1),
                     fill=None,
                     mode="lines",
                     line=dict(width=0),
@@ -751,7 +751,7 @@ def plot_performance(
             fig.add_trace(
                 go.Scatter(
                     x=steps,
-                    y=avg - err,
+                    y=(avg - err) * (284.73 if metric_name == "CO2 emissions" else 1),
                     fill="tonexty",
                     mode="lines",
                     line=dict(width=0),
@@ -767,7 +767,7 @@ def plot_performance(
             fig.add_trace(
                 go.Scatter(
                     x=steps,
-                    y=avg,
+                    y=avg * (284.73 if metric_name == "CO2 emissions" else 1),
                     mode="lines",
                     name=legend,
                     line=dict(color=col, width=2),
@@ -1223,44 +1223,45 @@ if __name__ == "__main__":
     if args.metrics:
         metrics = {metric: metric.lower().replace(" ", "_") for metric in args.metrics}
     # print metrics
-    print_metrics(base=args.base, save=args.save)
-    print("Successfully printed metrics.")
+    # print_metrics(base=args.base, save=args.save)
+    # print("Successfully printed metrics.")
 
-    # plot losses
-    plot_losses(base=args.base, metrics=metrics, save=args.save)
-    print("Successfully plotted losses.")
+    # # plot losses
+    # plot_losses(base=args.base, metrics=metrics, save=args.save)
+    # print("Successfully plotted losses.")
 
-    # plot noise effect
-    plot_noise(base=args.base, save=args.save)
-    print("Successfully plotted noise effect.")
+    # # plot noise effect
+    # plot_noise(base=args.base, save=args.save)
+    # print("Successfully plotted noise effect.")
 
-    # plot setpoints for single agents
-    plot_setpoints_single_agent(base=args.base, save=args.save)
-    print("Successfully plotted setpoints for single agents.")
+    # # plot setpoints for single agents
+    # plot_setpoints_single_agent(base=args.base, save=args.save)
+    # print("Successfully plotted setpoints for single agents.")
 
-    # plot behaviour
-    plot_behaviour(days=2)
-    plot_behaviour(days=3)
-    plot_behaviour(days=4)
+    # # plot behaviour
+    # plot_behaviour(days=2)
+    # plot_behaviour(days=3)
+    # plot_behaviour(days=4)
 
-    # plot behaviour prioflow
-    plot_behaviour(uid=2663, days=2, title="Behaviour of PrioFlow agent")
-    plot_behaviour(uid=2663, days=3, title="Behaviour of PrioFlow agent")
-    plot_behaviour(uid=2663, days=4, title="Behaviour of PrioFlow agent")
-    print("Successfully plotted behaviour.")
+    # # plot behaviour prioflow
+    # plot_behaviour(uid=2663, days=2, title="Behaviour of PrioFlow agent")
+    # plot_behaviour(uid=2663, days=3, title="Behaviour of PrioFlow agent")
+    # plot_behaviour(uid=2663, days=4, title="Behaviour of PrioFlow agent")
+    # print("Successfully plotted behaviour.")
 
-    # # plot performance
+    # # # plot performance
     plot_performance(base=args.base)
-    print("Successfully plotted performance.")
+    # print("Successfully plotted performance.")
 
-    # plot sankeys
-    plot_sankeys(base=args.base)
-    print("Successfully plotted sankeys.")
+    # # plot sankeys
+    # plot_sankeys(base=args.base)
+    # print("Successfully plotted sankeys.")
 
     # plot actors
-    plot_actors(base=args.base, save=args.save)
+    # plot_actors(base=args.base, save=args.save)
+    # plot_performance(base=args.base, configs=["3_handler", "new_actor"])
     print("Successfully plotted actors.")
 
     # do statistical test between 3_handler and new_actor
-    do_statistical_test(base=args.base)
-    print("Successfully performed statistical test between 3_handler and new_actor.")
+    # do_statistical_test(base=args.base)
+    # print("Successfully performed statistical test between 3_handler and new_actor.")
