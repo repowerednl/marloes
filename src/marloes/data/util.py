@@ -47,6 +47,12 @@ def read_series(
         # Convert the DataFrame to a Series
         series = df.squeeze("columns")
 
+        # Make sure the series contains only a single year of data
+        first_date = series.index[0]
+        series = series[
+            : first_date.replace(year=first_date.year + 1) - pd.Timedelta(minutes=1)
+        ]
+
         # Shift the series to the year 2025 so all data aligns
         series = shift_series(
             series,

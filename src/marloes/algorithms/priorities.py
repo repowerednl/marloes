@@ -66,9 +66,12 @@ class Priorities(BaseAlgorithm):
         If based on forecasts, the net power is positive, the battery should charge.
         If based on forecasts, the net power is negative, the battery should discharge.
         """
-        return self._determine_battery_actions(
-            get_net_forecasted_power(observations=observations),
-            self._get_batteries(observations),
+        return (
+            self._determine_battery_actions(
+                get_net_forecasted_power(observations=observations),
+                self._get_batteries(observations),
+            ),
+            None,
         )
 
     def perform_training_steps(self, step: int) -> None:
@@ -76,3 +79,6 @@ class Priorities(BaseAlgorithm):
         Overrides the training step. No learning is required for the priority-based algorithm.
         """
         pass
+
+    def track_networks(self):
+        return super().track_networks()

@@ -202,9 +202,9 @@ class Visualizer:
                 )
 
         fig.update_layout(
-            title=f"All Metrics for UID {uid}",
+            title=f"Setpoint and Production for {uid}",  # "Setpoints and Production"
             xaxis_title="Time",
-            yaxis_title="Value",
+            yaxis_title="kWh",
             font=dict(size=14, color="black"),
         )
         fig.show()

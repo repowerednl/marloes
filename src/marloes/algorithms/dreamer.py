@@ -1,6 +1,7 @@
 from .base import BaseAlgorithm
 from marloes.networks.dreamer.WorldModel import WorldModel
 from marloes.networks.dreamer.ActorCritic import ActorCritic
+from marloes.networks.dreamer.ActorCritic2 import ActorCritic2
 
 import torch
 import numpy as np
@@ -32,6 +33,7 @@ class Dreamer(BaseAlgorithm):
         self.horizon = self.config.get("horizon", 16)
         self.losses = None
         self.update_steps = self.config.get("update_steps", 1)
+        self.ratio_real_imagined = self.config.get("ratio_real_imagined", 0)
 
     def _initialize_world_model(self, config: dict):
         """
@@ -50,12 +52,23 @@ class Dreamer(BaseAlgorithm):
         input_size = (
             self.world_model.rssm.hidden_size + self.world_model.rssm.latent_state_size
         )
-        self.actor_critic = ActorCritic(
-            input=input_size,
-            output=self.environment.action_dim[0],
-            config=config,
-            deterministic=self.deterministic,
-        )
+        if not config.get("new", False):
+            self.actor_critic = ActorCritic(
+                input=input_size,
+                output=self.environment.action_dim[0],
+                config=config,
+                deterministic=self.deterministic,
+            )
+        else:
+            logging.info(
+                f"Using ActorCritic2 for Dreamer with input size {input_size} and output size {self.environment.action_dim[0]}"
+            )
+            self.actor_critic = ActorCritic2(
+                input=input_size,
+                output=self.environment.action_dim[0],
+                config=config,
+                deterministic=self.deterministic,
+            )
 
     def _init_previous(self):
         """
@@ -77,7 +90,6 @@ class Dreamer(BaseAlgorithm):
             "critic": self.actor_critic.critic.state_dict(),
             "critic_optimizer": self.actor_critic.critic_optim.state_dict(),
             "critic_target": self.actor_critic.critic_target.state_dict(),
-            "s_ema": self.actor_critic.s_ema,
         }
 
     def get_actions(self, observations: dict, deterministic: bool = False) -> dict:
@@ -117,7 +129,7 @@ class Dreamer(BaseAlgorithm):
             # Step 3: Get the action (based on the model state)  #
             # -------------------------------------------------- #
             s = torch.cat([h_t, z_t], dim=-1)
-            actions = self.actor_critic.act(s, deterministic)
+            actions, _ = self.actor_critic.act(s, deterministic)
 
             # Step 4: Update the previous state with the current state  #
             # -------------------------------------------------- #
@@ -155,9 +167,7 @@ class Dreamer(BaseAlgorithm):
             # | Step 1: Get a sample from the replay buffer         |#
             # |  - should be a sample of sequences (size=horizon)   |#
             # | --------------------------------------------------- |#
-            real_sample = self.real_RB.sample(
-                self.batch_size, self.horizon
-            )  # sequence = size horizon
+            real_sample = self.real_RB.sample(self.batch_size, self.horizon)
 
             # | ----------------------------------------------------- |#
             # | Step 2: Update the world model with real interactions |#
@@ -171,9 +181,20 @@ class Dreamer(BaseAlgorithm):
             # |  - Should return a batch of imagined sequences        |#
             # | ----------------------------------------------------- |#
             starting_points = self.real_RB.sample(self.batch_size)
+            # only select the ratio
+            n_real = int(self.ratio_real_imagined * self.batch_size)
+            n_imag = self.batch_size - n_real
+            # select batch_size - n_real starting points to pass to imagine
+            state_starts = starting_points["state"][:n_imag]
+            belief_starts = (
+                starting_points["belief"][:n_imag]
+                if "belief" in starting_points
+                else {}
+            )
+
             imagined_sequences = self.world_model.imagine(
-                starting_points["state"],
-                starting_points["belief"],
+                state_starts,  # starting_points["state"]
+                belief_starts,  # starting_points["belief"]
                 self.actor_critic.actor,
                 self.horizon,
             )
@@ -184,13 +205,20 @@ class Dreamer(BaseAlgorithm):
             # Only update with imagined trajectories
             # (updating with real trajectories should be implemented for:
             # - environments where the reward is tricky to predict)
+            # states (latent states), actions, rewards of the real trajectory
+            # make sure real_sample is converted to the right format (as returned by imagine)
+            seq = (
+                imagined_sequences
+                + self.world_model.convert_samples(real_sample[:n_real])
+                if n_real > 0
+                else imagined_sequences
+            )
 
-            self.actor_critic.learn(imagined_sequences)
+            self.actor_critic.learn(seq)
 
         # | ----------------------------------------------------- |#
         # | Step 5: Save the losses                               |#
         # | ----------------------------------------------------- |#
-        # Returning is not correct yet, plots do not show
         self.losses = {
             key: np.mean(value) for key, value in self.world_model.loss.items()
         } | {
@@ -207,3 +235,27 @@ class Dreamer(BaseAlgorithm):
         self.world_model.reset_loss()
 
         return self.losses
+
+    def create_training_batch(self, real: int, imagined_sequences: list) -> list:
+        """
+        Creates a training batch for the Dreamer algorithm.
+
+        Args:
+            real (int): Percentage of real data to use in the batch (0-100).
+            imagined_sequences (list): List of imagined sequences.
+
+        Returns:
+            list: List of training batches with real and imagined data.
+        """
+        if not (0 <= real <= 100):
+            raise ValueError("Real percentage must be between 0 and 100.")
+
+        n = int(real / 100 * self.batch_size)
+        if n == 0:
+            return imagined_sequences
+
+        # Select n real samples from the replay buffer
+        real_samples = self.real_RB.sample(n, self.horizon)
+
+        # Combine real and imagined sequences
+        return real_samples + imagined_sequences[: self.batch_size - n]

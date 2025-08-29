@@ -23,7 +23,7 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.buffer)
 
-    def push(self, state, actions, rewards, next_state, belief=None):
+    def push(self, state, actions, rewards, next_state, belief={}):
         """
         Stores a transition in the buffer.
         """

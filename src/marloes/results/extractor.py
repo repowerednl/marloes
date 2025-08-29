@@ -20,7 +20,7 @@ from marloes.agents import (
     ElectrolyserAgent,
     DemandAgent,
 )
-from marloes.agents.base import SupplyAgents, StorageAgents, DemandAgents
+from marloes.agents.base import Agent, SupplyAgents, StorageAgents, DemandAgents
 from marloes.algorithms.util import get_net_forecasted_power, get_net_power
 from marloes.data.extensive_data import ExtensiveDataStore
 from marloes.results.util import get_latest_uid
@@ -59,16 +59,13 @@ class Extractor:
         self.total_demand = np.zeros(self.size)
         self.total_grid_production = np.zeros(self.size)
         self.total_battery_intake = np.zeros(self.size)
+        self.supply_available_power = np.zeros(self.size)
 
         # Observation info
         self.total_solar_nomination = np.zeros(self.size)
         self.total_wind_nomination = np.zeros(self.size)
         self.total_demand_nomination = np.zeros(self.size)
         self.total_nomination_fraction = np.zeros(self.size)
-
-        # Setpoint info
-        self.battery_setpoints = np.zeros(self.size)
-        self.solar_setpoints = np.zeros(self.size)
 
     def clear(self):
         """Reset the timestep index to zero."""
@@ -112,14 +109,14 @@ class Extractor:
             model, Battery
         )
 
-        # Save the setpoints for the battery and solar agents
-        for asset in model.graph.nodes:
-            if isinstance(asset, Battery):
-                if asset.setpoint is not None:
-                    self.battery_setpoints[self.i] = asset.setpoint.value
-            elif isinstance(asset, Supply):
-                if asset.setpoint is not None:
-                    self.solar_setpoints[self.i] = asset.setpoint.value
+        # Get available power of supply agents
+        self.supply_available_power[self.i] = sum(
+            [
+                asset.state.available_power
+                for asset in model.graph.nodes
+                if isinstance(asset, Supply)
+            ]
+        )
 
     def from_files(self, uid: int | None = None, dir: str = "results") -> int:
         """
@@ -163,7 +160,9 @@ class Extractor:
 
         return uid
 
-    def from_observations(self, observations: dict) -> None:
+    def from_observations(
+        self, observations: dict, trainable_agents: list[Agent]
+    ) -> None:
         """
         Save the necessary information from the observations.
         #TODO: extend this to save more information from observations
@@ -182,7 +181,15 @@ class Extractor:
             if "nomination_fraction" in value:
                 self.total_nomination_fraction[self.i] += value["nomination_fraction"]
 
-    def store_loss(self, loss_dict: dict | None) -> None:
+        # Setpoints
+        for agent in trainable_agents:
+            if not hasattr(self, f"{agent.id}_setpoints"):
+                setattr(self, f"{agent.id}_setpoints", np.zeros(self.size))
+            getattr(self, f"{agent.id}_setpoints")[self.i] = (
+                agent.asset.setpoint.value if agent.asset.setpoint else 0.0
+            )
+
+    def store_loss(self, loss_dict: dict) -> None:
         """
         Store each loss in a dedicated array. If loss_dict is None.
         """
@@ -296,8 +303,8 @@ class ExtensiveExtractor(Extractor):
         super().clear()
         self.extensive_data.stash_chunk()
 
-    def from_observations(self, observations):
-        super().from_observations(observations)
+    def from_observations(self, observations: dict, trainable_agents: list[Agent]):
+        super().from_observations(observations, trainable_agents)
 
         # Fill in the forecast data
         # Since forecast does not change, we can just iteratively add the first value of the forecast series

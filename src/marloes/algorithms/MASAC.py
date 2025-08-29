@@ -21,6 +21,7 @@ class MultiAgentSAC:
             "action_dim"
         ]  # Number of agents is equal to action_dim, because continuous
         self.action_dim = config["action_dim"]
+        self.device = device
 
         # Hyperparameters
         self.SAC_config = config.get("SAC", {})
@@ -50,6 +51,8 @@ class MultiAgentSAC:
 
         # Initialize losses
         self._init_losses(config.get("model_updates_per_step", 10))
+
+        self._try_to_load_weights(config.get("uid", None))
 
     def _init_losses(self, model_updates_per_step):
         self.i = 0
@@ -284,3 +287,50 @@ class MultiAgentSAC:
         total_log_pi = torch.stack(log_pis, 0).sum(0)
 
         return joint_action, total_log_pi
+
+    def _try_to_load_weights(self, uid: int = None) -> None:
+        """
+        Load the network weights from a folder if the uid is provided.
+
+        Args:
+            uid (int): Unique identifier for the network weights.
+        """
+        if not uid:
+            print("No UID provided. Skipping loading of weights.")
+            return
+
+        try:
+            checkpoint = torch.load(
+                f"results/models/{uid}.pth",
+                map_location=self.device,
+                weights_only=False,
+            )
+        except FileNotFoundError:
+            print(f"No saved model found for UID {uid}. Starting with random weights.")
+            return
+
+        # Load model weights
+        for i, actor in enumerate(self.actors):
+            if f"actor_{i}_network" not in checkpoint:
+                print(f"Actor {i} network not found in checkpoint. Skipping.")
+                continue
+            actor.load_state_dict(checkpoint[f"actor_{i}_network"])
+        self.critic_1_network.load_state_dict(checkpoint["critic_1_network"])
+        self.critic_2_network.load_state_dict(checkpoint["critic_2_network"])
+        self.value_network.load_state_dict(checkpoint["value_network"])
+        self.target_value_network.load_state_dict(checkpoint["target_value_network"])
+
+        # Load log_alpha and ensure it requires grad
+        self.log_alpha = checkpoint["log_alpha"].to(self.device)
+        self.log_alpha.requires_grad_(True)
+
+        # Load optimizers
+        for i, optimizer in enumerate(self.actor_optimizers):
+            if f"actor_{i}_optimizer" not in checkpoint:
+                print(f"Actor {i} optimizer not found in checkpoint. Skipping.")
+                continue
+            optimizer.load_state_dict(checkpoint[f"actor_{i}_optimizer"])
+        self.critic_1_optimizer.load_state_dict(checkpoint["critic_1_optimizer"])
+        self.critic_2_optimizer.load_state_dict(checkpoint["critic_2_optimizer"])
+        self.value_optimizer.load_state_dict(checkpoint["value_optimizer"])
+        self.alpha_optimizer.load_state_dict(checkpoint["alpha_optimizer"])

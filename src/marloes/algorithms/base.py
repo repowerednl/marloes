@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 import random
 import time
+import numpy as np
 import torch
 
 from marloes.agents.battery import BatteryAgent
@@ -25,9 +26,17 @@ class BaseAlgorithm(ABC):
         logging.info(
             f"Initializing {self.__class__.__name__} algorithm and setting up the environment..."
         )
-
         # Initialize the Saver, environment, and device
         self.saver = Saver(config=config, evaluate=evaluate)
+        seed = self.saver.uid
+        np.random.seed(seed)
+        random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        logging.info(
+            f"Using seed {seed} for reproducibility in {self.__class__.__name__} algorithm."
+        )
+
         self.environment = EnergyValley(config, self.__class__.__name__)
 
         # Update config with environment parameters
@@ -38,13 +47,11 @@ class BaseAlgorithm(ABC):
         config["forecasts"] = self.environment.forecasts
 
         self.config = config
-        self.device = torch.device(
-            "mps" if torch.backends.mps.is_available() else "cpu"
-        )
-        self.device = torch.device("cpu")
+        device = config.get("device", "cpu")
+        self.device = torch.device(device)
         if self.device.type == "cpu":
             logging.warning(
-                "MPS is not available. Using CPU for computations. Performance may be slower."
+                "MPS/Cuda is not available. Using CPU for computations. Performance may be slower."
             )
 
         # General settings
@@ -93,8 +100,8 @@ class BaseAlgorithm(ABC):
 
         # Main testing loop
         for step in range(self.eval_steps):
-            if step % (self.eval_steps // 100) == 0:
-                logging.info(f"Reached step {step}/{self.eval_steps}...")
+            # if step % (self.eval_steps // 100) == 0:
+            #     logging.info(f"Reached step {step}/{self.eval_steps}...")
 
             # Get actions from the algorithm
             actions, _ = self.get_actions(
@@ -129,15 +136,15 @@ class BaseAlgorithm(ABC):
 
         # Main training loop
         for step in range(self.training_steps):
-            if step % (self.training_steps // 100) == 0:
-                logging.info(f"Reached step {step}/{self.training_steps}...")
+            # if step % (self.training_steps // 100) == 0:
+            #     logging.info(f"Reached step {step}/{self.training_steps}...")
 
             # 1. Collect data from environment
             # --------------------
             if step < self.num_initial_random_steps:
                 # Initially do random actions for exploration
                 actions = self.sample_actions(self.environment.trainable_agent_dict)
-                info = None
+                info = {}
             else:
                 # Get actions from the algorithm
                 actions, info = self.get_actions(state)

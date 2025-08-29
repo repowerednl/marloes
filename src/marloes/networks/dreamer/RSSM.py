@@ -229,6 +229,10 @@ class RSSM(BaseNetwork):
             states = sequence["state"]
             actions = sequence["actions"]
             next_states = sequence["next_state"]
+            beliefs = sequence.get("belief", None)
+            h_t = (
+                beliefs[0].get("h_t", None) if beliefs else None
+            )  # Get the initial recurrent state
             # Get the predicted and actual latent states
             (
                 predicted,
@@ -236,7 +240,7 @@ class RSSM(BaseNetwork):
                 h_ts,
                 predicted_details,
                 actual_details,
-            ) = self._single_rollout(states, actions, next_states)
+            ) = self._single_rollout(states, actions, next_states, h_t)
             [
                 results[key].append(val)
                 for key, val in zip(
@@ -255,6 +259,7 @@ class RSSM(BaseNetwork):
         states: torch.Tensor,
         actions: torch.Tensor,
         next_states: torch.Tensor,
+        h_t: torch.Tensor | None = None,
     ):
         """
         Single rollout for a single sequence in the batch obtaining the predicted and actual latent states.
@@ -267,8 +272,11 @@ class RSSM(BaseNetwork):
         Returns:
             tuple: Predicted latent states, actual latent states, recurrent states, and their details.
         """
-        h_0 = self._init_state(1)  # Batch size of 1: single rollout
-        h_t = h_0[-1]  # Take the last layer and unsqueeze for batch dim
+        if h_t is None:
+            h_0 = self._init_state(1)  # Batch size of 1: single rollout
+            h_t = h_0[-1]  # Take the last layer and unsqueeze for batch dim
+        else:
+            h_t = h_t
 
         T = next_states.shape[0]
         # # infer the initial latent state for the first step

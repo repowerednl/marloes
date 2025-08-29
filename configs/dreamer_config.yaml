@@ -1,89 +1,94 @@
-algorithm: Priorities
+algorithm: Dreamer
 chunk_size: 1000
-training_steps: 20000
-num_initial_random_steps: 1
-update_interval: 50
+training_steps: 500
+num_initial_random_steps: 1440 #1440
+update_interval: 60
 horizon: 8
-batch_size: 32
-update_steps: 2
-deterministic: True
+batch_size: 64
+update_steps: 1
+deterministic: False
+multiplication_factor_full_reward: 1
 agents:
+  - type: solar
+    AC: 3000
+    DC: 3000
+    orientation: EW
+    trainable: True
   # - type: solar
-  #   AC: 9000
-  #   DC: 10000
-  #   orientation: S
-  - type: solar
-    AC: 2000
-    DC: 2000
-    orientation: EW
-    trainable: true
-  - type: solar
-    AC: 1000
-    DC: 1000
-    orientation: EW
-    trainable: false
-  # - type: wind
-  #   location: Onshore
-  #   power: 1000
-  #   AC: 900
+  #   AC: 1000
+  #   DC: 1000
+  #   orientation: EW
+  #   trainable: True
   - type: demand
     scale: 15
     profile: Farm
-    trainable: false
+    trainable: False
+  # - type: demand
+  #   scale: 10
+  #   profile: Farm
+  #   trainable: False
   - type: battery
     energy_capacity: 2000
     power: 1000
-    trainable: true
+    trainable: True
   # - type: battery
-  #   energy_capacity: 100
-  #   power: 750
+  #   energy_capacity: 1000
+  #   power: 500
+  #   trainable: True
 grid:
   name: Grid
 subrewards:
   CO2:
-    active: true
+    active: False
     scaling_factor: 1
   NE:
-    active: false
+    active: False
     scaling_factor: 1
   TEST:
-    active: false
+    active: False
     scaling_factor: 1
+  BA:
+    active: True
+    scaling_factor: 10
 replay_buffers:
-  real_capacity: 3000
-  model_capacity: 3000
+  real_capacity: 100000
+  model_capacity: 100000
 WorldModel:
-  lr: 0.001
-  weight_decay: 0.0
+  lr: 0.0005
+  weight_decay: 0.001
   beta_weights:
     pred: 1.0
     dyn: 1.0
     rep: 0.1
-  clip_grad: 5
-  free_bits: 1.0
+  clip_grad: 0.5
+  free_bits: 0.5
   RSSM:
     clamp_lower: -5.0
     clamp_upper: 5.0
     LayerDetails:
       recurrent_size: 64
-      latent_size: 32
+      latent_size: 64
       batch_first: True
       bias: True
-      dropout: 0.0
+      dropout: 0.01
       bidirectional: False
       num_layers: 2
     Encoder:
       clamp_lower: -5.0
       clamp_upper: 5.0
 ActorCritic:
-  actor_lr: 0.001
-  critic_lr: 0.001
-  actor_weight_decay: 0.0
-  critic_weight_decay: 0.0
-  actor_clip_grad: 5
-  critic_clip_grad: 5
-  gamma: 0.997
-  lambda: 0.95
-  ema_update: 0.98 # update the target networks with this factor
-  s_ema_alpha: 0.9
+  new: false
+  actor_hidden_size: 64
+  critic_hidden_size: 64
+  actor_lr: 0.00005
+  critic_lr: 0.0001
+  actor_weight_decay: 0.001
+  critic_weight_decay: 0.001
+  actor_clip_grad: 0.5
+  critic_clip_grad: 0.5
+  n_bins: 20 # number of bins for the value distribution
+  gamma: 0.998
+  lambda: 0.98
+  ema_update: 0.995 # update the target networks with this factor
+  s_ema_alpha: 0.95
   entropy_coef: 0.01 # coefficient for the entropy loss

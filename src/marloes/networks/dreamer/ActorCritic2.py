@@ -7,7 +7,7 @@ from marloes.networks.util import compute_lambda_returns, symlog
 import copy
 
 
-class ActorCritic(nn.Module):
+class ActorCritic2(nn.Module):
     """
     Combines the Actor and Critic networks for learning from abstract trajectories.
     """
@@ -28,7 +28,7 @@ class ActorCritic(nn.Module):
             output (int): Dimension of the output (action space).
             hidden_size (int, optional): Dimension of the hidden layers. Defaults to 64.
         """
-        super(ActorCritic, self).__init__()
+        super(ActorCritic2, self).__init__()
         self.actor = Actor(input, output, config.get("actor_hidden_size", hidden_size))
         self.n_bins = config.get("n_bins", 50)  # Number of bins for the critic
         self.critic = Critic(
@@ -76,8 +76,8 @@ class ActorCritic(nn.Module):
             self.i = 0
         else:
             self.i += 1
-        # if self.i % 5 == 0:
-        self.actor_loss = []
+        if self.i % 5 == 0:
+            self.actor_loss = []
 
         self.critic_loss = []
 
@@ -130,6 +130,7 @@ class ActorCritic(nn.Module):
         self.critic_loss.append(critic_loss.item())
 
         # EMA target update
+        # if self.i % 5 == 0 and self.i > 0:
         self.update_critic_target()
 
     def _compute_actor_loss(self, states, actions, advantages, returns) -> torch.Tensor:
@@ -154,6 +155,7 @@ class ActorCritic(nn.Module):
         # invert tanh to get pre-tanh values
         eps = 1e-6  # small epsilon to avoid numerical issues
         actions = torch.clamp(actions, -1 + eps, 1 - eps).detach()
+        # invert tanh to get pre-tanh values
         pre_tanh = 0.5 * (torch.log1p(actions) - torch.log1p(-actions))
         log_prob = dist.log_prob(pre_tanh).sum(
             dim=-1, keepdim=True
@@ -191,20 +193,14 @@ class ActorCritic(nn.Module):
         # Reduce entropy coefficient over time
         if not hasattr(self, "entropy_decay"):
             self.entropy_decay = self.entropy_coef  # Initialize entropy decay
-        self.entropy_decay *= 0.99  # Decay factor (adjust as needed)
+        self.entropy_decay *= 0.999  # Decay factor (adjust as needed)
 
-        actor_loss = (
-            -(
-                (
-                    advantages.detach()
-                    / torch.maximum(self.s_ema, torch.ones_like(self.s_ema))
-                )
-                * log_prob
-            ).mean()
-            - entropy * self.entropy_decay
-        ).mean()  # Mean over batch and time
-        # clip values outside the standard deviation range
-        # actor_loss = torch.clamp(actor_loss, -1, 1)
+        scale_factor = torch.maximum(
+            self.s_ema, torch.tensor(1.0, device=self.s_ema.device)
+        )
+        weighted_advantages = (advantages.detach() / scale_factor) * log_prob
+        entropy_term = entropy * self.entropy_decay
+        actor_loss = -(weighted_advantages.mean() + entropy_term.mean())
         return actor_loss
 
     def _compute_critic_loss(
@@ -238,11 +234,7 @@ class ActorCritic(nn.Module):
         Returns:
             tuple: λ-returns tensor of shape (B, T, 1) and advantages tensor of shape (B, T, 1).
         """
-        # Option 1:
-        # rewards = symlog(rewards)  # Apply symlog transformation to rewards
         returns = compute_lambda_returns(rewards, values, self.gamma, self.lmbda)
-        # Option 2:
-        # returns = symlog(returns)
         advantages = returns - values
         return returns, advantages
 
@@ -294,81 +286,95 @@ class ActorCritic(nn.Module):
 class Actor(nn.Module):
     """
     Actor network for predicting continuous actions.
+
+    Now uses two shared layers, then `output_size` separate heads:
+    each head has one hidden layer (`hidden_size`) and a single output node.
     """
 
     def __init__(self, input_size: int, output_size: int, hidden_size: int = 256):
-        """
-        Initializes the Actor network.
-
-        Args:
-            input_size (int): Dimension of the input.
-            output_size (int): Dimension of the output (action space).
-            hidden_size (int, optional): Dimension of the hidden layers. Defaults to 256.
-        """
         super(Actor, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
-        # self.dropout1 = nn.Dropout(p=0.1)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
-        # self.dropout2 = nn.Dropout(p=0.1)
-        self.fc3 = nn.Linear(hidden_size, hidden_size)
-        self.dropout3 = nn.Dropout(p=0.1)
-        self.fc_mean = nn.Linear(hidden_size, output_size)
-        self.log_std = nn.Linear(hidden_size, output_size)
-        # initialize the weights of log_std with a small negative value to encourage exploration
-        self.log_std.weight.data.fill_(-0.5)
+        # dropout layer
+        self.dropout = nn.Dropout(p=0.1)
+        # self.fc2 = nn.Linear(hidden_size, hidden_size)
+
+        self.output_size = output_size
+        self.hidden_size = hidden_size
+
+        # one head-per-action for the mean
+        self.heads_mean_hidden = nn.ModuleList(
+            [nn.Linear(hidden_size, hidden_size) for _ in range(output_size)]
+        )
+        self.heads_mean_out = nn.ModuleList(
+            [nn.Linear(hidden_size, 1) for _ in range(output_size)]
+        )
+
+        # one head-per-action for the log_std
+        self.heads_log_std_hidden = nn.ModuleList(
+            [nn.Linear(hidden_size, hidden_size) for _ in range(output_size)]
+        )
+        self.heads_log_std_out = nn.ModuleList(
+            [nn.Linear(hidden_size, 1) for _ in range(output_size)]
+        )
+
+        # initialize the weights of log_std output layers to encourage exploration
+        for out in self.heads_log_std_out:
+            out.weight.data.fill_(-0.5)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Forward pass through the Actor network.
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
+        Forward pass:
+         - two shared layers
+         - per-head hidden layer + output node
         Returns:
-            a tuple containing:
-                - mu (torch.Tensor): Mean of the Gaussian distribution for actions.
-                - log_std (torch.Tensor): Log standard deviation of the Gaussian distribution for actions.
+         - mu:      [batch, output_size]
+         - log_std: [batch, output_size]
         """
         x = F.relu(self.fc1(x))
-        # x = self.dropout1(x)
-        x = F.relu(self.fc2(x))
-        # x = self.dropout2(x)
-        x = F.relu(self.fc3(x))
-        x = self.dropout3(x)
-        mu = self.fc_mean(x)
-        log_std = self.log_std(x)
+        # x = F.relu(self.fc2(x))
+        x = self.dropout(x)
 
-        log_std = torch.clamp(
-            log_std, -2, 2
-        )  # Clamping log_std to prevent extreme values
+        mus = []
+        log_stds = []
+        for i in range(self.output_size):
+            h_mu = F.relu(self.heads_mean_hidden[i](x))
+            mu_i = self.heads_mean_out[i](h_mu)
+            mus.append(mu_i)
+
+            h_ls = F.relu(self.heads_log_std_hidden[i](x))
+            ls_i = self.heads_log_std_out[i](h_ls)
+            log_stds.append(ls_i)
+
+        mu = torch.cat(mus, dim=-1)
+        log_std = torch.cat(log_stds, dim=-1)
+        log_std = torch.clamp(log_std, -2, 2)
         # Replace NaN and inf values with specific values
         mu = torch.nan_to_num(mu, nan=0.0, posinf=5.0, neginf=-5.0)
         log_std = torch.nan_to_num(log_std, nan=-1.0, posinf=2.0, neginf=-2.0)
+
         return mu, log_std
 
     def sample(
         self, x, deterministic: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Samples actions from the Actor network, using the reparameterization trick.
-        Forwarding through the layers, and returning the actions and the transformed log_probs.
+        Samples actions using the reparameterization trick,
+        now using the per-head outputs.
         """
         mu, log_std = self.forward(x)
         std = torch.exp(log_std)
-        normal = torch.distributions.Normal(mu, std)
+        dist = torch.distributions.Normal(mu, std)
+
         if deterministic:
-            x = mu
+            pre_tanh = mu
             actions = torch.tanh(mu)
         else:
-            x = normal.rsample()  # reparam trick
-            actions = torch.tanh(x)
+            pre_tanh = dist.rsample()
+            actions = torch.tanh(pre_tanh)
 
-        log_prob = normal.log_prob(x).sum(-1, keepdim=True)
-        correction = torch.log(1 - actions.pow(2) + 1e-6).sum(
-            dim=-1, keepdim=True
-        )  # Correction for tanh
-
-        log_prob -= correction  # Adjust log probability for the tanh transformation
+        log_prob = dist.log_prob(pre_tanh).sum(-1, keepdim=True)
+        correction = torch.log(1 - actions.pow(2) + 1e-6).sum(dim=-1, keepdim=True)
+        log_prob = log_prob - correction
 
         return actions, log_prob
 
@@ -376,43 +382,20 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     """
     Critic network for predicting the value of the current state.
+    (unchanged)
     """
 
     def __init__(self, input_size: int, hidden_size: int = 256, n_bins: int = 50):
-        """
-        Initializes the Critic network.
-
-        Args:
-            input_size (int): Dimension of the input.
-            hidden_size (int, optional): Dimension of the hidden layers. Defaults to 256.
-        """
         super(Critic, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
-        # self.fc_value = nn.Linear(hidden_size, 1)
-        # for two hot encoding loss
         self.fc_out = nn.Linear(hidden_size, n_bins)
-        # create the spaved bins
-        self.register_buffer(
-            "bins", torch.linspace(-20, 20, n_bins)
-        )  # Bins for two-hot encoding
+        self.register_buffer("bins", torch.linspace(-20, 20, n_bins))
 
     def forward(self, x):
-        """
-        Forward pass through the Critic network.
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor: Predicted value of the state.
-        """
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        # logits are the raw outputs of the critic, representing the log probabilities of the bins
         logits = self.fc_out(x)
         probs = F.softmax(logits, dim=-1)
-        # predicted scalar value
         value = (probs * self.bins).sum(dim=-1, keepdim=True)
-
         return logits, value
