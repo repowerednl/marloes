@@ -451,6 +451,8 @@ def print_metrics(
         "6_handler",
         "3_handler_default",
         "9_handler",
+        "just_solar",
+        "just_battery",
     ],
     scenario: str = "zero_noise",
     save: bool = False,
@@ -1223,8 +1225,8 @@ if __name__ == "__main__":
     if args.metrics:
         metrics = {metric: metric.lower().replace(" ", "_") for metric in args.metrics}
     # print metrics
-    # print_metrics(base=args.base, save=args.save)
-    # print("Successfully printed metrics.")
+    print_metrics(base=args.base, save=args.save)
+    print("Successfully printed metrics.")
 
     # # plot losses
     # plot_losses(base=args.base, metrics=metrics, save=args.save)
@@ -1250,7 +1252,7 @@ if __name__ == "__main__":
     # print("Successfully plotted behaviour.")
 
     # # # plot performance
-    plot_performance(base=args.base)
+    # plot_performance(base=args.base)
     # print("Successfully plotted performance.")
 
     # # plot sankeys
@@ -1260,7 +1262,7 @@ if __name__ == "__main__":
     # plot actors
     # plot_actors(base=args.base, save=args.save)
     # plot_performance(base=args.base, configs=["3_handler", "new_actor"])
-    print("Successfully plotted actors.")
+    # print("Successfully plotted actors.")
 
     # do statistical test between 3_handler and new_actor
     # do_statistical_test(base=args.base)
